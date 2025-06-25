@@ -2,8 +2,12 @@
 import React, { useState, useEffect } from 'react';
 import {
   Search, Download, Eye, Star, Filter,
-  Calendar, BookOpen, FileText, Video, Link
+  Calendar, BookOpen, FileText, Video, Link, ExternalLink
 } from 'lucide-react';
+
+// Імпортуйте ваші PDF файли
+import Requirements from '../documents/Content_requirements.pdf';
+import Title from '../documents/Requirements_title.pdf';
 
 const MethodicalMaterials = () => {
   const [materials, setMaterials] = useState([]);
@@ -13,13 +17,15 @@ const MethodicalMaterials = () => {
   const [selectedType, setSelectedType] = useState('all');
   const [sortBy, setSortBy] = useState('newest');
   const [loading, setLoading] = useState(true);
+  const [previewUrl, setPreviewUrl] = useState(null);
+  const [showPreview, setShowPreview] = useState(false);
 
-const mockMaterials = [
+  const mockMaterials = [
     {
       id: 1,
-      title: "Методичні рекомендації з написання курсових робіт з програмування",
+      title: "Методичні рекомендації з написання курсових робіт",
       description: "Детальний посібник для студентів з кроками написання якісної курсової роботи, вимогами до оформлення та критеріями оцінювання.",
-      author: "Проф. Іваненко О.М.",
+      author: "Викладач кафедри",
       authorAvatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=40&h=40&fit=crop&crop=face",
       category: "Програмування",
       type: "PDF",
@@ -27,10 +33,26 @@ const mockMaterials = [
       downloads: 245,
       rating: 4.8,
       size: "2.3 MB",
-      tags: ["курсові", "методичка", "програмування", "оформлення"]
+      tags: ["курсові", "методичка", "програмування", "оформлення"],
+      fileUrl: Requirements
     },
     {
       id: 2,
+      title: "Шаблон оформлення курсової роботи",
+      description: "Готовий шаблон у форматі PDF з правильним форматуванням, стилями заголовків та списку літератури.",
+      author: "Викладач кафедри",
+      authorAvatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=40&h=40&fit=crop&crop=face",
+      category: "Оформлення",
+      type: "PDF",
+      uploadDate: "2024-03-08",
+      downloads: 412,
+      rating: 4.7,
+      size: "1.8 MB",
+      tags: ["шаблон", "оформлення", "pdf"],
+      fileUrl: Title
+    },
+    {
+      id: 3,
       title: "Відеолекція: Основи наукового дослідження",
       description: "Відеоматеріал про те, як правильно формулювати проблему дослідження, ставити цілі та завдання, обирати методи.",
       author: "Доц. Петренко С.В.",
@@ -42,20 +64,6 @@ const mockMaterials = [
       rating: 4.9,
       size: "156 MB",
       tags: ["дослідження", "методологія", "відео"]
-    },
-    {
-      id: 3,
-      title: "Шаблон оформлення курсової роботи",
-      description: "Готовий шаблон у форматі Word з правильним форматуванням, стилями заголовків та списку літератури.",
-      author: "Проф. Коваленко М.І.",
-      authorAvatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=40&h=40&fit=crop&crop=face",
-      category: "Оформлення",
-      type: "DOCX",
-      uploadDate: "2024-03-08",
-      downloads: 412,
-      rating: 4.7,
-      size: "0.5 MB",
-      tags: ["шаблон", "оформлення", "word"]
     },
     {
       id: 4,
@@ -70,34 +78,6 @@ const mockMaterials = [
       rating: 4.6,
       size: "-",
       tags: ["ресурси", "онлайн", "бібліотеки"]
-    },
-    {
-      id: 5,
-      title: "Презентація: Як захищати курсову роботу",
-      description: "Поради щодо підготовки до захисту, структури презентації та відповідей на питання комісії.",
-      author: "Проф. Мельник В.О.",
-      authorAvatar: "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=40&h=40&fit=crop&crop=face",
-      category: "Захист",
-      type: "PPTX",
-      uploadDate: "2024-02-28",
-      downloads: 298,
-      rating: 4.8,
-      size: "8.7 MB",
-      tags: ["захист", "презентація", "поради"]
-    },
-    {
-      id: 6,
-      title: "Чек-лист перевірки курсової роботи",
-      description: "Детальний список пунктів для самоперевірки роботи перед здачею викладачу.",
-      author: "Доц. Борисенко Л.К.",
-      authorAvatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=40&h=40&fit=crop&crop=face",
-      category: "Перевірка",
-      type: "PDF",
-      uploadDate: "2024-02-25",
-      downloads: 187,
-      rating: 4.9,
-      size: "1.1 MB",
-      tags: ["чек-лист", "перевірка", "самоконтроль"]
     }
   ];
 
@@ -159,8 +139,44 @@ const mockMaterials = [
     year: 'numeric', month: 'long', day: 'numeric'
   });
 
-  const handleDownload = (material) => console.log('Завантаження:', material.title);
-  const handlePreview = (material) => console.log('Перегляд:', material.title);
+  // Функція для завантаження файлу
+  const handleDownload = (material) => {
+    console.log('Завантаження:', material.title);
+    
+    if (material.fileUrl) {
+      const link = document.createElement('a');
+      link.href = material.fileUrl;
+      link.download = `${material.title}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // Оновлюємо лічильник завантажень (в реальному проекті це буде API запит)
+      setMaterials(prev => prev.map(m => 
+        m.id === material.id ? { ...m, downloads: m.downloads + 1 } : m
+      ));
+    } else {
+      alert('Файл недоступний для завантаження');
+    }
+  };
+
+  // Функція для попереднього перегляду PDF
+  const handlePreview = (material) => {
+    console.log('Перегляд:', material.title);
+    
+    if (material.fileUrl) {
+      // Відкрити в новій вкладці
+      window.open(material.fileUrl, '_blank');
+    } else {
+      alert('Файл недоступний для перегляду');
+    }
+  };
+
+  // Функція для закриття попереднього перегляду
+  const closePreview = () => {
+    setShowPreview(false);
+    setPreviewUrl(null);
+  };
 
   if (loading) return (
     <div className="loader-wrapper">
@@ -245,10 +261,18 @@ const mockMaterials = [
                 <span>{material.size}</span>
               </div>
               <div className="actions">
-                <button onClick={() => handlePreview(material)} className="btn btn-light">
+                <button 
+                  onClick={() => handlePreview(material)} 
+                  className="btn btn-light"
+                  disabled={!material.fileUrl}
+                >
                   <Eye className="icon-sm" /> Переглянути
                 </button>
-                <button onClick={() => handleDownload(material)} className="btn btn-dark">
+                <button 
+                  onClick={() => handleDownload(material)} 
+                  className="btn btn-dark"
+                  disabled={!material.fileUrl}
+                >
                   <Download className="icon-sm" /> Завантажити
                 </button>
               </div>
@@ -262,6 +286,26 @@ const mockMaterials = [
           <BookOpen className="empty-icon" />
           <h3>Матеріали не знайдено</h3>
           <p>Спробуйте змінити фільтри або пошуковий запит</p>
+        </div>
+      )}
+
+      {/* Модальне вікно для попереднього перегляду PDF (опціонально) */}
+      {showPreview && previewUrl && (
+        <div className="modal-overlay" onClick={closePreview}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Попередній перегляд PDF</h3>
+              <button onClick={closePreview} className="close-btn">×</button>
+            </div>
+            <div className="modal-body">
+              <iframe
+                src={previewUrl}
+                width="100%"
+                height="600px"
+                title="PDF Preview"
+              />
+            </div>
+          </div>
         </div>
       )}
     </div>
