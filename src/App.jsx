@@ -10,6 +10,7 @@ import StudentProfile from './pages/StudentProfile.jsx';
 import StudentDashboard from './pages/StudentMainPage.jsx';
 import TeacherDashboard from './pages/TeacherMainPage.jsx';
 import TeacherProfile from './pages/TeacherProfile.jsx';
+import MethodicalMaterials from './pages/MethodicalMaterials.jsx';
 
 import EmailVerification from './components/EmailVerification.jsx';
 
@@ -35,6 +36,7 @@ function App() {
             <Route path="/sthome" element={<TeacherDashboard />} />
             <Route path="/profile" element={<StudentProfile />} />
             <Route path="/stprofile" element={<TeacherProfile />} />
+            <Route path="/materials" element={<MethodicalMaterials />} /> 
             <Route path="/verify/:token" element={<EmailVerification />} />
           </Routes>
         </div>

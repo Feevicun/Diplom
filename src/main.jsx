@@ -11,6 +11,7 @@ import './styles/registration.css';
 import './styles/ThemeSwitcher.css';
 import './styles/TeacherMainPage.css';
 import './styles/profile.css';
+import './styles/MethodicalMaterials.css';
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

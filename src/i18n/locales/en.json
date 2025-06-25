@@ -66,7 +66,10 @@
       "profileDropdown": {
         "profile": "My Profile",
         "history": "History",
-        "logout": "Logout"
+        "logout": "Logout",
+        "library": "Coursework examples",
+        "materials": "Methodological materials"
+        
       }
     },
     "sidebar": {

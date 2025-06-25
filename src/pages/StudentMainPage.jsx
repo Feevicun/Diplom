@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { User, Clock, LogOut, Bell } from "lucide-react";
+import { User, Clock, LogOut, Bell, BookOpen, FolderOpen } from "lucide-react";
 
 const departmentTeachers = [
   { id: 1, name: "Іван Петренко", description: "Штучний інтелект, Java, алгоритми" },
@@ -202,6 +202,14 @@ const handleCloseDrawer = () => {
             <div className="dropdown-item" onClick={() => navigate("/profile")}>
               <User size={16} style={{ marginRight: 8 }} />
               {t("studentDashboard.header.profileDropdown.profile")}
+            </div>
+            <div className="dropdown-item">
+              <BookOpen size={20} style={{ marginRight: 8 }} />
+              {t("studentDashboard.header.profileDropdown.library")}
+            </div>
+            <div className="dropdown-item" onClick={() => navigate("/materials")}>
+              <FolderOpen size={24} style={{ marginRight: 8 }} />
+              {t("studentDashboard.header.profileDropdown.materials")}
             </div>
             <div className="dropdown-item">
               <Clock size={16} style={{ marginRight: 8 }} />
