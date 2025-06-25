@@ -15,6 +15,37 @@ export default function ThemeSwitcher() {
 
   const currentIcon = themes.find((t) => t.name === theme)?.icon || <Palette size={16} />;
 
+
+const themeStyles = {
+  light: {
+    background: '#f5f5f5',
+    color: '#111',
+    activeBg: '#e0e0e0',
+    shadow: '0 0 6px rgba(0,0,0,0.1)',
+  },
+  dark: {
+    background: '#222',
+    color: '#fff',
+    activeBg: '#444',
+    shadow: '0 0 8px rgba(0,0,0,0.3)',
+  },
+  purple: {
+    background: '#9b4dff',         // 🔄 новий колір фону
+    color: '#fff',
+    activeBg: '#7d33e6',           // трохи темніший для активної кнопки
+    shadow: '0 0 8px rgba(155, 77, 255, 0.4)',
+  },
+  beige: {
+    background: '#f0e7db',
+    color: '#333',
+    activeBg: '#e4d9c6',
+    shadow: '0 0 6px rgba(0,0,0,0.1)',
+  },
+};
+
+
+  const currentStyle = themeStyles[theme] || themeStyles.dark;
+
   return (
     <div
       style={{
@@ -27,7 +58,8 @@ export default function ThemeSwitcher() {
       <div
         onClick={() => setOpen(!open)}
         style={{
-          background: '#222',
+          background: currentStyle.background,
+          color: currentStyle.color,
           border: 'none',
           borderRadius: '28px',
           padding: '8px',
@@ -40,7 +72,7 @@ export default function ThemeSwitcher() {
           height: '36px',
           transition: 'width 0.4s ease, gap 0.3s ease',
           overflow: 'hidden',
-          boxShadow: '0 0 8px rgba(0,0,0,0.3)',
+          boxShadow: currentStyle.shadow,
         }}
         title="Змінити тему"
       >
@@ -54,12 +86,12 @@ export default function ThemeSwitcher() {
                 setOpen(false);
               }}
               style={{
-                background: theme === t.name ? '#444' : 'transparent',
+                background: theme === t.name ? currentStyle.activeBg : 'transparent',
                 border: 'none',
                 borderRadius: '50%',
                 padding: '6px',
                 cursor: 'pointer',
-                color: '#fff',
+                color: currentStyle.color,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
