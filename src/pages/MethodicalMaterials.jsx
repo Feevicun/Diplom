@@ -1,5 +1,6 @@
 // MethodicalMaterials.jsx
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Search, Download, Eye, Star, Filter,
   Calendar, BookOpen, FileText, Video, Link, ExternalLink
@@ -10,6 +11,7 @@ import Requirements from '../documents/Content_requirements.pdf';
 import Title from '../documents/Requirements_title.pdf';
 
 const MethodicalMaterials = () => {
+    const navigate = useNavigate();
   const [materials, setMaterials] = useState([]);
   const [filteredMaterials, setFilteredMaterials] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -19,6 +21,8 @@ const MethodicalMaterials = () => {
   const [loading, setLoading] = useState(true);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
+
+  
 
   const mockMaterials = [
     {
@@ -187,6 +191,17 @@ const MethodicalMaterials = () => {
 
   return (
     <div className="materials-page">
+      {/* Стрілка назад */}
+      <div 
+        className="back-arrow" 
+        onClick={() => navigate("/home")}
+        role="button"
+        tabIndex={0}
+        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') navigate("/home") }}
+        aria-label="Повернутися на головну"
+      >
+        ←
+      </div>
       <div className="materials-header">
         <div className="header-left">
           <h1><BookOpen className="header-icon" /> Методичні матеріали</h1>
@@ -238,6 +253,7 @@ const MethodicalMaterials = () => {
               </div>
             </div>
             <h3 className="material-title">{material.title}</h3>
+            <div className="card-body">
             <p className="material-desc">{material.description}</p>
             <div className="tags">
               {material.tags.slice(0, 3).map(tag => (
@@ -246,6 +262,7 @@ const MethodicalMaterials = () => {
               {material.tags.length > 3 && (
                 <span className="tag">+{material.tags.length - 3}</span>
               )}
+            </div>
             </div>
             <div className="card-footer">
               <div className="author">

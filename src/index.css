@@ -283,8 +283,7 @@ body.dark {
   --teacher-card-hover: #3a3a3a;
   --teacher-card-desc: #ccc;
   --no-match-color: #999;
-    --text-color: #fff;
-  --muted: #aaa;
+  --text-color: #fff;
   --muted-light: #888;
   --border-color: #444;
   --card-bg: #2a2a2a;
@@ -311,7 +310,6 @@ body.light {
   --teacher-card-desc: #333;
   --no-match-color: #666;
   --text-color: #1a1a1a;
-  --muted: #666;
   --muted-light: #999;
   --border-color: #ddd;
   --card-bg: #ffffff;
@@ -330,8 +328,7 @@ body.purple {
   --switcher-select-color: #f0e9ff;
   --switcher-focus: #d0a3ff;
   --switcher-focus-shadow: rgba(208, 163, 255, 0.2);
-  --text-color: #2a133a;
-  --muted: #5a4570;
+  --text-color: #9b4dff;
   --muted-light: #9a7cb3;
   --border-color: #d1c4e9;
   --card-bg: #ffffff;
@@ -351,7 +348,6 @@ body.beige {
   --switcher-focus: #d0a3ff;
   --switcher-focus-shadow: rgba(208, 163, 255, 0.2);
   --text-color: #c18c5d;
-  --muted: #5e5e5e;
   --muted-light: #8e8e8e;
   --border-color: #e6d7c3;
   --card-bg: #ffffff;
