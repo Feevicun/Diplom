@@ -12,6 +12,7 @@
 - переглянути доступні теми
 - побачити профіль викладача
 - подати заявку напряму через інтерфейс  
+
 Усе це без потреби шукати email, телефон або фізично йти на кафедру.
 
 ---
@@ -61,42 +62,43 @@
 
 ## 🛠 Технології
 
-- ⚛️ React + Vite — сучасний стек розробки
-- 🧠 AI-assisted topic generator — автоматичне формулювання тем
-- 🌍 i18n — підтримка української та англійської мов
-- 📦 Context API — глобальний контроль теми
-- 🔔 Notification Drawer — з анімаціями та різними режимами
-- 🎨 Стилі — мінімалізм + кастомний CSS
-- 🧼 ESLint — охайний код
+- ⚛️ **React + Vite** — сучасний стек розробки
+- 🧠 **AI-assisted topic generator** — автоматичне формулювання тем
+- 🌍 **i18n** — підтримка української та англійської мов
+- 📦 **Context API** — глобальний контроль теми
+- 🔔 **Notification Drawer** — з анімаціями та різними режимами
+- 🎨 **Стилі** — мінімалізм + кастомний CSS
+- 🧼 **ESLint** — охайний код
 
 ---
 
-## Структура проекту 
+## 📁 Структура проекту
+
+```
 /diplom
+├── server/                       # Серверна частина (Node.js + JSON)
+│   ├── .env                     # Змінні середовища
+│   ├── server.js                # Основний серверний файл
+│   ├── users.json               # Тимчасова база даних користувачів
+│   ├── package.json             # Залежності серверної частини
+│   └── package-lock.json
 │
-├── server/
-│   ├── .env
-│   ├── package.json
-│   ├── package-lock.json
-│   ├── server.js
-│   └── users.json
-│
-├── src/
-│   ├── components/
+├── src/                         # Основна папка клієнтської частини
+│   ├── components/              # Повторно використовувані компоненти UI
 │   │   ├── EmailVerification.jsx
 │   │   ├── LanguageSwitcher.jsx
 │   │   └── ThemeSwitcher.jsx
 │   │
-│   ├── context/
+│   ├── context/                 # Глобальні контексти React
 │   │   └── ThemeContext.jsx
 │   │
-│   ├── i18n/
+│   ├── i18n/                    # Інтернаціоналізація (i18n)
 │   │   ├── index.js
 │   │   └── locales/
-│   │       ├── en.json
-│   │       └── ua.json
+│   │       ├── en.json          # Англійська локалізація
+│   │       └── ua.json          # Українська локалізація
 │   │
-│   ├── pages/
+│   ├── pages/                   # Сторінки додатку
 │   │   ├── Authorization.jsx
 │   │   ├── DeleteAccount.jsx
 │   │   ├── LoadingScreen.jsx
@@ -106,7 +108,7 @@
 │   │   ├── TeacherMainPage.jsx
 │   │   └── TeacherProfile.jsx
 │   │
-│   ├── styles/
+│   ├── styles/                  # CSS-стилі для сторінок і компонентів
 │   │   ├── authorization.css
 │   │   ├── DeleteAccount.css
 │   │   ├── loadingscreen.css
@@ -116,46 +118,60 @@
 │   │   ├── TeacherMainPage.css
 │   │   └── ThemeSwitcher.css
 │
-├── App.jsx
-├── App.css
-├── index.css
-├── main.jsx
-├── .gitignore
-├── eslint.config.js
-├── index.html
-├── package.json
+├── App.jsx                      # Головний компонент додатку
+├── App.css                      # Стилі для App.jsx
+├── index.css                    # Загальні стилі
+├── main.jsx                     # Точка входу React
+│
+├── .gitignore                   # Файли та папки, що ігноруються Git
+├── eslint.config.js             # Налаштування ESLint
+├── index.html                   # HTML-шаблон для Vite
+├── package.json                 # Залежності клієнтської частини
 ├── package-lock.json
-├── README.md
-└── vite.config.js
+├── README.md                    # Документація проєкту
+└── vite.config.js               # Налаштування Vite
+```
 
-## 🚀 Запуск
+---
 
+## 🚀 Запуск проєкту
+
+### Встановлення залежностей
 ```bash
 npm install
+```
+
+### Запуск в режимі розробки
+```bash
 npm run dev
+```
 
+### Запуск серверної частини
+```bash
+cd server
+npm install
+npm start
+```
 
+---
 
-
+## 🌍 English Version
 
 # 🎓 Supervisor Matching System for Coursework
 
 > An intelligent web platform that helps students find the ideal supervisor for their coursework without bureaucracy.  
 > Designed with love for students, teachers, and modern UI ✨
 
----
-
-## 🎯 Project Goal
+### 🎯 Project Goal
 
 Help students **quickly** and **easily**:
 - find a supervisor for coursework
 - explore available topics and teacher profiles
-- submit a request directly through the interface  
+- submit a request directly through the interface
+
 No need to search for emails, phone numbers, or visit departments physically.
 
----
-
-## 🧠 Key Features
+### 🧠 Key Features
 
 - 🧾 **AI-powered topic generation** — based on your idea
 - 🧑‍🏫 **Teacher directory** — with expertise, topics, and available slots
@@ -168,9 +184,7 @@ No need to search for emails, phone numbers, or visit departments physically.
 - 👤 **User profile management** — edit profile, view history, personalized experience
 - ✨ **Modern minimalist interface** with smooth animations and theme switching
 
----
-
-## 🧑‍🎓 For Students
+### 🧑‍🎓 For Students
 
 - Describe your idea — AI will help generate a coursework topic
 - View matching teachers
@@ -178,64 +192,40 @@ No need to search for emails, phone numbers, or visit departments physically.
 - Chat directly in-app
 - Stay updated through notifications
 
----
-
-## 🧑‍🏫 For Teachers
+### 🧑‍🏫 For Teachers
 
 - Accept or reject student requests
 - Review submitted ideas and topics
 - Manage your profile, topics, and available supervision slots
 - Communicate easily via built-in messaging and notifications
 
----
+### 📁 Project Structure
 
-## 🌈 Interface Themes
-
-- `light` ☀️ — clean and minimalist
-- `dark` 🌙 — perfect for night coding
-- `purple` 💜 — VSCode & Discord aesthetics
-- `beige` 🧸 — for fans of cozy, warm tones
-
----
-
-## 🛠 Tech Stack
-
-- ⚛️ React + Vite — modern frontend tools
-- 🧠 AI topic suggestion — smart assistance
-- 🌍 i18n — multilingual support (Ukrainian & English)
-- 📦 Context API — global state for theming
-- 🔔 Notification drawer — with animation and view modes
-- 🎨 Custom CSS — elegant minimalist design
-- 🧼 ESLint — clean, consistent code style
-
----
-
-Project Structure
+```
 /diplom
+├── server/                       # Server-side (Node.js + JSON)
+│   ├── .env                     # Environment variables
+│   ├── server.js                # Main server file
+│   ├── users.json               # Temporary user database
+│   ├── package.json             # Server-side dependencies
+│   └── package-lock.json
 │
-├── server/
-│   ├── .env
-│   ├── package.json
-│   ├── package-lock.json
-│   ├── server.js
-│   └── users.json
-│
-├── src/
-│   ├── components/
+├── src/                         # Main client-side folder
+│   ├── components/              # Reusable UI components
 │   │   ├── EmailVerification.jsx
 │   │   ├── LanguageSwitcher.jsx
 │   │   └── ThemeSwitcher.jsx
 │   │
-│   ├── context/
+│   ├── context/                 # Global React contexts
 │   │   └── ThemeContext.jsx
 │   │
-│   ├── i18n/
+│   ├── i18n/                    # Internationalization (i18n)
 │   │   ├── index.js
 │   │   └── locales/
-│   │       ├── en.json
-│   │       └── ua.json
+│   │       ├── en.json          # English localization
+│   │       └── ua.json          # Ukrainian localization
 │   │
-│   ├── pages/
+│   ├── pages/                   # Application pages
 │   │   ├── Authorization.jsx
 │   │   ├── DeleteAccount.jsx
 │   │   ├── LoadingScreen.jsx
@@ -245,7 +235,7 @@ Project Structure
 │   │   ├── TeacherMainPage.jsx
 │   │   └── TeacherProfile.jsx
 │   │
-│   ├── styles/
+│   ├── styles/                  # CSS styles for pages and components
 │   │   ├── authorization.css
 │   │   ├── DeleteAccount.css
 │   │   ├── loadingscreen.css
@@ -255,23 +245,32 @@ Project Structure
 │   │   ├── TeacherMainPage.css
 │   │   └── ThemeSwitcher.css
 │
-├── App.jsx
-├── App.css
-├── index.css
-├── main.jsx
-├── .gitignore
-├── eslint.config.js
-├── index.html
-├── package.json
+├── App.jsx                      # Main application component
+├── App.css                      # Styles for App.jsx
+├── index.css                    # Global styles
+├── main.jsx                     # React entry point
+│
+├── .gitignore                   # Files and folders ignored by Git
+├── eslint.config.js             # ESLint configuration
+├── index.html                   # HTML template for Vite
+├── package.json                 # Client-side dependencies
 ├── package-lock.json
-├── README.md
-└── vite.config.js
-
+├── README.md                    # Project documentation
+└── vite.config.js               # Vite configuration
+```
 
 ---
 
-## 🚀 Getting Started
+## 📄 Ліцензія
 
-```bash
-npm install
-npm run dev
+Цей проєкт створено для навчальних цілей.
+
+## 🤝 Внесок
+
+Вітаються пропозиції та покращення! Відкривайте issues або створюйте pull requests.
+
+---
+
+<div align="center">
+  <p>Зроблено з ❤️ для студентів та викладачів</p>
+</div>
