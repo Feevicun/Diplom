@@ -1,0 +1,210 @@
+{
+  "authorization": {
+    "title": "Реєстрація на курсову роботу",
+    "selectRole": "Оберіть роль користувача:",
+    "selectPlaceholder": "Обрати...",
+    "roles": {
+      "student": "Студент",
+      "teacher": "Викладач"
+    },
+    "errors": {
+      "role": "Будь ласка, оберіть роль.",
+      "loginEmail": "Потрібен email.",
+      "loginPassword": "Потрібен пароль.",
+      "registerName": "Потрібне ім'я.",
+      "registerEmail": "Потрібен email.",
+      "registerEmailFormat": "Невірний формат email.",
+      "registerPassword": "Потрібен пароль.",
+      "registerPasswordLength": "Пароль має бути щонайменше 6 символів."
+    },
+    "tabs": {
+      "login": "Вхід",
+      "register": "Реєстрація"
+    },
+    "login": {
+      "emailPlaceholder": "Email",
+      "passwordPlaceholder": "Пароль",
+      "button": "Увійти",
+      "noAccount": "Немає акаунту?",
+      "registerLink": "Зареєструватись",
+      "forgetPassword": "Забули пароль?",
+      "resetLink": "Відновити"
+    },
+    "register": {
+      "namePlaceholder": "Повне ім'я",
+      "emailPlaceholder": "Email",
+      "passwordPlaceholder": "Пароль",
+      "button": "Зареєструватись",
+      "haveAccount": "Вже маєте акаунт?",
+      "loginLink": "Увійти"
+    }
+  },
+
+  "deleteAccount": {
+    "title": "Видалення акаунту",
+    "emailPlaceholder": "Email",
+    "selectRole": "Оберіть роль",
+    "roles": {
+      "teacher": "Викладач",
+      "student": "Студент"
+    },
+    "errors": {
+      "emailRequired": "Будь ласка, введіть email.",
+      "emailInvalid": "Невірний формат email.",
+      "roleRequired": "Будь ласка, оберіть роль."
+    },
+    "button": "Видалити акаунт",
+    "successMessage": "Акаунт з email {{email}} та роллю {{role}} було видалено.",
+    "backText": "Назад до",
+    "authPage": "сторінки авторизації"
+  },
+
+  "studentDashboard": {
+    "header": {
+      "uploadPhoto": "Завантажте фото",
+      "defaultName": "Студент",
+      "profileDropdown": {
+        "profile": "Мій профіль",
+        "history": "Історія",
+        "logout": "Вийти"
+      }
+    },
+    "sidebar": {
+      "title": "Викладачі кафедри"
+    },
+    "main": {
+      "instruction": "Введіть тему курсової або ідею",
+      "textareaPlaceholder": "Опишіть свою ідею або тему...",
+      "matchButton": "Підібрати викладача",
+      "topicLabel": "Тема курсової:",
+      "noMatches": "На жаль, немає викладачів, які відповідають темі."
+    },
+    "modal": {
+      "book": "Забронювати",
+      "cancel": "Відмінити"
+    },
+   "notification": {
+  "title": "Сповіщення",
+  "modeLabel": "Режим:",
+  "modeOptions": {
+    "slider": "Слайдер",
+    "scroll": "Список",
+    "carousel": "Автопрокрутка"
+  },
+  "messages": {
+    "1": "Вам підібрано тему курсової",
+    "2": "Новий викладач доданий на кафедру",
+    "3": "Ваш профіль оновлено"
+  },
+  "empty": "Немає нових сповіщень",
+  "close": "Закрити"
+}
+
+
+  },
+
+  "studentProfile": {
+    "title": "Профіль студента",
+    "labels": {
+      "name": "Ім’я:",
+      "surname": "Прізвище:",
+      "email": "Email:",
+      "course": "Курс:",
+      "group": "Група:",
+      "faculty": "Факультет:",
+      "department": "Кафедра:",
+      "oldPassword": "Старий пароль:",
+      "newPassword": "Новий пароль:",
+      "confirmPassword": "Підтвердження нового пароля:"
+    },
+    "buttons": {
+      "saveProfile": "Зберегти",
+      "changePassword": "Змінити пароль",
+      "logout": "Вийти",
+      "modalSave": "Зберегти",
+      "modalCancel": "Скасувати"
+    },
+    "alerts": {
+      "profileSaved": "Профіль збережено!",
+      "fillAllFields": "Будь ласка, заповніть усі поля",
+      "newPasswordMismatch": "Новий пароль не співпадає з підтвердженням",
+      "passwordChangeError": "Сталася помилка при зміні пароля.",
+      "logoutMessage": "Ви вийшли з акаунту"
+    },
+    "modalTitle": "Зміна пароля",
+    "backArrow": "←"
+  },
+
+  "teacherProfile": {
+    "title": "Профіль викладача",
+    "backArrow": "←",
+    "avatarUpload": "Завантажити фото",
+    "fields": {
+      "name": "Ім’я:",
+      "surname": "Прізвище:",
+      "email": "Email:",
+      "faculty": "Факультет:",
+      "department": "Кафедра:"
+    },
+    "buttons": {
+      "saveProfile": "Зберегти",
+      "changePassword": "Змінити пароль",
+      "logout": "Вийти",
+      "modalSave": "Зберегти",
+      "modalCancel": "Скасувати"
+    },
+    "modal": {
+      "title": "Зміна пароля",
+      "oldPassword": "Старий пароль:",
+      "newPassword": "Новий пароль:",
+      "confirmPassword": "Підтвердження нового пароля:"
+    },
+    "alerts": {
+      "fillAllFields": "Будь ласка, заповніть усі поля",
+      "oldPasswordIncorrect": "Старий пароль невірний",
+      "passwordMismatch": "Новий пароль не співпадає з підтвердженням",
+      "passwordChanged": "Пароль успішно змінено!",
+      "profileSaved": "Профіль збережено!",
+      "logoutMessage": "Ви вийшли з акаунту"
+    }
+  },
+  "teacherDashboard": {
+    "profileMenu": {
+      "myProfile": "Мій профіль",
+      "calendar": "Календар",
+      "logout": "Вийти"
+    },
+    "bookedStudentsTitle": "Заброньовані студенти",
+    "studentCard": {
+      "student": "👩‍🎓 {{name}}",
+      "courseIdea": "Ідея курсової:",
+      "accept": "Прийняти",
+      "reject": "Відхилити"
+    },
+    "noBookedStudents": "Ще немає заброньованих студентів."
+  },
+  "registration": {
+    "title": "Реєстрація",
+    "button": "Зареєструватися",
+    "successMessage": "Реєстрація успішна! Вітаємо, {{firstName}} {{surname}}!",
+    "placeholders": {
+      "surname": "Прізвище",
+      "firstName": "Імʼя",
+      "faculty": "Факультет",
+      "chooseFaculty": "Оберіть факультет",
+      "department": "Кафедра",
+      "chooseDepartment": "Оберіть кафедру",
+      "course": "Курс",
+      "group": "Група"
+    },
+    "errors": {
+      "surname": "Введіть прізвище",
+      "firstName": "Введіть імʼя",
+      "faculty": "Оберіть факультет",
+      "department": "Оберіть кафедру",
+      "course": "Введіть курс",
+      "group": "Введіть групу"
+    }
+  }
+}
+

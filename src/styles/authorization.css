@@ -1,0 +1,414 @@
+.auth-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    min-height: 100%;
+  }
+  
+  .auth-form {
+    width: 420px;
+    padding: 30px 25px;
+    border-radius: 12px;
+    text-align: center;
+    transition: transform 0.4s ease, box-shadow 0.4s ease, background-color 0.4s ease;
+  }
+  
+  body.dark .auth-form {
+    background: #1e1e1e;
+    box-shadow: 0 0 20px rgba(255, 102, 0, 0.3);
+  }
+  
+  body.light .auth-form {
+    background: #ffffff;
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+  }
+  
+  .auth-form:hover {
+    transform: translateY(-5px);
+  }
+  
+  /* Заголовок */
+  .auth-form h2 {
+    margin-bottom: 20px;
+    font-size: 24px;
+    color: #ff6600;
+  }
+  
+  /* Tabs */
+  .tabs {
+    display: flex;
+    margin-bottom: 25px;
+    position: relative;
+  }
+  
+  .tabs button {
+    flex: 1;
+    padding: 10px;
+    font-size: 16px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    transition: color 0.3s ease;
+  }
+  
+  body.dark .tabs button {
+    color: #ccc;
+  }
+  
+  body.light .tabs button {
+    color: #444;
+  }
+  
+  .tabs button.active {
+    font-weight: bold;
+    color: #ff6600;
+  }
+  
+  .bar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 50%;
+    height: 3px;
+    background-color: #ff6600;
+    transition: left 0.4s ease;
+  }
+  
+  /* Вміст форми */
+  .form-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .form {
+    display: none;
+    width: 100%;
+  }
+  
+  .form.active {
+    display: block;
+    opacity: 0;
+    animation: fadeIn 0.6s ease forwards;
+  }
+  
+  /* Елементи форми */
+  .form-group {
+    margin-bottom: 18px;
+    width: 100%;
+  }
+  
+  .form-group input {
+    width: 90%;
+    padding: 10px;
+    border-radius: 6px;
+    font-size: 15px;
+    transition: border-color 0.3s ease, background-color 0.3s ease, color 0.3s ease;
+    border: 1px solid;
+  }
+  
+  body.dark .form-group input {
+    background: #2c2c2c;
+    border-color: #444;
+    color: #f5f5f5;
+  }
+  
+  body.light .form-group input {
+    background: #f0f0f0;
+    border-color: #ccc;
+    color: #121212;
+  }
+  
+  .form-group input:focus {
+    border-color: #ff6600;
+    outline: none;
+  }
+  
+  /* Кастомний випадаючий список */
+  .custom-dropdown {
+    position: relative;
+    padding: 10px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    width: 94%;
+    user-select: none;
+    transition: background 0.3s ease, color 0.3s ease;
+    border: 1px solid;
+  }
+  
+  body.dark .custom-dropdown {
+    background-color: #1f1f1f;
+    color: #f5f5f5;
+    border-color: #444;
+  }
+  
+  body.light .custom-dropdown {
+    background-color: #ffffff;
+    color: #121212;
+    border-color: #ccc;
+  }
+  
+  .dropdown-options {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    border-radius: 6px;
+    width: 100%;
+    z-index: 10;
+    overflow: hidden;
+    border: 1px solid;
+  }
+  
+  body.dark .dropdown-options {
+    background-color: #2a2a2a;
+    border-color: #555;
+  }
+  
+  body.light .dropdown-options {
+    background-color: #f9f9f9;
+    border-color: #ccc;
+  }
+  
+  .dropdown-options div {
+    padding: 10px;
+    transition: background 0.3s;
+  }
+  
+  body.dark .dropdown-options div:hover {
+    background-color: #3c3c3c;
+  }
+  
+  body.light .dropdown-options div:hover {
+    background-color: #e0e0e0;
+  }
+  
+  /* Кнопки */
+  button[type="submit"] {
+    background-color: #ff6600;
+    color: #121212;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: bold;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    display: block;
+    margin: 0 auto;
+  }
+
+  body.light button[type="submit"] {
+    color: #fff;
+  }
+  
+  button[type="submit"]:hover {
+    background-color: #e65c00;
+    transform: scale(1.05);
+  }
+  
+  /* Текст під формою */
+  p {
+    font-size: 14px;
+    margin-top: 12px;
+    text-align: center;
+  }
+  
+  body.dark p {
+    color: #bbb;
+  }
+  
+  body.light p {
+    color: #444;
+  }
+  
+p a {
+  color: #ff6600;
+  text-decoration: none;
+  transition: none;
+}
+
+p a:hover,
+p a:visited,
+p a:focus {
+  color: #ff6600;
+  text-decoration: underline; /* або none, якщо не треба підкреслення */
+}
+  
+  /* Анімація */
+  @keyframes fadeIn {
+    to {
+      opacity: 1;
+    }
+  }
+  
+.input-error {
+  border: 1px solid #ff5c5c !important;
+  background-color: #fff0f0;
+}
+
+.error-tooltip {
+  position: absolute;
+  background: #ff4d4d;
+  color: white;
+  font-size: 13px;
+  padding: 6px 10px;
+  border-radius: 4px;
+  top: 100%;
+  left: 0;
+  margin-top: 4px;
+  white-space: nowrap;
+  z-index: 10;
+  opacity: 0;
+  transform: translateY(-5px);
+  pointer-events: none;
+  transition: all 0.2s ease;
+}
+
+.form-group:hover .error-tooltip,
+.form-group:focus-within .error-tooltip {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+
+  body.purple .auth-form {
+    background: #6d4eaa85;
+    box-shadow: 0 0 20px rgba(155, 89, 182, 0.4);
+  }
+  
+  body.purple .tabs button {
+    color: #d6c4f7;
+  }
+  
+  body.purple .tabs button.active {
+    color: #a26bd8;
+  }
+  
+  body.purple .form-group input {
+    background: #6d4eaa85;
+    border-color: #6e4d9d;
+    color: #644b9a;
+  }
+  
+  body.purple .form-group input:focus {
+    border-color: #a26bd8;
+  }
+  
+  body.purple .custom-dropdown {
+    background-color: #6d4eaa85;
+    color: #f0e9ff;
+    border-color: #6e4d9d;
+  }
+  
+  body.purple .dropdown-options {
+    background-color: #4e3474;
+    border-color: #6e4d9d;
+  }
+  
+  body.purple .dropdown-options div:hover {
+    background-color: #6e4d9d;
+  }
+  
+  body.purple button[type="submit"] {
+    background-color: #a26bd8;
+    color: #fff;
+  }
+  
+  body.purple button[type="submit"]:hover {
+    background-color: #8d56c4;
+  }
+  
+  body.purple p {
+    color: #ddd;
+  }
+  body.purple a {
+    color: #fff;
+  }
+
+  body.purple h2 {
+    color: #fff;
+  }
+
+  body.purple .bar {
+    background-color: #fff;
+  }
+
+  body.purple .custom-dropdown {
+    background-image: url("data:image/svg+xml;charset=US-ASCII,%3csvg width='12' height='7' viewBox='0 0 12 7' fill='none' xmlns='http://www.w3.org/2000/svg'%3e%3cpath d='M1 1L6 6L11 1' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3e%3c/svg%3e"); /* кастомна стрілка */
+
+  }
+
+  body.beige .auth-form {
+    background: #fdf6e3;
+    box-shadow: 0 0 15px rgba(189, 158, 119, 0.3);
+  }
+  
+  body.beige .tabs button {
+    color: #7b674b;
+  }
+
+  body.beige .bar {
+    background-color: #c7b18d;
+  }
+
+  body.beige .auth-form h2 {
+    color: #c7b18d;
+  }
+
+  body.beige p a {
+    color: #c7b18d;
+  }
+  
+  body.beige .custom-dropdown {
+    background-image: url("data:image/svg+xml;charset=US-ASCII,%3csvg width='12' height='7' viewBox='0 0 12 7' fill='none' xmlns='http://www.w3.org/2000/svg'%3e%3cpath d='M1 1L6 6L11 1' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3e%3c/svg%3e") !important; /* кастомна стрілка */
+
+  }
+
+  body.beige .tabs button.active {
+    color: #d49e52;
+  }
+  
+  body.beige .form-group input {
+    background: #f3e6d0;
+    border-color: #c7b18d;
+    color: #5a4732;
+  }
+  
+  body.beige .form-group input:focus {
+    border-color: #d49e52;
+  }
+  
+  body.beige .custom-dropdown {
+    background-image: url("data:image/svg+xml;charset=US-ASCII,%3csvg width='12' height='7' viewBox='0 0 12 7' fill='none' xmlns='http://www.w3.org/2000/svg'%3e%3cpath d='M1 1L6 6L11 1' stroke='%23ff6600' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3e%3c/svg%3e"); /* кастомна стрілка */
+    background-repeat: no-repeat;
+    background-position: right 15px center;
+    background-size: 12px 7px;
+    background-color: #fff8e6;
+    color: #5a4732;
+    border-color: #c7b18d;
+  }
+  
+  body.beige .dropdown-options {
+    background-color: #f9ecd9;
+    border-color: #c7b18d;
+  }
+  
+  body.beige .dropdown-options div:hover {
+    background-color: #eedcc0;
+  }
+  
+  body.beige button[type="submit"] {
+    background-color: #d49e52;
+    color: #fff;
+  }
+  
+  body.beige button[type="submit"]:hover {
+    background-color: #c28830;
+  }
+  
+  body.beige p {
+    color: #6a543b;
+  }
+
+  

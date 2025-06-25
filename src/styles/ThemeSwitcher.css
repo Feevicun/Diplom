@@ -1,0 +1,28 @@
+.theme-toggle-btn {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    padding: 5px 10px;
+    background-color: #ff6600;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 400;
+    cursor: pointer;
+    box-shadow: 0 4px 8px rgba(255, 102, 0, 0.4);
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    user-select: none;
+    z-index: 1000;
+  }
+  
+  .theme-toggle-btn:hover {
+    background-color: #e65500;
+    transform: scale(1.05);
+  }
+  
+  .theme-toggle-btn:focus {
+    outline: 2px solid #fff;
+    outline-offset: 2px;
+  }
+  

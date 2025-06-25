@@ -1,0 +1,340 @@
+ .delete-account-container {
+  width: 420px;
+  padding: 30px 25px;
+  background: #1e1e1e;
+  border-radius: 12px;
+  box-shadow: 0 0 20px rgba(255, 102, 0, 0.3);
+  text-align: center;
+  font-family: 'Segoe UI', sans-serif;
+  color: #f5f5f5;
+  margin: 200px auto;
+  transition: transform 0.4s ease, box-shadow 0.4s ease;
+  border: 2px solid #ff6600;
+}
+
+body.dark .delete-account-container {
+  background: #1e1e1e;
+  box-shadow: 0 0 20px rgba(255, 102, 0, 0.3);
+}
+
+body.light .delete-account-container {
+  background: #ffffff;
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+}
+
+.delete-account-container:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 0 30px rgba(255, 102, 0, 0.5);
+}
+
+.delete-account-container h2 {
+  font-size: 24px;
+  color: #ff6600;
+  margin-bottom: 24px;
+  font-weight: 600;
+}
+
+.delete-account-form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.form-group {
+  width: 100%;
+  margin-bottom: 18px;
+}
+
+.form-group input {
+  width: 94%;
+  padding: 12px;
+  background: #2c2c2c;
+  border: 1px solid #444;
+  border-radius: 6px;
+  font-size: 15px;
+  color: #f5f5f5;
+  transition: border-color 0.3s ease, background-color 0.3s ease;
+  cursor: text;
+}
+
+.form-group input:focus {
+  border-color: #ff6600;
+  outline: none;
+  background-color: #333333;
+}
+
+.custom-dropdown {
+  width: 94%;
+  padding: 12px 15px;
+  background-color: #1f1f1f;
+  color: #f5f5f5;
+  border: 1px solid #444;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 15px;
+  transition: border-color 0.3s ease, background-color 0.3s ease;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=US-ASCII,%3csvg width='12' height='7' viewBox='0 0 12 7' fill='none' xmlns='http://www.w3.org/2000/svg'%3e%3cpath d='M1 1L6 6L11 1' stroke='%23ff6600' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3e%3c/svg%3e"); /* кастомна стрілка */
+  background-repeat: no-repeat;
+  background-position: right 15px center;
+  background-size: 12px 7px;
+}
+
+.custom-dropdown:hover,
+.custom-dropdown:focus {
+  border-color: #ff6600;
+  background-color: #2a2a2a;
+}
+
+.delete-account-button {
+  background-color: #ff6600;
+  color: #121212;
+  border: none;
+  padding: 12px 30px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: bold;
+  margin-top: 20px;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+  user-select: none;
+}
+
+.delete-account-button:hover {
+  background-color: #e65c00;
+  transform: scale(1.05);
+}
+
+.message-success {
+  color: #2a9d8f;
+  font-weight: 600;
+  margin-bottom: 15px;
+  font-size: 1rem;
+}
+
+.message-error {
+  color: #e63946;
+  font-weight: 600;
+  margin-bottom: 15px;
+  font-size: 1rem;
+}
+
+.back-text {
+  margin-top: 25px;
+  font-size: 14px;
+  color: #bbb;
+  text-align: center;
+}
+
+.back-text a {
+  color: #ff6600;
+  text-decoration: none;
+  transition: text-decoration 0.3s ease;
+}
+
+.back-text a:hover {
+  text-decoration: underline;
+}
+
+::selection {
+  background: #ff6600;
+  color: #121212;
+}
+
+
+/* Світло-фіолетова тема */
+body.purple .delete-account-container {
+  background: #f3e8ff;
+  box-shadow: 0 0 20px rgba(153, 102, 255, 0.3);
+  color: #2d004d;
+  border: 2px solid #9966ff;
+}
+
+body.purple .delete-account-container h2 {
+  color: #9966ff;
+}
+
+body.purple .form-group input,
+body.purple .custom-dropdown {
+  background: #f8f0ff;
+  color: #2d004d;
+  border: 1px solid #caaaff;
+}
+
+body.purple .form-group input:focus,
+body.purple .custom-dropdown:hover,
+body.purple .custom-dropdown:focus {
+  border-color: #9966ff;
+  background-color: #c098f8;
+}
+
+body.purple .custom-dropdown {
+  background-image: url("data:image/svg+xml;charset=US-ASCII,%3csvg width='12' height='7' viewBox='0 0 12 7' fill='none' xmlns='http://www.w3.org/2000/svg'%3e%3cpath d='M1 1L6 6L11 1' stroke='%239966ff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 15px center;
+  background-size: 12px 7px;
+}
+
+body.purple .delete-account-button {
+  background-color: #9966ff;
+  color: #fff;
+}
+
+body.purple .delete-account-button:hover {
+  background-color: #8a55e6;
+}
+
+body.purple .back-text a {
+  color: #9966ff;
+}
+
+body.purple  .back-text {
+  margin-top: 25px;
+  font-size: 14px;
+  color: #8a55e6;
+  text-align: center;
+}
+
+/* Бежева тема */
+body.beige .delete-account-container {
+  background: #fefaf3;
+  box-shadow: 0 0 15px rgba(200, 150, 100, 0.2);
+  color: #4d3a1f;
+  border: 2px solid #d4a373;
+}
+
+body.beige .delete-account-container h2 {
+  color: #d4a373;
+}
+
+body.beige .form-group input,
+body.beige .custom-dropdown {
+  background: #fffdf7;
+  color: #4d3a1f;
+  border: 1px solid #e6ccb2;
+}
+
+body.beige .form-group input:focus,
+body.beige .custom-dropdown:hover,
+body.beige .custom-dropdown:focus {
+  border-color: #d4a373;
+  background-color: #faf2e6;
+}
+
+
+body.beige .delete-account-button {
+  background-color: #d4a373;
+  color: #fff;
+}
+
+body.beige .delete-account-button:hover {
+  background-color: #c58b62;
+}
+
+body.beige .back-text a {
+  color: #d4a373;
+}
+
+
+/* Основний стиль для placeholder (темна тема) */
+.form-group input::placeholder {
+  color: #888888;
+  opacity: 1; /* Firefox за замовчуванням робить placeholder напівпрозорим */
+}
+
+/* Для кращої сумісності з різними браузерами */
+.form-group input::-webkit-input-placeholder {
+  color: #888888;
+}
+
+.form-group input::-moz-placeholder {
+  color: #888888;
+  opacity: 1;
+}
+
+.form-group input:-ms-input-placeholder {
+  color: #888888;
+}
+
+.form-group input:-moz-placeholder {
+  color: #888888;
+  opacity: 1;
+}
+
+/* Світла тема */
+body.light .form-group input::placeholder {
+  color: #666666;
+}
+
+body.light .form-group input::-webkit-input-placeholder {
+  color: #666666;
+}
+
+body.light .form-group input::-moz-placeholder {
+  color: #666666;
+  opacity: 1;
+}
+
+/* Фіолетова тема */
+body.purple .form-group input::placeholder {
+  color: #fff;
+  opacity: 0.7;
+}
+
+body.purple .form-group input::-webkit-input-placeholder {
+  color: #fff;
+  opacity: 0.7;
+}
+
+body.purple .form-group input::-moz-placeholder {
+  color: #fff;
+  opacity: 0.7;
+}
+
+/* Бежева тема */
+body.beige .form-group input::placeholder {
+  color: #c58b62;
+  opacity: 0.8;
+}
+
+body.beige .form-group input::-webkit-input-placeholder {
+  color: #c58b62;
+  opacity: 0.8;
+}
+
+body.beige .form-group input::-moz-placeholder {
+  color: #c58b62;
+  opacity: 0.8;
+}
+
+
+.input-error {
+  border: 1px solid #ff5c5c !important;
+  background-color: #fff0f0;
+}
+
+.error-tooltip {
+  position: absolute;
+  background: #ff4d4d;
+  color: white;
+  font-size: 13px;
+  padding: 6px 10px;
+  border-radius: 4px;
+  top: 100%;
+  left: 0;
+  margin-top: 4px;
+  white-space: nowrap;
+  z-index: 10;
+  opacity: 0;
+  transform: translateY(-5px);
+  pointer-events: none;
+  transition: all 0.2s ease;
+}
+
+.form-group:hover .error-tooltip,
+.form-group:focus-within .error-tooltip {
+  opacity: 1;
+  transform: translateY(0);
+}

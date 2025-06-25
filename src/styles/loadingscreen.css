@@ -1,0 +1,44 @@
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Segoe UI', sans-serif;
+  background-color: #fffdf8;
+}
+
+.meme-loading-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  text-align: center;
+}
+
+.meme-text {
+  font-size: 24px;
+  color: #333;
+  margin-bottom: 20px;
+  opacity: 0;
+  transition: opacity 1s ease-in;
+}
+
+.fade-in {
+  animation: fadeIn 1s forwards;
+}
+
+.fade-in.delay {
+  animation-delay: 2s;
+}
+
+.meme-gif {
+  width: 220px;
+  margin-top: 15px;
+  border-radius: 12px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+@keyframes fadeIn {
+  to {
+    opacity: 1;
+  }
+}

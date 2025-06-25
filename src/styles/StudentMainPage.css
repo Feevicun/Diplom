@@ -1,0 +1,1259 @@
+/* Загальні стилі */
+body {
+  background-color: #121212;
+  color: #f5f5f5;
+  font-family: 'Segoe UI', sans-serif;
+  margin: 0;
+  padding: 0;
+}
+
+  
+  /* Основний контейнер */
+  .student-dashboard {
+    padding: 40px;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  
+  /* Заголовок */
+  .student-dashboard h2 {
+    font-size: 28px;
+    margin-bottom: 24px;
+    color: #ff6600;
+    text-align: center;
+  }
+  
+  /* Секція з полем вводу */
+  .dashboard-content {
+    margin-bottom: 32px;
+    text-align: center;
+  }
+  
+  .course-input {
+    width: 100%;
+    height: 160px;
+    padding: 14px;
+    font-size: 16px;
+    background-color: #1e1e1e;
+    color: #f5f5f5;
+    border: 1px solid #444;
+    border-radius: 8px;
+    resize: vertical;
+    transition: border-color 0.3s;
+  }
+  
+  .course-input:focus {
+    outline: none;
+    border-color: #ff6600;
+  }
+  
+  /* Кнопка */
+  .match-button {
+    padding: 12px 16px;
+    background-color: #ff6600;
+    color: #121212;
+    border: none;
+    border-radius: 6px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.3s, transform 0.2s;
+  }
+  
+  .match-button:hover {
+    background-color: #e65c00;
+    transform: scale(1.05);
+  }
+  
+  /* Список викладачів */
+  .teacher-list {
+    margin-top: 40px;
+  }
+  
+  .teacher-list h3 {
+    font-size: 22px;
+    margin-bottom: 16px;
+    color: #ff6600;
+  }
+  
+  .teacher-card {
+    background-color: #1e1e1e;
+    border: 1px solid #333;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 18px;
+    cursor: pointer;
+    transition: background 0.3s, transform 0.2s;
+    transform-origin: left;
+  }
+  
+  .teacher-card:hover {
+    background-color: #262626;
+    transform: scale(1.02);
+  }
+  
+  .teacher-card h4 {
+    font-size: 18px;
+    margin-bottom: 6px;
+    color: #f5f5f5;
+  }
+  
+  .teacher-card p {
+    font-size: 14px;
+    color: #000;
+  }
+  
+/* Модальне затемнення */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.75);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  backdrop-filter: blur(2px);
+}
+
+/* Модальне вікно */
+.modal-content {
+  background-color: var(--modal-bg, #ffffff);
+  color: var(--modal-text, #121212);
+  padding: 32px;
+  border-radius: 16px;
+  max-width: 500px;
+  width: 90%;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.4);
+  text-align: left;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.modal-content h3 {
+  font-size: 22px;
+  color: #ff6600;
+  margin-bottom: 12px;
+}
+
+.modal-content p {
+  font-size: 15px;
+  line-height: 1.5;
+  margin-bottom: 24px;
+}
+
+/* Кнопки */
+.modal-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 14px;
+}
+
+.modal-buttons button {
+  padding: 10px 20px;
+  border-radius: 8px;
+  border: none;
+  font-size: 15px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.confirm-btn {
+  background-color: #4caf50;
+  color: #fff;
+}
+
+.confirm-btn:hover {
+  background-color: #43a047;
+}
+
+.cancel-btn {
+  background-color: #999;
+  color: #fff;
+}
+
+.cancel-btn:hover {
+  background-color: #777;
+}
+
+/* Анімація */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+body.dark {
+  --modal-bg: #1e1e1e;
+  --modal-text: #f5f5f5;
+}
+
+body.light {
+  --modal-bg: #ffffff;
+  --modal-text: #121212;
+}
+
+body.purple {
+  --modal-bg: #6d4eaa;
+  --modal-text: #f0e9ff;
+}
+
+body.beige {
+  --modal-bg: #fdf6e3;
+  --modal-text: #5a4732;
+}
+
+  
+  .teacher-card,
+  .match-button {
+    animation: fadeIn 0.4s ease-in;
+  }
+  
+  /* Колір виділення тексту */
+  ::selection {
+    background: #ff6600;
+    color: #121212;
+  }
+  
+  .student-header {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    color: #f5f5f5;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    z-index: 100;
+  }
+  
+  .student-profile {
+    display: flex;
+    align-items: center;
+    background-color: #1e1e1e;
+    padding: 6px 10px;
+    border-radius: 20px;
+    cursor: pointer;
+    border: 1px solid #444;
+    transition: background 0.3s ease;
+  }
+  
+  .student-profile:hover {
+    background-color: #2a2a2a;
+  }
+  
+  .avatar-wrapper {
+    width: 40px;
+    height: 40px;
+    margin-right: 10px;
+    overflow: hidden;
+    border-radius: 50%;
+    border: 2px solid #ff6600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+  
+  .avatar-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  
+  .student-name {
+    font-size: 15px;
+    color: #f5f5f5;
+    margin-right: 6px;
+  }
+  
+  .arrow {
+    font-size: 14px;
+    color: #ccc;
+    transition: transform 0.3s ease;
+  }
+
+
+  .student-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background-color: rgba(30, 30, 30, 0.95);
+  border-radius: 12px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+  padding: 10px 0;
+  min-width: 150px;
+  z-index: 1000;
+  backdrop-filter: blur(8px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  padding: 10px 7px;
+  font-size: 14px;
+  color: #f5f5f5;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.dropdown-item:hover {
+  background-color: #444;
+  color: #fff;
+  border-radius: 8px;
+}
+
+  
+body.purple .student-dropdown {
+    background-color: #a26bd8;
+    border: 1px solid #9958da;
+  } 
+
+  body.beige .student-dropdown {
+    background-color: #c7b18d;
+    border: 1px solid #d4b076;
+  } 
+
+  .dropdown-item {
+    padding: 10px 16px;
+    color: #f5f5f5;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+  
+  .dropdown-item:hover {
+    background-color: #3c3c3c;
+  }
+  
+
+  body.light {
+    background-color: #f5f5f5;
+    color: #1e1e1e;
+  }
+  
+  body.light .student-dashboard {
+    /* контейнер */
+    /* padding та max-width можна залишити без змін */
+  }
+  
+  body.light .student-dashboard h2 {
+    color: #ff6600; /* той же колір заголовка */
+  }
+  
+  body.light .dashboard-content {
+    text-align: center;
+  }
+  
+  body.light .course-input {
+    background-color: #ffffff;
+    color: #1e1e1e;
+    border: 1px solid #ccc;
+  }
+  
+  body.light .course-input:focus {
+    border-color: #ff6600;
+  }
+  
+  body.light .match-button {
+    background-color: #ff6600;
+    color: #ffffff;
+  }
+  
+  body.light .match-button:hover {
+    background-color: #e65c00;
+  }
+  
+  body.light .teacher-list h3 {
+    color: #ff6600;
+  }
+  
+  body.light .teacher-card {
+    background-color: #ffffff;
+    border: 1px solid #ddd;
+    color: #1e1e1e;
+    transition: background 0.3s, transform 0.2s;
+  }
+  
+  body.light .teacher-card:hover {
+    background-color: #f0f0f0;
+    transform: scale(1.02);
+  }
+  
+  body.light .teacher-card h4 {
+    color: #1e1e1e;
+  }
+  
+  body.light .teacher-card p {
+    color: #555;
+  }
+  
+  /* body.light .modal-overlay {
+    background-color: rgba(245, 245, 245, 0.95);
+  }
+  
+  body.light .modal-content {
+    background-color: #ffffff;
+    border: 1px solid #ccc;
+    color: #1e1e1e;
+  }
+  
+  body.light .modal-content h3 {
+    color: #ff6600;
+  }
+  
+  body.light .modal-content p {
+    color: #333;
+  }
+  
+  body.light .modal-buttons .confirm-btn {
+    background-color: #4caf50;
+    color: #ffffff;
+  }
+  
+  body.light .modal-buttons .confirm-btn:hover {
+    background-color: #3da644;
+  }
+  
+  body.light .modal-buttons .cancel-btn {
+    background-color: #aaa;
+    color: #1e1e1e;
+  }
+  
+  body.light .modal-buttons .cancel-btn:hover {
+    background-color: #999;
+  } */
+  
+  body.light .student-header {
+    color: #1e1e1e;
+  }
+  
+  body.light .student-profile {
+    background-color: #f0f0f0;
+    border: 1px solid #ccc;
+    transition: background 0.3s ease;
+  }
+  
+  body.light .student-profile:hover {
+    background-color: #e0e0e0;
+  }
+  
+  body.light .avatar-wrapper {
+    border: 2px solid #ff6600;
+  }
+  
+  body.light .student-name {
+    color: #1e1e1e;
+  }
+  
+  body.light .arrow {
+    color: #666;
+  }
+  
+body.light .student-dropdown {
+    background-color: #f9f9f9;
+    border: 1px solid #ccc;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+
+  body.light .dropdown-item {
+    color: #1e1e1e;
+  }
+  
+  body.light .dropdown-item:hover {
+    background-color: #ddd;
+  }
+  
+  /* Колір виділення тексту для світлої теми */
+  body.light ::selection {
+    background: #ff6600;
+    color: #ffffff;
+  }
+  body.purple {
+    background-color: #f3e8ff;
+    color: #3b0a63;
+  }
+  
+  body.purple .student-dashboard h2,
+  body.purple .teacher-list h3,
+  body.purple .modal-content h3 {
+    color: #9b4dff;
+  }
+  
+  body.purple .course-input {
+    background-color: #fff0ff;
+    color: #3b0a63;
+    border: 1px solid #c088ff;
+  }
+  
+  body.purple .course-input:focus {
+    border-color: #9b4dff;
+  }
+  
+  body.purple .match-button {
+    background-color: #9b4dff;
+    color: #fff;
+  }
+  
+  body.purple .match-button:hover {
+    background-color: #853ce0;
+  }
+  
+  body.purple .teacher-card {
+    background-color: #f9f0ff;
+    border: 1px solid #d5b5ff;
+    color: #3b0a63;
+  }
+  
+  body.purple .teacher-card:hover {
+    background-color: #f0e0ff;
+  }
+  
+  body.purple .teacher-card h4 {
+    color: #3b0a63;
+  }
+  
+  body.purple .teacher-card p {
+    color: #654a75;
+  }
+  
+  /* body.purple .modal-overlay {
+    background-color: rgba(243, 232, 255, 0.95);
+  }
+  
+  body.purple .modal-content {
+    background-color: #fff9ff;
+    border: 1px solid #d5b5ff;
+    color: #3b0a63;
+  }
+  
+  body.purple .modal-content p {
+    color: #4a3d5c;
+  } */
+
+    body.purple .dashboard-main p {
+    color: #9b4dff;
+  }
+  
+  /* body.purple .modal-buttons .confirm-btn {
+    background-color: #8bc34a;
+    color: #fff;
+  }
+  
+  body.purple .modal-buttons .confirm-btn:hover {
+    background-color: #7cb342;
+  }
+  
+  body.purple .modal-buttons .cancel-btn {
+    background-color: #bb86fc;
+    color: #fff;
+  }
+  
+  body.purple .modal-buttons .cancel-btn:hover {
+    background-color: #a66df2;
+  } */
+  
+  body.purple .student-header,
+  body.purple .student-name,
+  body.purple .arrow {
+    color: #3b0a63;
+  }
+  
+  body.purple .student-profile {
+    background-color: #f0ddff;
+    border: 1px solid #c088ff;
+  }
+  
+  body.purple .student-profile:hover {
+    background-color: #e6d0ff;
+  }
+  
+  body.purple .avatar-wrapper {
+    border-color: #9b4dff;
+  }
+  
+  body.purple .dropdown-item:hover {
+    background-color: #e6d0ff;
+  }
+
+  
+  body.beige {
+    background-color: #fdf6e3;
+    color: #3e2f1c;
+  }
+  
+  body.beige .student-dashboard h2,
+  body.beige .teacher-list h3,
+  body.beige .modal-content h3 {
+    color: #c68b00;
+  }
+  
+  body.beige .course-input {
+    background-color: #fff9e6;
+    color: #3e2f1c;
+    border: 1px solid #d8c18f;
+  }
+  
+  body.beige .course-input:focus {
+    border-color: #c68b00;
+  }
+  body.beige .match-button {
+    background-color: #c68b00;
+    color: #fff;
+  }
+  
+  body.beige .match-button:hover {
+    background-color: #a67600;
+  }
+  
+  body.beige .teacher-card {
+    background-color: #fffaf0;
+    border: 1px solid #decaa2;
+    color: #3e2f1c;
+  }
+  
+  body.beige .teacher-card:hover {
+    background-color: #f6eedc;
+  }
+  
+  body.beige .teacher-card h4 {
+    color: #3e2f1c;
+  }
+  
+  body.beige .teacher-card p {
+    color: #6b5432;
+  }
+  
+  /* body.beige .modal-overlay {
+    background-color: rgba(253, 246, 227, 0.95);
+  }
+  
+  body.beige .modal-content {
+    background-color: #fffaf0;
+    border: 1px solid #decaa2;
+    color: #3e2f1c;
+  }
+  
+  body.beige .modal-content p {
+    color: #4e3e28;
+  }
+  
+  body.beige .modal-buttons .confirm-btn {
+    background-color: #8bc34a;
+    color: #fff;
+  }
+  
+  body.beige .modal-buttons .confirm-btn:hover {
+    background-color: #7cb342;
+  }
+  
+  body.beige .modal-buttons .cancel-btn {
+    background-color: #cbb38c;
+    color: #3e2f1c;
+  }
+  
+  body.beige .modal-buttons .cancel-btn:hover {
+    background-color: #bca379;
+  } */
+  
+  body.beige .student-header,
+  body.beige .student-name,
+  body.beige .arrow {
+    color: #3e2f1c;
+  }
+  
+  body.beige .student-profile {
+    background-color: #f4ead2;
+    border: 1px solid #d8c18f;
+  }
+  
+  body.beige .student-profile:hover {
+    background-color: #e9dfc2;
+  }
+  
+  body.beige .avatar-wrapper {
+    border-color: #c68b00;
+  }
+  
+  body.beige .dropdown-item:hover {
+    background-color: #f0e5c6;
+  }
+  
+
+  .teacher-sidebar::-webkit-scrollbar,
+.matching-results::-webkit-scrollbar {
+  width: 0px;
+  background: transparent;
+}
+
+.teacher-sidebar {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE 10+ */
+}
+
+.teacher-sidebar::-webkit-scrollbar,
+.matching-results::-webkit-scrollbar {
+  display: none; /* Safari/Chrome (як альтернатива width: 0) */
+  width: 0;
+}
+
+.matching-results {
+  margin-top: 20px;
+  max-height: 400px;
+  overflow-y: auto;
+  padding-right: 10px;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE 10+ */
+}
+
+.matching-results::-webkit-scrollbar {
+  display: none; /* Chrome, Safari */
+}
+
+.matching-results h3 {
+  margin-bottom: 15px;
+  font-size: 18px;
+  color: var(--matching-title, #ff6600);
+}
+
+/* Карточка викладача */
+.teacher-match-card {
+  background-color: var(--teacher-card-bg, #2b2b2b);
+  color: var(--teacher-card-text, #f5f5f5);
+  border: 1px solid var(--teacher-card-border, #444);
+  border-radius: 10px;
+  padding: 15px;
+  margin-bottom: 12px;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+  transform-origin: left;
+}
+
+.teacher-match-card:hover {
+  background-color: var(--teacher-card-hover, #3a3a3a);
+  transform: scale(1.02);
+}
+
+.teacher-match-card strong {
+  font-size: 16px;
+  display: block;
+  margin-bottom: 6px;
+}
+
+.teacher-match-card p {
+  margin: 0;
+  font-size: 14px;
+  color: var(--teacher-card-desc, #ccc);
+}
+
+/* Повідомлення, якщо немає збігів */
+.no-matches {
+  margin-top: 20px;
+  font-style: italic;
+  color: var(--no-match-color, #999);
+}
+
+
+
+
+
+body.light .notifications-icon {
+  color: #000;
+}
+
+body.dark .notifications-icon {
+  color: #fff;
+}
+
+body.purple .notifications-icon {
+  color: #7a5ca8;
+}
+
+body.beige .notifications-icon {
+  color: #c19a6b;
+}
+
+
+
+/* ========== СИСТЕМИ СПОВІЩЕНЬ ========== */
+
+.notifications-icon {
+  position: absolute; /* або relative/fixed */
+  top: 10px;       /* рухає вниз (негативне значення — вгору) */
+  right: 20px;     /* рухає вліво */
+}
+
+
+.notifications-icon span {
+  position: absolute;
+  top: -7px;    
+  right: -6px;     
+  min-width: 0px;
+  height: 10px;
+  background: linear-gradient(135deg, #ff4757, #ff3742);
+  border-radius: 50%;
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  line-height: 1;
+  animation: pulse 2s infinite;
+  border: 2px solid var(--bg-color, #121212);
+  z-index: 2; 
+}
+
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+/* Оверлей */
+.notification-drawer-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(8px);
+  z-index: 1000;
+  display: flex;
+  justify-content: flex-end;
+  animation: fadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Панель сповіщень */
+.notification-drawer {
+  width: 500px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--drawer-bg);
+  border-radius: 16px;
+  box-shadow: -10px 0 30px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+/* Заголовок панелі */
+.drawer-title {
+  padding: 20px 24px 8px;
+  font-size: 22px;
+  font-weight: bold;
+  background: var(--drawer-header-bg);
+  border-bottom: 1px solid var(--drawer-border);
+}
+
+/* Базовий стиль для селектора всередині вкладки */
+.notification-mode-switcher-inside {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 24px;
+  margin: 0 24px;
+  border-bottom: 1px solid var(--drawer-border);
+}
+
+.notification-mode-switcher-inside label {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--switcher-label-color);
+}
+
+.notification-mode-switcher-inside select {
+  appearance: none; /* Прибирає дефолтну стрілку в більшості браузерів */
+  -webkit-appearance: none;
+  -moz-appearance: none;
+
+  padding: 8px 36px 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--switcher-border);
+  background-color: var(--switcher-select-bg);
+  color: var(--switcher-select-color);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  position: relative;
+
+  background-image: url("data:image/svg+xml,%3Csvg fill='%23666' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 18px;
+  transition: all 0.3s ease;
+}
+
+.notification-mode-switcher-inside select:focus {
+  outline: none;
+  border-color: var(--switcher-focus);
+  box-shadow: 0 0 0 3px var(--switcher-focus-shadow);
+}
+
+
+
+
+.drawer-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 0;
+}
+
+.drawer-footer {
+  padding: 16px 24px;
+  border-top: 1px solid var(--drawer-border);
+  background: var(--drawer-footer-bg);
+}
+
+/* Контент панелі */
+.drawer-content {
+  padding: 20px 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: var(--drawer-content-bg);
+  border-radius: 12px;
+  margin: 16px;
+  box-shadow: 0 2px 8px var(--drawer-shadow);
+}
+
+.drawer-message {
+  flex: 1;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--drawer-text-color);
+  font-weight: 500;
+}
+
+/* Кнопки стрілок для слайдера */
+.arrow-btn {
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 50%;
+  background: var(--arrow-bg);
+  color: var(--arrow-color);
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 8px var(--arrow-shadow);
+}
+
+.arrow-btn:hover {
+  transform: scale(1.1);
+  background: var(--arrow-hover-bg);
+  box-shadow: 0 4px 12px var(--arrow-hover-shadow);
+}
+
+.arrow-btn:active {
+  transform: scale(0.9);
+}
+
+/* Список сповіщень (режим прокрутки) */
+.drawer-scroll-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+.drawer-scroll-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.drawer-scroll-list::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+  border-radius: 3px;
+}
+
+.drawer-scroll-list::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 3px;
+}
+
+.drawer-scroll-list::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+}
+
+/* Елемент сповіщення */
+.notification-item {
+  padding: 16px;
+  margin: 8px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background: var(--notification-bg);
+  border: 1px solid var(--notification-border);
+  position: relative;
+  overflow: hidden;
+}
+
+.notification-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 4px;
+  height: 100%;
+  background: var(--notification-accent);
+  transform: scaleY(0);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.notification-item:hover::before {
+  transform: scaleY(1);
+}
+
+.notification-item:hover {
+  transform: translateX(8px);
+  background: var(--notification-hover-bg);
+  box-shadow: 0 4px 16px var(--notification-hover-shadow);
+}
+
+.notification-item.read {
+  opacity: 0.6;
+  background: var(--notification-read-bg);
+  color: var(--notification-read-color);
+}
+
+.notification-item.read::before {
+  background: var(--notification-read-accent);
+}
+
+/* Карусель сповіщень */
+.drawer-carousel {
+  padding: 24px;
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--carousel-text);
+  background: var(--carousel-bg);
+  border-radius: 16px;
+  margin: 16px;
+  box-shadow: 0 4px 16px var(--carousel-shadow);
+  position: relative;
+  overflow: hidden;
+  animation: fadeInUp 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.drawer-carousel::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--carousel-accent), transparent);
+  animation: slideProgress 4s linear infinite;
+}
+
+@keyframes slideProgress {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Повідомлення про порожній список */
+.notification-empty {
+  text-align: center;
+  padding: 60px 24px;
+  color: var(--empty-text);
+  font-size: 16px;
+  font-style: italic;
+}
+
+/* Кнопка закриття */
+.drawer-close {
+  margin: 20px 24px;
+  padding: 16px 32px;
+  background: var(--close-btn-bg);
+  color: var(--close-btn-color);
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.drawer-close::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s;
+}
+
+.drawer-close:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px var(--close-btn-shadow);
+}
+
+.drawer-close:hover::before {
+  left: 100%;
+}
+
+.drawer-close:active {
+  transform: translateY(0);
+}
+
+/* Селектор режиму перегляду */
+.notification-mode-switcher {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 24px;
+  background: var(--switcher-bg);
+  border-radius: 12px;
+  margin: 16px;
+  box-shadow: 0 2px 8px var(--switcher-shadow);
+}
+
+.notification-mode-switcher label {
+  font-weight: 600;
+  color: var(--switcher-label);
+  font-size: 14px;
+}
+
+.notification-mode-switcher select {
+  padding: 8px 12px;
+  border: 1px solid var(--switcher-border);
+  border-radius: 8px;
+  background: var(--switcher-select-bg);
+  color: var(--switcher-select-color);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.notification-mode-switcher select:focus {
+  outline: none;
+  border-color: var(--switcher-focus);
+  box-shadow: 0 0 0 3px var(--switcher-focus-shadow);
+}
+
+
+
+/* Анімація виходу (закриття) */
+@keyframes slideOut {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+.notification-drawer.closing {
+  animation: slideOut 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+
+/* ========== АДАПТИВНІСТЬ ========== */
+
+@media (max-width: 768px) {
+  .notification-drawer {
+    width: 100vw;
+  }
+  
+  .notification-drawer-overlay {
+    justify-content: center;
+  }
+  
+  .drawer-content {
+    margin: 12px;
+    padding: 16px;
+  }
+  
+  .arrow-btn {
+    width: 36px;
+    height: 36px;
+    font-size: 14px;
+  }
+  
+  .notification-item {
+    margin: 6px;
+    padding: 12px;
+  }
+  
+  .drawer-carousel {
+    margin: 12px;
+    padding: 20px;
+  }
+  
+  .notification-mode-switcher {
+    margin: 12px;
+    padding: 12px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+}
+
+/* ========== ACCESSIBILITY ========== */
+
+@media (prefers-reduced-motion: reduce) {
+  .notifications-icon,
+  .arrow-btn,
+  .notification-item,
+  .drawer-close {
+    transition: none;
+  }
+  
+  .notifications-icon span {
+    animation: none;
+  }
+  
+  .drawer-carousel::before {
+    animation: none;
+  }
+  
+  .notification-drawer {
+    animation: none;
+  }
+  
+  .notification-drawer-overlay {
+    animation: none;
+  }
+}

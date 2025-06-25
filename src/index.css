@@ -1,0 +1,320 @@
+:root {
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: light dark;
+  color: rgba(255, 255, 255, 0.87);
+  background-color: #242424;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  font-weight: 500;
+  color: #646cff;
+  text-decoration: inherit;
+}
+a:hover {
+  color: #535bf2;
+}
+
+body {
+  margin: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+h1 {
+  font-size: 3.2em;
+  line-height: 1.1;
+}
+
+button {
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: 500;
+  font-family: inherit;
+  background-color: #1a1a1a;
+  cursor: pointer;
+  transition: border-color 0.25s;
+}
+button:hover {
+  border-color: #646cff;
+}
+button:focus,
+button:focus-visible {
+  outline: 4px auto -webkit-focus-ring-color;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    color: #213547;
+    background-color: #ffffff;
+  }
+  a:hover {
+    color: #747bff;
+  }
+  button {
+    background-color: #f9f9f9;
+  }
+}
+
+/* Темна тема */
+body.dark,
+body:not(.light):not(.purple):not(.beige) {
+  --bg-color: #121212;
+  --drawer-bg: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+  --drawer-title-color: #ffffff;
+  --drawer-border: rgba(255, 255, 255, 0.1);
+  --drawer-header-bg: rgba(0, 0, 0, 0.3);
+  --drawer-content-bg: rgba(255, 255, 255, 0.05);
+  --drawer-text-color: #e0e0e0;
+  --drawer-shadow: rgba(0, 0, 0, 0.3);
+  
+  --arrow-bg: rgba(255, 255, 255, 0.1);
+  --arrow-color: #ffffff;
+  --arrow-hover-bg: rgba(255, 255, 255, 0.2);
+  --arrow-shadow: rgba(0, 0, 0, 0.2);
+  --arrow-hover-shadow: rgba(0, 0, 0, 0.3);
+  
+  --notification-bg: rgba(255, 255, 255, 0.08);
+  --notification-border: rgba(255, 255, 255, 0.12);
+  --notification-hover-bg: rgba(255, 255, 255, 0.15);
+  --notification-hover-shadow: rgba(0, 0, 0, 0.4);
+  --notification-accent: #ff6600;
+  --notification-read-bg: rgba(255, 255, 255, 0.03);
+  --notification-read-color: #888888;
+  --notification-read-accent: #555555;
+  
+  --carousel-bg: rgba(255, 102, 0, 0.1);
+  --carousel-text: #ffffff;
+  --carousel-shadow: rgba(255, 102, 0, 0.2);
+  --carousel-accent: #ff6600;
+  
+  --empty-text: #888888;
+  --close-btn-bg: #ff6600;
+  --close-btn-color: #ffffff;
+  --close-btn-shadow: rgba(255, 102, 0, 0.4);
+  
+  --switcher-bg: rgba(255, 255, 255, 0.05);
+  --switcher-shadow: rgba(0, 0, 0, 0.2);
+  --switcher-label: #ffffff;
+  --switcher-border: rgba(255, 255, 255, 0.2);
+  --switcher-select-bg: rgba(255, 255, 255, 0.1);
+  --switcher-select-color: #ffffff;
+  --switcher-focus: #ff6600;
+  --switcher-focus-shadow: rgba(255, 102, 0, 0.3);
+  
+  --scrollbar-track: rgba(255, 255, 255, 0.1);
+  --scrollbar-thumb: rgba(255, 255, 255, 0.3);
+  --scrollbar-thumb-hover: rgba(255, 255, 255, 0.5);
+}
+
+/* Світла тема */
+body.light {
+  --bg-color: #f5f5f5;
+  --drawer-bg: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+  --drawer-title-color: #212529;
+  --drawer-border: rgba(0, 0, 0, 0.1);
+  --drawer-header-bg: rgba(255, 255, 255, 0.8);
+  --drawer-content-bg: rgba(0, 0, 0, 0.02);
+  --drawer-text-color: #495057;
+  --drawer-shadow: rgba(0, 0, 0, 0.1);
+  
+  --arrow-bg: rgba(0, 0, 0, 0.05);
+  --arrow-color: #495057;
+  --arrow-hover-bg: rgba(0, 0, 0, 0.1);
+  --arrow-shadow: rgba(0, 0, 0, 0.1);
+  --arrow-hover-shadow: rgba(0, 0, 0, 0.15);
+  
+  --notification-bg: rgba(0, 0, 0, 0.02);
+  --notification-border: rgba(0, 0, 0, 0.08);
+  --notification-hover-bg: rgba(0, 0, 0, 0.05);
+  --notification-hover-shadow: rgba(0, 0, 0, 0.1);
+  --notification-accent: #ff6600;
+  --notification-read-bg: rgba(0, 0, 0, 0.01);
+  --notification-read-color: #6c757d;
+  --notification-read-accent: #dee2e6;
+  
+  --carousel-bg: rgba(255, 102, 0, 0.05);
+  --carousel-text: #495057;
+  --carousel-shadow: rgba(255, 102, 0, 0.1);
+  --carousel-accent: #ff6600;
+  
+  --empty-text: #6c757d;
+  --close-btn-bg: #ff6600;
+  --close-btn-color: #ffffff;
+  --close-btn-shadow: rgba(255, 102, 0, 0.3);
+  
+  --switcher-bg: rgba(0, 0, 0, 0.02);
+  --switcher-shadow: rgba(0, 0, 0, 0.05);
+  --switcher-label: #495057;
+  --switcher-border: rgba(0, 0, 0, 0.15);
+  --switcher-select-bg: #ffffff;
+  --switcher-select-color: #495057;
+  --switcher-focus: #ff6600;
+  --switcher-focus-shadow: rgba(255, 102, 0, 0.25);
+  
+  --scrollbar-track: rgba(0, 0, 0, 0.05);
+  --scrollbar-thumb: rgba(0, 0, 0, 0.2);
+  --scrollbar-thumb-hover: rgba(0, 0, 0, 0.3);
+}
+
+/* Фіолетова тема */
+body.purple {
+  --bg-color: #f3e8ff;
+  --drawer-bg: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%);
+  --drawer-title-color: #581c87;
+  --drawer-border: rgba(139, 69, 19, 0.15);
+  --drawer-header-bg: rgba(196, 181, 253, 0.3);
+  --drawer-content-bg: rgba(139, 69, 19, 0.05);
+  --drawer-text-color: #7c3aed;
+  --drawer-shadow: rgba(139, 69, 19, 0.1);
+  
+  --arrow-bg: rgba(139, 69, 19, 0.1);
+  --arrow-color: #7c3aed;
+  --arrow-hover-bg: rgba(139, 69, 19, 0.2);
+  --arrow-shadow: rgba(139, 69, 19, 0.15);
+  --arrow-hover-shadow: rgba(139, 69, 19, 0.25);
+  
+  --notification-bg: rgba(139, 69, 19, 0.05);
+  --notification-border: rgba(139, 69, 19, 0.1);
+  --notification-hover-bg: rgba(139, 69, 19, 0.1);
+  --notification-hover-shadow: rgba(139, 69, 19, 0.2);
+  --notification-accent: #9b4dff;
+  --notification-read-bg: rgba(139, 69, 19, 0.02);
+  --notification-read-color: #a78bfa;
+  --notification-read-accent: #c4b5fd;
+  
+  --carousel-bg: rgba(155, 77, 255, 0.1);
+  --carousel-text: #581c87;
+  --carousel-shadow: rgba(155, 77, 255, 0.15);
+  --carousel-accent: #9b4dff;
+  
+  --empty-text: #a78bfa;
+  --close-btn-bg: #9b4dff;
+  --close-btn-color: #ffffff;
+  --close-btn-shadow: rgba(155, 77, 255, 0.4);
+  
+  --switcher-bg: rgba(139, 69, 19, 0.05);
+  --switcher-shadow: rgba(139, 69, 19, 0.1);
+  --switcher-border: rgba(139, 69, 19, 0.2);
+  --switcher-select-bg: #faf5ff;
+  --switcher-focus: #9b4dff;
+  --switcher-focus-shadow: rgba(155, 77, 255, 0.3);
+  
+  --scrollbar-track: rgba(139, 69, 19, 0.1);
+  --scrollbar-thumb: rgba(139, 69, 19, 0.3);
+  --scrollbar-thumb-hover: rgba(139, 69, 19, 0.5);
+}
+
+/* Бежева тема */
+body.beige {
+  --bg-color: #fdf6e3;
+  --drawer-bg: linear-gradient(135deg, #fffbf0 0%, #fdf6e3 100%);
+  --drawer-title-color: #92400e;
+  --drawer-border: rgba(180, 83, 9, 0.15);
+  --drawer-header-bg: rgba(254, 243, 199, 0.5);
+  --drawer-content-bg: rgba(180, 83, 9, 0.05);
+  --drawer-text-color: #b45309;
+  --drawer-shadow: rgba(180, 83, 9, 0.1);
+  
+  --arrow-bg: rgba(180, 83, 9, 0.1);
+  --arrow-color: #b45309;
+  --arrow-hover-bg: rgba(180, 83, 9, 0.2);
+  --arrow-shadow: rgba(180, 83, 9, 0.15);
+  --arrow-hover-shadow: rgba(180, 83, 9, 0.25);
+  
+  --notification-bg: rgba(180, 83, 9, 0.05);
+  --notification-border: rgba(180, 83, 9, 0.1);
+  --notification-hover-bg: rgba(180, 83, 9, 0.1);
+  --notification-hover-shadow: rgba(180, 83, 9, 0.2);
+  --notification-accent: #c68b00;
+  --notification-read-bg: rgba(180, 83, 9, 0.02);
+  --notification-read-color: #fbbf24;
+  --notification-read-accent: #fed7aa;
+  
+  --carousel-bg: rgba(198, 139, 0, 0.1);
+  --carousel-text: #92400e;
+  --carousel-shadow: rgba(198, 139, 0, 0.15);
+  --carousel-accent: #c68b00;
+  
+  --empty-text: #fbbf24;
+  --close-btn-bg: #c68b00;
+  --close-btn-color: #ffffff;
+  --close-btn-shadow: rgba(198, 139, 0, 0.4);
+  
+  --switcher-bg: rgba(180, 83, 9, 0.05);
+  --switcher-shadow: rgba(180, 83, 9, 0.1);
+  --switcher-label: #92400e;
+  --switcher-border: rgba(180, 83, 9, 0.2);
+  --switcher-select-bg: #fffbf0;
+  --switcher-select-color: #92400e;
+  --switcher-focus: #c68b00;
+  --switcher-focus-shadow: rgba(198, 139, 0, 0.3);
+  
+  --scrollbar-track: rgba(180, 83, 9, 0.1);
+  --scrollbar-thumb: rgba(180, 83, 9, 0.3);
+  --scrollbar-thumb-hover: rgba(180, 83, 9, 0.5);
+}
+
+
+/* Підлаштування кольорів під теми */
+body.dark {
+  --switcher-label-color: #ffffff;
+  --switcher-border: #444;
+  --switcher-select-bg: #222;
+  --switcher-select-color: #fff;
+    --switcher-focus: #8884ff;
+  --switcher-focus-shadow: rgba(136, 132, 255, 0.2);
+    --matching-title: #ff6600;
+  --teacher-card-bg: #2b2b2b;
+  --teacher-card-text: #f5f5f5;
+  --teacher-card-border: #444;
+  --teacher-card-hover: #3a3a3a;
+  --teacher-card-desc: #ccc;
+  --no-match-color: #999;
+}
+
+body.light {
+  --switcher-label-color: #000000;
+  --switcher-border: #ccc;
+  --switcher-select-bg: #fff;
+  --switcher-select-color: #000;
+    --switcher-focus: #0099ff;
+  --switcher-focus-shadow: rgba(0, 153, 255, 0.2);
+    --matching-title: #ff6600;
+  --teacher-card-bg: #f0f0f0;
+  --teacher-card-text: #121212;
+  --teacher-card-border: #ccc;
+  --teacher-card-hover: #e6e6e6;
+  --teacher-card-desc: #333;
+  --no-match-color: #666;
+}
+
+body.purple {
+  --switcher-label-color: #581c87;
+  --switcher-border: #aa88ff;
+  --switcher-select-bg: #aa88ff;
+  --switcher-select-color: #f0e9ff;
+    --switcher-focus: #d0a3ff;
+  --switcher-focus-shadow: rgba(208, 163, 255, 0.2);
+}
+
+body.beige {
+  --switcher-label-color: #3d2f1c;
+  --switcher-border: #c9b18a;
+  --switcher-select-bg: #f5f1e6;
+  --switcher-select-color: #3d2f1c;
+  --switcher-focus: #d0a3ff;
+  --switcher-focus-shadow: rgba(208, 163, 255, 0.2);
+}

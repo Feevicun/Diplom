@@ -1,0 +1,16 @@
+[
+  {
+    "name": "Vika Osoba",
+    "email": "vikander.games@gmail.com",
+    "password": "Feevicun29",
+    "role": "Student",
+    "verified": true
+  },
+  {
+    "name": "Vika Osoba",
+    "email": "vikander.work@gmail.com",
+    "password": "Feevicun12",
+    "role": "Student",
+    "verified": true
+  }
+]

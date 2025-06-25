@@ -1,0 +1,212 @@
+{
+  "authorization": {
+    "title": "Registration for course work",
+    "selectRole": "Select User Role:",
+    "selectPlaceholder": "Select...",
+    "roles": {
+      "student": "Student",
+      "teacher": "Teacher"
+    },
+    "errors": {
+      "role": "Please select a role.",
+      "loginEmail": "Email is required.",
+      "loginPassword": "Password is required.",
+      "registerName": "Name is required.",
+      "registerEmail": "Email is required.",
+      "registerEmailFormat": "Invalid email format.",
+      "registerPassword": "Password is required.",
+      "registerPasswordLength": "Password must be at least 6 characters."
+    },
+    "tabs": {
+      "login": "Login",
+      "register": "Register"
+    },
+    "login": {
+      "emailPlaceholder": "Email",
+      "passwordPlaceholder": "Password",
+      "button": "Log In",
+      "noAccount": "Don't have an account?",
+      "registerLink": "Register",
+      "forgetPassword": "Forget password?",
+      "resetLink": "Reset"
+    },
+    "register": {
+      "namePlaceholder": "Full Name",
+      "emailPlaceholder": "Email",
+      "passwordPlaceholder": "Password",
+      "button": "Register",
+      "haveAccount": "Already have an account?",
+      "loginLink": "Log In"
+    }
+  },
+
+  "deleteAccount": {
+    "title": "Delete Account",
+    "emailPlaceholder": "Email",
+    "selectRole": "Select role",
+    "roles": {
+      "teacher": "Teacher",
+      "student": "Student"
+    },
+    "errors": {
+      "emailRequired": "Please enter your email.",
+      "emailInvalid": "Invalid email format.",
+      "roleRequired": "Please select a role."
+    },
+    "button": "Delete Account",
+    "successMessage": "Account with email {{email}} and role {{role}} has been deleted.",
+    "backText": "Back to",
+    "authPage": "authentication page"
+  },
+
+  "studentDashboard": {
+    "header": {
+      "uploadPhoto": "Upload photo",
+      "defaultName": "Student",
+      "profileDropdown": {
+        "profile": "My Profile",
+        "history": "History",
+        "logout": "Logout"
+      }
+    },
+    "sidebar": {
+      "title": "Department Teachers"
+    },
+    "main": {
+      "instruction": "Enter your course work topic or idea",
+      "textareaPlaceholder": "Describe your idea or topic...",
+      "matchButton": "Match Teacher",
+      "topicLabel": "Course Work Topic:",
+      "noMatches": "Unfortunately, there are no teachers matching the topic."
+    },
+    "modal": {
+      "book": "Book",
+      "cancel": "Cancel"
+    },
+    "notification": {
+  "title": "Notifications",
+  "modeLabel": "Mode:",
+  "modeOptions": {
+    "slider": "Slider",
+    "scroll": "List",
+    "carousel": "Auto-scroll"
+  },
+  "messages": {
+    "1": "You have been assigned a course topic",
+    "2": "A new teacher has been added to the department",
+    "3": "Your profile has been updated"
+  },
+  "empty": "No new notifications",
+  "close": "Close"
+}
+
+
+  },
+
+  "studentProfile": {
+    "title": "Student Profile",
+    "labels": {
+      "name": "Name:",
+      "surname": "Surname:",
+      "email": "Email:",
+      "course": "Course:",
+      "group": "Group:",
+      "faculty": "Faculty:",
+      "department": "Department:",
+      "oldPassword": "Old Password:",
+      "newPassword": "New Password:",
+      "confirmPassword": "Confirm New Password:"
+    },
+    "buttons": {
+      "saveProfile": "Save",
+      "changePassword": "Change Password",
+      "logout": "Logout",
+      "modalSave": "Save",
+      "modalCancel": "Cancel"
+    },
+    "alerts": {
+      "profileSaved": "Profile saved!",
+      "fillAllFields": "Please fill all fields",
+      "newPasswordMismatch": "New password does not match confirmation",
+      "passwordChangeError": "An error occurred while changing the password.",
+      "logoutMessage": "You have logged out"
+    },
+    "modalTitle": "Change Password",
+    "backArrow": "←"
+  },
+
+  "teacherProfile": {
+    "title": "Teacher Profile",
+    "backArrow": "←",
+    "avatarUpload": "Upload photo",
+    "fields": {
+      "name": "Name:",
+      "surname": "Surname:",
+      "email": "Email:",
+      "faculty": "Faculty:",
+      "department": "Department:"
+    },
+    "buttons": {
+      "saveProfile": "Save",
+      "changePassword": "Change Password",
+      "logout": "Logout",
+      "modalSave": "Save",
+      "modalCancel": "Cancel"
+    },
+    "modal": {
+      "title": "Change Password",
+      "oldPassword": "Old Password:",
+      "newPassword": "New Password:",
+      "confirmPassword": "Confirm New Password:"
+    },
+    "alerts": {
+      "fillAllFields": "Please fill all fields",
+      "oldPasswordIncorrect": "Old password is incorrect",
+      "passwordMismatch": "New password does not match confirmation",
+      "passwordChanged": "Password changed successfully!",
+      "profileSaved": "Profile saved!",
+      "logoutMessage": "You have logged out"
+    }
+  },
+
+  "teacherDashboard": {
+    "profileMenu": {
+      "myProfile": "My Profile",
+      "calendar": "Calendar",
+      "logout": "Logout"
+    },
+    "bookedStudentsTitle": "Booked Students",
+    "studentCard": {
+      "student": "👩‍🎓 {{name}}",
+      "courseIdea": "Course Idea:",
+      "accept": "Accept",
+      "reject": "Reject"
+    },
+    "noBookedStudents": "No booked students yet."
+  },
+  
+  "registration": {
+    "title": "Registration",
+    "button": "Register",
+    "successMessage": "Registration successful! Welcome, {{firstName}} {{surname}}!",
+    "placeholders": {
+      "surname": "Surname",
+      "firstName": "First Name",
+      "faculty": "Faculty",
+      "chooseFaculty": "Choose Faculty",
+      "department": "Department",
+      "chooseDepartment": "Choose Department",
+      "course": "Course",
+      "group": "Group"
+    },
+    "errors": {
+      "surname": "Please enter your surname",
+      "firstName": "Please enter your first name",
+      "faculty": "Please select a faculty",
+      "department": "Please select a department",
+      "course": "Please enter your course",
+      "group": "Please enter your group"
+    }
+  }
+}
+

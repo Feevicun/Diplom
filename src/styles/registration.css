@@ -1,0 +1,362 @@
+/* Загальні налаштування сторінки */
+.mainpage-container {
+    min-height: 100%;
+    margin: 100px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #f5f5f5;
+    padding: 20px;
+}
+
+body.light .mainpage-form{
+    background-color: #ffffff;
+    color: #1e1e1e;
+  }
+  
+  /* Темна тема */
+body.dark .mainpage-form{
+    background-color: #1e1e1e;
+    color: #f5f5f5;
+  }
+
+/* Форма */
+.mainpage-form {
+    width: 420px;
+    background-color: #1e1e1e;
+    padding: 30px 40px;
+    border-radius: 12px;
+    box-shadow: 0 0 20px rgba(255, 102, 0, 0.3);
+    text-align: center;
+    transition: transform 0.4s ease, box-shadow 0.4s ease;
+}
+
+.mainpage-form:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 0 30px rgba(255, 102, 0, 0.5);
+}
+
+/* Заголовок */
+.mainpage-title {
+    font-size: 24px;
+    margin-bottom: 20px;
+    color: #ff6600;
+}
+
+/* Група інпутів, щоб розділити по горизонталі */
+.mainpage-split-inputs {
+    display: flex;
+    gap: 1px;
+    margin-bottom: 18px;
+}
+
+/* Група інпутів */
+.mainpage-form-group {
+    margin-bottom: 1px;
+    text-align: left;
+}
+
+/* Лейбли */
+.mainpage-label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #ccc;
+}
+
+body.purple .mainpage-label {
+    color: #fff;
+}
+body.light .mainpage-label {
+    color: #ccc;
+}
+body.beige .mainpage-label {
+    color: #7d7d7d;
+}
+
+/* Інпут та селект */
+.mainpage-input,
+.mainpage-select {
+    width: 95%;
+    padding: 10px;
+    background-color: #2c2c2c;
+    border: 1px solid #444;
+    border-radius: 6px;
+    color: #f5f5f5;
+    font-size: 15px;
+    transition: border-color 0.3s ease;
+    box-sizing: border-box;
+}
+
+.mainpage-input:focus,
+.mainpage-select:focus {
+    outline: none;
+    border-color: #ff6600;
+}
+
+/* Темна тема — вже є */
+body.dark .mainpage-input,
+body.dark .mainpage-select {
+    background-color: #2c2c2c;
+    color: #f5f5f5;
+    border: 1px solid #444;
+}
+
+/* Світла тема */
+body.light .mainpage-input,
+body.light .mainpage-select {
+    background-color: #f5f5f5;
+    color: #1e1e1e;
+    border: 1px solid #ccc;
+}
+
+/* При фокусі — змінюється лише рамка */
+body.dark .mainpage-input:focus,
+body.dark .mainpage-select:focus,
+body.light .mainpage-input:focus,
+body.light .mainpage-select:focus {
+    border-color: #ff6600;
+    outline: none;
+}
+
+/* Темна тема — оранжевий відтінок (є в оригіналі) */
+body.dark .mainpage-form {
+    background-color: #1e1e1e;
+    color: #f5f5f5;
+    box-shadow: 0 0 20px rgba(255, 102, 0, 0.3);
+}
+
+body.dark .mainpage-form:hover {
+    box-shadow: 0 0 30px rgba(255, 102, 0, 0.5);
+}
+
+/* Світла тема — світло-сірий відтінок для тіні */
+body.light .mainpage-form {
+    background-color: #ffffff;
+    color: #1e1e1e;
+    box-shadow: 0 0 20px rgba(253, 2, 2, 0.3);
+}
+
+body.light .mainpage-form:hover {
+    box-shadow: 0 0 30px rgba(100, 100, 100, 0.5);
+}
+
+
+/* Кнопка */
+.mainpage-submit-btn {
+    background-color: #ff6600;
+    color: #121212;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: bold;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    width: 100%;
+    margin-top: 10px;
+}
+
+.mainpage-submit-btn:hover {
+    background-color: #e65c00;
+    transform: scale(1.05);
+}
+
+/* Повідомлення про реєстрацію */
+.mainpage-registration-message {
+    margin-top: 18px;
+    font-size: 16px;
+    color: #ffcc80;
+}
+
+
+/* Інпути для розділених полів прізвища і імені мають однакову ширину */
+.mainpage-input-surname,
+.mainpage-input-firstname {
+    flex: 1;
+}
+
+/* Вибір групи і кафедри */
+.mainpage-select {
+    cursor: pointer;
+}
+
+/* Виділення тексту */
+::selection {
+    background: #ff6600;
+    color: #121212;
+}
+
+body.purple ::selection {
+    background: #a26bd8;
+    color: #fff;
+}
+
+body.beige ::selection {
+    background: #c7b18d;
+    color: #fff;
+}
+
+/* Анімація появи */
+@keyframes fadeIn {
+    to {
+        opacity: 1;
+    }
+}
+
+
+body.purple .mainpage-form {
+    background-color: #b6a4da85;
+    color: #6c5b8f;
+    box-shadow: 0 0 20px rgba(155, 89, 182, 0.4);
+    border: 1px solid #6e4d9d;
+  }
+  
+  body.purple .mainpage-form input,
+  body.purple .mainpage-form select,
+  body.purple .mainpage-form textarea {
+    background-color: #6d4eaa85;
+    color: #f0e9ff;
+    border: 1px solid #6e4d9d;
+
+  }
+  
+  body.purple .mainpage-form input:focus,
+  body.purple .mainpage-form select:focus,
+  body.purple .mainpage-form textarea:focus {
+    border-color: #a26bd8;
+    outline: none;
+  }
+  
+  body.purple .mainpage-form button {
+    background-color: #a26bd8;
+    color: #fff;
+    border: none;
+  }
+  
+  body.purple .mainpage-form button:hover {
+    background-color: #8d56c4;
+    transform: scale(1.05);
+  }
+
+  
+  body.beige .mainpage-form {
+    background-color: #fdf6e3;
+    color: #5a4732;
+    box-shadow: 0 0 15px rgba(189, 158, 119, 0.3);
+    border: 1px solid #c7b18d;
+  }
+  
+  body.beige .mainpage-title {
+    font-size: 24px;
+    margin-bottom: 20px;
+    color: #c7b18d;
+}
+
+  body.beige .mainpage-form input,
+  body.beige .mainpage-form select,
+  body.beige .mainpage-form textarea {
+    background-color: #f3e6d0;
+    color: #5a4732;
+    border: 1px solid #c7b18d;
+  }
+  
+  body.beige .mainpage-form input:focus,
+  body.beige .mainpage-form select:focus,
+  body.beige .mainpage-form textarea:focus {
+    border-color: #d49e52;
+    outline: none;
+  }
+  
+  body.beige .mainpage-form button {
+    background-color: #d49e52;
+    color: #fff;
+  }
+  
+  body.beige .mainpage-form button:hover {
+    background-color: #c28830;
+    transform: scale(1.05);
+  }
+  
+
+
+  /* Основні стилі для placeholder в інпутах */
+.mainpage-input::placeholder {
+    color: #888888; /* Сірий колір для placeholder */
+    opacity: 1; /* Firefox за замовчуванням робить placeholder напівпрозорим */
+  }
+  
+  /* Для кращої сумісності з різними браузерами */
+  .mainpage-input::-webkit-input-placeholder {
+    color: #888888;
+  }
+  
+  .mainpage-input::-moz-placeholder {
+    color: #888888;
+    opacity: 1;
+  }
+  
+  .mainpage-input:-ms-input-placeholder {
+    color: #888888;
+  }
+  
+  .mainpage-input:-moz-placeholder {
+    color: #888888;
+    opacity: 1;
+  }
+  
+  /* Окремі стилі для різних інпутів (якщо потрібно) */
+  .mainpage-input-surname::placeholder {
+    color: #ff6600; /* Помаранчевий для прізвища */
+  }
+  
+  .mainpage-input-firstname::placeholder {
+    color: #4CAF50; /* Зелений для імені */
+  }
+  
+  .mainpage-input-course::placeholder {
+    color: #2196F3; /* Синій для курсу */
+  }
+  
+  .mainpage-input-group::placeholder {
+    color: #9C27B0; /* Фіолетовий для групи */
+  }
+  
+  /* Альтернативно - однаковий колір для всіх інпутів */
+  .mainpage-input::placeholder {
+    color: #666666; /* Темно-сірий */
+    font-style: italic; /* Курсив для placeholder */
+  }
+  
+  /* Для темної теми */
+  body.dark .mainpage-input::placeholder {
+    color: #bbbbbb;
+  }
+  
+  /* Для світлої теми */
+  body.light .mainpage-input::placeholder {
+    color: #666666;
+  }
+  
+  /* Для фіолетової теми */
+  body.purple .mainpage-input::placeholder {
+    color: #fff;
+    opacity: 0.7;
+  }
+  
+  /* Для бежевої теми */
+  body.beige .mainpage-input::placeholder {
+    color: #d4a373;
+    opacity: 0.8;
+  }
+
+
+ .error-tooltip {
+  background-color: rgba(231, 18, 18, 0.443);
+  color: white;
+  font-size: 12px;
+  margin-top: 4px;
+  display: block;
+}
