@@ -9,6 +9,7 @@ import {
 // Імпортуйте ваші PDF файли
 import Requirements from '../documents/Content_requirements.pdf';
 import Title from '../documents/Requirements_title.pdf';
+import Design from '../documents/design.pdf';
 
 const MethodicalMaterials = () => {
     const navigate = useNavigate();
@@ -24,66 +25,173 @@ const MethodicalMaterials = () => {
 
   
 
-  const mockMaterials = [
+const mockMaterials = [
+  {
+    id: 1,
+    title: "Методичні рекомендації з написання курсових робіт",
+    description: "Детальний посібник для студентів з кроками написання якісної курсової роботи, вимогами до оформлення та критеріями оцінювання.",
+    author: "Викладач кафедри",
+    authorAvatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=40&h=40&fit=crop&crop=face",
+    category: "Програмування",
+    type: "PDF",
+    uploadDate: "2024-03-15",
+    downloads: 245,
+    rating: 4.8,
+    size: "2.3 MB",
+    tags: ["курсові", "методичка", "програмування", "оформлення"],
+    fileUrl: Requirements 
+  },
+  {
+    id: 2,
+    title: "Шаблон оформлення курсової роботи",
+    description: "Готовий шаблон у форматі PDF з правильним форматуванням, стилями заголовків та списку літератури.",
+    author: "Викладач кафедри",
+    authorAvatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=40&h=40&fit=crop&crop=face",
+    category: "Оформлення",
+    type: "PDF",
+    uploadDate: "2024-03-08",
+    downloads: 412,
+    rating: 4.7,
+    size: "1.8 MB",
+    tags: ["шаблон", "оформлення", "pdf"],
+    fileUrl: Title 
+  },
+  {
+    id: 3,
+    title: "Основи академічного письма",
+    description: "Посібник з правил написання наукових текстів, структурування думок та використання джерел.",
+    author: "PhD - Наталя Шліхта",
+    authorAvatar: "https://images.unsplash.com/photo-1494790108755-2616b332c88c?w=40&h=40&fit=crop&crop=face",
+    category: "Методологія",
+    type: "PDF",
+    uploadDate: "2024-03-12",
+    downloads: 328,
+    rating: 4.9,
+    size: "3.1 MB",
+    tags: ["письмо", "методологія", "наукова робота"],
+    fileUrl: "https://naqa.gov.ua/wp-content/uploads/2019/05/Academic_Writing_Course.pdf" // Демо PDF
+  },
+  {
+    id: 4,
+    title: "Відеолекція: Планування наукового дослідження",
+    description: "45-хвилинна лекція про етапи проведення дослідження, від постановки проблеми до аналізу результатів.",
+    author: "Доц. Петренко С.В.",
+    authorAvatar: "https://images.unsplash.com/photo-1507125524815-d4c5c0b3c9f8?w=40&h=40&fit=crop&crop=face",
+    category: "Методологія", 
+    type: "Відео",
+    uploadDate: "2024-03-10",
+    downloads: 189,
+    rating: 4.8,
+    size: "156 MB",
+    tags: ["дослідження", "планування", "відео", "лекція"],
+    fileUrl: "https://www.youtube.com/watch?v=D-vpAQ4fvNE" // Приклад YouTube відео
+  },
+  {
+    id: 5,
+    title: "Презентація: Захист курсової роботи",
+    description: "Шаблон презентації PowerPoint для успішного захисту курсової роботи з прикладами слайдів.",
+    author: "Доц. Сидоренко А.П.",
+    authorAvatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=40&h=40&fit=crop&crop=face",
+    category: "Захист",
+    type: "PPTX",
+    uploadDate: "2024-03-05",
+    downloads: 278,
+    rating: 4.6,
+    size: "4.2 MB",
+    tags: ["презентація", "захист", "шаблон"],
+    fileUrl: "https://www.slideshare.net/slideshow/ss-255093740/255093740"
+  },
+  {
+    id: 6,
+    title: "Чек-лист перевірки курсової роботи",
+    description: "Детальний список пунктів для самоперевірки роботи перед здачею викладачу.",
+    author: "Асист. Мельник О.В.",
+    authorAvatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=40&h=40&fit=crop&crop=face",
+    category: "Перевірка",
+    type: "DOCX",
+    uploadDate: "2024-03-01",
+    downloads: 156,
+    rating: 4.7,
+    size: "0.8 MB",
+    tags: ["чек-лист", "перевірка", "самоконтроль"],
+    fileUrl: "https://pedagogy.lnu.edu.ua/wp-content/uploads/2023/01/REKOMENDATSIYI-shchodo-perevirky-kursovykh-robit-1.docx"
+  },
+  {
+    id: 7,
+    title: "Онлайн-ресурси для дослідження",
+    description: "Підібрана колекція найкращих онлайн-бібліотек, баз даних та інструментів для написання курсових робіт.",
+    author: "Біб. Іваненко Л.С.",
+    authorAvatar: "https://images.unsplash.com/photo-1489424731084-a5d8b219a5bb?w=40&h=40&fit=crop&crop=face",
+    category: "Ресурси",
+    type: "Посилання",
+    uploadDate: "2024-02-28",
+    downloads: 445,
+    rating: 4.9,
+    size: "-",
+    tags: ["ресурси", "онлайн", "бібліотеки", "бази даних"],
+    fileUrl: "https://scholar.google.com"
+  },
+  {
+    id: 8,
+    title: "ГОСТ 7.1-2003: Бібліографічний опис",
+    description: "Офіційний стандарт оформлення списку літератури та бібліографічних посилань.",
+    author: "Держстандарт України",
+    authorAvatar: "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=40&h=40&fit=crop&crop=face",
+    category: "Оформлення",
+    type: "PDF",
+    uploadDate: "2024-02-25",
+    downloads: 567,
+    rating: 4.5,
+    size: "1.2 MB",
+    tags: ["ГОСТ", "бібліографія", "стандарт", "оформлення"],
+    fileUrl: "https://dnpb.gov.ua/wp-content/uploads/2015/12/DSTU-7.1-2006_2010.pdf" // Демо PDF
+  },
+  {
+    id: 9,
+    title: "Інструменти перевірки на плагіат",
+    description: "Огляд популярних сервісів для перевірки унікальності тексту та запобігання плагіату.",
+    author: "Доц. Ткаченко В.М.",
+    authorAvatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=40&h=40&fit=crop&crop=face",
+    category: "Перевірка",
+    type: "Посилання",
+    uploadDate: "2024-02-20",
+    downloads: 334,
+    rating: 4.8,
+    size: "-",
+    tags: ["плагіат", "перевірка", "унікальність"],
+    fileUrl: "https://www.grammarly.com"
+  },
+  {
+    id: 10,
+    title: "Приклади успішних курсових робіт",
+    description: "Збірка зразків відмінних курсових робіт різних спеціальностей з коментарями викладачів.",
+    author: "Кафедра загальної підготовки",
+    authorAvatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=40&h=40&fit=crop&crop=face",
+    category: "Програмування",
+    type: "Посилання",
+    uploadDate: "2024-02-15",
+    downloads: 678,
+    rating: 4.9,
+    size: "5.7 MB",
+    tags: ["приклади", "зразки", "курсові роботи"],
+    fileUrl: "https://kursovye-raboty.kiev.ua/priklad-zrazok-kursovoyi-roboti/" 
+  },
     {
-      id: 1,
-      title: "Методичні рекомендації з написання курсових робіт",
-      description: "Детальний посібник для студентів з кроками написання якісної курсової роботи, вимогами до оформлення та критеріями оцінювання.",
-      author: "Викладач кафедри",
-      authorAvatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=40&h=40&fit=crop&crop=face",
-      category: "Програмування",
-      type: "PDF",
-      uploadDate: "2024-03-15",
-      downloads: 245,
-      rating: 4.8,
-      size: "2.3 MB",
-      tags: ["курсові", "методичка", "програмування", "оформлення"],
-      fileUrl: Requirements
-    },
-    {
-      id: 2,
-      title: "Шаблон оформлення курсової роботи",
-      description: "Готовий шаблон у форматі PDF з правильним форматуванням, стилями заголовків та списку літератури.",
-      author: "Викладач кафедри",
-      authorAvatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=40&h=40&fit=crop&crop=face",
-      category: "Оформлення",
-      type: "PDF",
-      uploadDate: "2024-03-08",
-      downloads: 412,
-      rating: 4.7,
-      size: "1.8 MB",
-      tags: ["шаблон", "оформлення", "pdf"],
-      fileUrl: Title
-    },
-    {
-      id: 3,
-      title: "Відеолекція: Основи наукового дослідження",
-      description: "Відеоматеріал про те, як правильно формулювати проблему дослідження, ставити цілі та завдання, обирати методи.",
-      author: "Доц. Петренко С.В.",
-      authorAvatar: "https://images.unsplash.com/photo-1494790108755-2616b332c88c?w=40&h=40&fit=crop&crop=face",
-      category: "Методологія",
-      type: "Відео",
-      uploadDate: "2024-03-10",
-      downloads: 189,
-      rating: 4.9,
-      size: "156 MB",
-      tags: ["дослідження", "методологія", "відео"]
-    },
-    {
-      id: 4,
-      title: "Посилання на корисні онлайн-ресурси",
-      description: "Підібрана колекція найкращих онлайн-бібліотек, баз даних та інструментів для написання курсових робіт.",
-      author: "Доц. Сидоренко А.П.",
-      authorAvatar: "https://images.unsplash.com/photo-1507125524815-d4c5c0b3c9f8?w=40&h=40&fit=crop&crop=face",
-      category: "Ресурси",
-      type: "Посилання",
-      uploadDate: "2024-03-05",
-      downloads: 156,
-      rating: 4.6,
-      size: "-",
-      tags: ["ресурси", "онлайн", "бібліотеки"]
-    }
-  ];
+    id: 11,
+    title: "Загальними вимогами до тексту пояснювальної записки",
+    description: "Збірка зразків відмінних курсових робіт різних спеціальностей з коментарями викладачів.",
+    author: "Кафедра загальної підготовки",
+    authorAvatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=40&h=40&fit=crop&crop=face",
+    category: "Програмування",
+    type: "PDF",
+    uploadDate: "2024-02-15",
+    downloads: 678,
+    rating: 4.7,
+    size: "5.7 MB",
+    tags: ["приклади", "зразки", "курсові роботи"],
+    fileUrl: Design
+  }
+];
 
   const categories = ['all', 'Програмування', 'Методологія', 'Оформлення', 'Ресурси', 'Захист', 'Перевірка'];
   const types = ['all', 'PDF', 'Відео', 'DOCX', 'PPTX', 'Посилання'];
@@ -236,8 +344,8 @@ const MethodicalMaterials = () => {
         <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
           <option value="newest">Найновіші</option>
           <option value="popular">Популярні</option>
-          <option value="rating">За рейтингом</option>
-          <option value="title">За назвою</option>
+          <option value="rating">За назвою</option>
+          <option value="title">За рейтингом</option>
         </select>
       </div>
 

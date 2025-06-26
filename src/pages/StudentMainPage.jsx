@@ -203,7 +203,7 @@ const handleCloseDrawer = () => {
               <User size={16} style={{ marginRight: 8 }} />
               {t("studentDashboard.header.profileDropdown.profile")}
             </div>
-            <div className="dropdown-item">
+            <div className="dropdown-item" onClick={() => navigate("/library")}>
               <BookOpen size={20} style={{ marginRight: 8 }} />
               {t("studentDashboard.header.profileDropdown.library")}
             </div>
