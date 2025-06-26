@@ -108,7 +108,7 @@ const CourseworkLibrary = () => {
 
       <div className="materials-header">
         <div className="header-left">
-          <h1><BookOpen className="header-icon" /> Бібліотека прикладів курсових</h1>
+          <h1><BookOpen className="header-icon" /> Бібліотека робіт</h1>
           <p>Реальні приклади курсових робіт від студентів попередніх років</p>
         </div>
         <div className="header-right">
