@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -66,6 +67,7 @@ const handleLogin = async () => {
         name: data.name,
         role: selectedRole,
       });
+      localStorage.setItem("studentEmail", loginEmail); 
       navigate(selectedRole === 'Student' ? '/home' : '/sthome');
     } else {
       alert(data.message);
@@ -106,6 +108,7 @@ const handleLogin = async () => {
 
       if (response.ok) {
         alert("Check your email for verification.");
+        localStorage.setItem("studentEmail", registerEmail);
       } else {
         alert(data.message);
       }
@@ -238,3 +241,4 @@ const handleLogin = async () => {
     </div>
   );
 }
+

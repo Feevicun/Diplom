@@ -103,12 +103,11 @@ const StudentProfile = () => {
     }
   };
 
-  const handleLogout = () => {
-    alert(t("studentProfile.alerts.logoutMessage"));
-    localStorage.removeItem("registrationData");
-    localStorage.removeItem("avatar");
-    navigate("/authorization");
-  };
+const handleLogout = () => {
+  alert(t("studentProfile.alerts.logoutMessage"));
+  navigate("/authorization");
+};
+
 
   return (
     <>

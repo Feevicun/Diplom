@@ -6,5 +6,351 @@
     "type": "login",
     "description": "User logged in",
     "meta": {}
+  },
+  {
+    "id": "17511c35-5bc8-4b7c-9698-ef65ae2585e2",
+    "timestamp": "2025-06-27T21:59:48.906Z",
+    "userEmail": "vikander.work@gmail.com",
+    "type": "login",
+    "description": "User logged in",
+    "meta": {}
+  },
+  {
+    "id": "64219ab2-8344-4a5f-8a7c-db3876bdc9f2",
+    "timestamp": "2025-06-27T22:00:54.985Z",
+    "userEmail": "v47525470@gmail.com",
+    "type": "register",
+    "description": "User registered",
+    "meta": {
+      "role": "Student"
+    }
+  },
+  {
+    "id": "093cd10a-8ced-43f6-be00-12e5c2e345f1",
+    "timestamp": "2025-06-27T22:01:08.077Z",
+    "userEmail": "v47525470@gmail.com",
+    "type": "email_verification",
+    "description": "Email verified",
+    "meta": {}
+  },
+  {
+    "id": "3b2e3aa4-b687-4198-9774-1a30f4edc0e0",
+    "timestamp": "2025-06-27T22:02:05.184Z",
+    "userEmail": "v47525470@gmail.com",
+    "type": "login",
+    "description": "User logged in",
+    "meta": {}
+  },
+  {
+    "id": "33c711dc-ff47-480d-9e19-c30f8295e2a9",
+    "timestamp": "2025-06-27T22:09:00.126Z",
+    "userEmail": "v47525470@gmail.com",
+    "type": "login",
+    "description": "User logged in",
+    "meta": {}
+  },
+  {
+    "id": "db8ce3e5-39b7-44b3-988b-1a5556674211",
+    "timestamp": "2025-06-27T22:13:43.800Z",
+    "userEmail": "v475254701@gmail.com",
+    "type": "register",
+    "description": "User registered",
+    "meta": {
+      "role": "Student"
+    }
+  },
+  {
+    "id": "80e7da37-4a0d-45ad-887c-728b8760d5ca",
+    "timestamp": "2025-06-27T22:15:49.813Z",
+    "userEmail": "v4752547@gmail.com",
+    "type": "register",
+    "description": "User registered",
+    "meta": {
+      "role": "Student"
+    }
+  },
+  {
+    "id": "ddd3c5dd-85e6-4c4f-a80d-60ba0b41b11a",
+    "timestamp": "2025-06-27T22:22:35.566Z",
+    "userEmail": "ivanosoba34@gmail.com",
+    "type": "register",
+    "description": "User registered",
+    "meta": {
+      "role": "Student"
+    }
+  },
+  {
+    "id": "e04565de-f4ee-409a-ae3c-7894602a66b0",
+    "timestamp": "2025-06-27T22:24:15.681Z",
+    "userEmail": "ivanosoba24@gmail.com",
+    "type": "register",
+    "description": "User registered",
+    "meta": {
+      "role": "Student"
+    }
+  },
+  {
+    "id": "b814e332-20a0-4aaa-8fae-5a1e77a020b0",
+    "timestamp": "2025-06-27T22:29:30.580Z",
+    "userEmail": "ivanosoba04@gmail.com",
+    "type": "register",
+    "description": "User registered",
+    "meta": {
+      "role": "Student"
+    }
+  },
+  {
+    "id": "007e5bd1-2c18-439d-89c4-9d9099aa3d8f",
+    "timestamp": "2025-06-27T22:39:16.549Z",
+    "userEmail": "v47525470@gmail.com",
+    "type": "login",
+    "description": "User logged in",
+    "meta": {}
+  },
+  {
+    "id": "852c857e-1495-463b-b48c-1dc07a709ca6",
+    "timestamp": "2025-06-27T22:39:57.699Z",
+    "userEmail": "ivanosoba24@gmail.com",
+    "type": "login",
+    "description": "User logged in",
+    "meta": {}
+  },
+  {
+    "id": "8049600a-55fb-4bd5-b2c5-a1d57ff4a698",
+    "timestamp": "2025-06-27T22:40:24.806Z",
+    "userEmail": "ivanosoba34@gmail.com",
+    "type": "login",
+    "description": "User logged in",
+    "meta": {}
+  },
+  {
+    "id": "f576e7a3-b2df-42f5-b0ca-cc60de40e14e",
+    "timestamp": "2025-06-27T22:41:00.945Z",
+    "userEmail": "ivanosoba34@gmail.com",
+    "type": "login",
+    "description": "User logged in",
+    "meta": {}
+  },
+  {
+    "id": "48e59ff4-dbcd-4458-8c4b-8828b72c49f0",
+    "timestamp": "2025-06-27T22:41:55.567Z",
+    "userEmail": "ivanosoba24@gmail.com",
+    "type": "login",
+    "description": "User logged in",
+    "meta": {}
+  },
+  {
+    "id": "5683b7ff-6231-48bd-a4f1-28d9cd412f22",
+    "timestamp": "2025-06-27T22:42:33.140Z",
+    "userEmail": "ivanosoba24@gmail.com",
+    "type": "login",
+    "description": "User logged in",
+    "meta": {}
+  },
+  {
+    "id": "3f281d7e-f82c-4707-b971-41736216b4c2",
+    "timestamp": "2025-06-27T22:42:54.228Z",
+    "userEmail": "ivanosoba04@gmail.com",
+    "type": "login",
+    "description": "User logged in",
+    "meta": {}
+  },
+  {
+    "id": "56a99c61-e3e8-4849-bd6b-c7b9b0237f2f",
+    "timestamp": "2025-06-27T22:43:32.257Z",
+    "userEmail": "vikander.work@gmail.com",
+    "type": "login",
+    "description": "User logged in",
+    "meta": {}
+  },
+  {
+    "id": "64db64be-bccf-4679-b2dc-6d4c9632008e",
+    "timestamp": "2025-06-27T22:43:49.067Z",
+    "userEmail": "vikander.work@gmail.com",
+    "type": "login",
+    "description": "User logged in",
+    "meta": {}
+  },
+  {
+    "id": "5d234bb4-d552-410d-8b9b-5e5d59b3981b",
+    "timestamp": "2025-06-27T22:48:08.946Z",
+    "userEmail": "vikander.games@gmail.com",
+    "type": "account_deletion",
+    "description": "Account with role student deleted.",
+    "meta": {}
+  },
+  {
+    "id": "1191a583-6a5b-45e2-88dd-9eca71667727",
+    "timestamp": "2025-06-27T22:48:21.188Z",
+    "userEmail": "vikander.work@gmail.com",
+    "type": "account_deletion",
+    "description": "Account with role student deleted.",
+    "meta": {}
+  },
+  {
+    "id": "9a4fecda-8358-4ed9-951f-bfd9d020e222",
+    "timestamp": "2025-06-27T22:48:37.154Z",
+    "userEmail": "vikander.work@gmail.com",
+    "type": "register",
+    "description": "User registered",
+    "meta": {
+      "role": "Student"
+    }
+  },
+  {
+    "id": "e4ec0f4e-7efe-4548-8f2c-8e0202ac1e49",
+    "timestamp": "2025-06-27T22:50:36.721Z",
+    "userEmail": "vikander.work@gmail.com",
+    "type": "email_verification",
+    "description": "Email verified",
+    "meta": {}
+  },
+  {
+    "id": "85c4f520-0f8f-46ab-a421-a57cc56a280a",
+    "timestamp": "2025-06-27T22:50:41.782Z",
+    "userEmail": "vikander.work@gmail.com",
+    "type": "login",
+    "description": "User logged in",
+    "meta": {}
+  },
+  {
+    "id": "d568eadb-cdbc-4387-9b07-8dfb17609261",
+    "timestamp": "2025-06-27T22:50:56.568Z",
+    "userEmail": "vikander.work@gmail.com",
+    "type": "login",
+    "description": "User logged in",
+    "meta": {}
+  },
+  {
+    "id": "838fc3d6-3c04-4d42-9926-eeb1774581dd",
+    "timestamp": "2025-06-27T22:58:37.632Z",
+    "userEmail": "vikander.work@gmail.com",
+    "type": "account_deletion",
+    "description": "Account with role student deleted.",
+    "meta": {}
+  },
+  {
+    "id": "759e7c0e-d1f6-460c-bc75-3ec8a40cdf96",
+    "timestamp": "2025-06-27T22:58:53.580Z",
+    "userEmail": "vikander.work@gmail.com",
+    "type": "register",
+    "description": "User registered",
+    "meta": {
+      "role": "Student"
+    }
+  },
+  {
+    "id": "29af1136-f7e8-4bed-8900-0abc3a50f7f1",
+    "timestamp": "2025-06-27T22:59:10.870Z",
+    "userEmail": "vikander.work@gmail.com",
+    "type": "email_verification",
+    "description": "Email verified",
+    "meta": {}
+  },
+  {
+    "id": "a6ec2f87-eda9-425c-ba10-50848c0c3479",
+    "timestamp": "2025-06-27T23:01:41.030Z",
+    "userEmail": "vikander.work@gmail.com",
+    "type": "login",
+    "description": "User logged in",
+    "meta": {}
+  },
+  {
+    "id": "719bb3f1-c9ac-4d22-9458-63e990451cd5",
+    "timestamp": "2025-06-27T23:02:09.397Z",
+    "userEmail": "vikander.work@gmail.com",
+    "type": "login",
+    "description": "User logged in",
+    "meta": {}
+  },
+  {
+    "id": "644dcf5c-42b6-4234-b61c-8462659fe803",
+    "timestamp": "2025-06-27T23:04:56.626Z",
+    "userEmail": "vikander.work@gmail.com",
+    "type": "account_deletion",
+    "description": "Account with role student deleted.",
+    "meta": {}
+  },
+  {
+    "id": "c77b501e-ed9c-4af6-b4f0-52ec05ca6c08",
+    "timestamp": "2025-06-27T23:05:12.862Z",
+    "userEmail": "vikander.work@gmail.com",
+    "type": "register",
+    "description": "User registered",
+    "meta": {
+      "role": "Student"
+    }
+  },
+  {
+    "id": "b64276cc-dc4d-4b7a-a491-7f1022ca5af9",
+    "timestamp": "2025-06-27T23:05:23.837Z",
+    "userEmail": "vikander.work@gmail.com",
+    "type": "email_verification",
+    "description": "Email verified",
+    "meta": {}
+  },
+  {
+    "id": "74807b77-4251-4958-9d9d-8e15bf521fe4",
+    "timestamp": "2025-06-27T23:05:36.279Z",
+    "userEmail": "vikander.work@gmail.com",
+    "type": "register",
+    "description": "User registered student info",
+    "meta": {
+      "surname": "fkfk",
+      "firstName": "fkkgkgk",
+      "course": "21",
+      "group": "43",
+      "faculty": "Біологічний факультет",
+      "department": "біофізики та біоінформатики"
+    }
+  },
+  {
+    "id": "00a76ace-d552-4150-a281-ac1f2f8a3038",
+    "timestamp": "2025-06-27T23:06:57.487Z",
+    "userEmail": "vikander.work@gmail.com",
+    "type": "login",
+    "description": "User logged in",
+    "meta": {}
+  },
+  {
+    "id": "48c69d3e-3139-4392-adf4-8e8ebca3b3c1",
+    "timestamp": "2025-06-27T23:13:29.502Z",
+    "userEmail": "vikander.work@gmail.com",
+    "type": "account_deletion",
+    "description": "Account with role student deleted.",
+    "meta": {}
+  },
+  {
+    "id": "d08deac1-f7f9-428d-96ef-5e066a79721b",
+    "timestamp": "2025-06-27T23:13:55.701Z",
+    "userEmail": "vikander.work@gmail.com",
+    "type": "register",
+    "description": "User registered",
+    "meta": {
+      "role": "Student"
+    }
+  },
+  {
+    "id": "0e552076-b550-424d-aba7-414eba385912",
+    "timestamp": "2025-06-27T23:14:11.852Z",
+    "userEmail": "vikander.work@gmail.com",
+    "type": "email_verification",
+    "description": "Email verified",
+    "meta": {}
+  },
+  {
+    "id": "208e937e-83db-4867-bf85-71bb1a2675a9",
+    "timestamp": "2025-06-27T23:14:31.232Z",
+    "userEmail": "vikander.work@gmail.com",
+    "type": "register",
+    "description": "User registered student info",
+    "meta": {
+      "surname": "Osoba",
+      "firstName": "Galyna",
+      "course": "5",
+      "group": "23",
+      "faculty": "Факультет електроніки та комп'ютерних технологій",
+      "department": "системного проектування"
+    }
   }
 ]

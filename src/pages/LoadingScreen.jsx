@@ -7,7 +7,7 @@ export default function LoadingScreen() {
 
   useEffect(() => {
     const firstTimer = setTimeout(() => setShowSecond(true), 3000);
-    const navTimer = setTimeout(() => navigate('/authorization'), 10000);
+    const navTimer = setTimeout(() => navigate('/authorization'), 5000);
 
     return () => {
       clearTimeout(firstTimer);

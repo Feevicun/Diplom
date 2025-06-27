@@ -1,6 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { useLogger } from '../hooks/useLogger';
+
+
+
 
 function CustomDropdown({ options, selected, onChange, placeholder, error }) {
   const [open, setOpen] = useState(false);
@@ -67,6 +71,8 @@ export default function RegistrationForm() {
   const [email] = useState('');
   const [registrationMessage, setRegistrationMessage] = useState('');
   const [fieldErrors, setFieldErrors] = useState({});
+  const storedEmail = localStorage.getItem('studentEmail');
+  const { logEvent } = useLogger(storedEmail);
 
   const facultiesWithDepartments = {
     "Біологічний факультет": [
@@ -211,27 +217,50 @@ export default function RegistrationForm() {
     return Object.keys(errors).length === 0;
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    setRegistrationMessage('');
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setRegistrationMessage('');
 
-    if (!validate()) return;
+  if (!validate()) return;
 
-    const registrationData = {
-      surname,
-      firstName,
-      course,
-      group,
-      faculty,
-      department,
-      email,
-    };
+  const registrationData = {
+    surname,
+    firstName,
+    course,
+    group,
+    faculty,
+    department,
+    email: storedEmail || '',
+  };
+    // Оновлення localStorage
+  localStorage.setItem('registrationData', JSON.stringify(registrationData));
+  localStorage.setItem('studentEmail', registrationData.email);
 
-    localStorage.setItem('registrationData', JSON.stringify(registrationData));
+  try {
+    const response = await fetch('/api/register-student-info', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(registrationData),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      setRegistrationMessage(errorData.message || 'Помилка при реєстрації');
+      return;
+    }
+
     setRegistrationMessage(t("registration.successMessage", { firstName, surname }));
     setFieldErrors({});
     navigate('/home');
-  };
+
+  } catch (error) {
+    setRegistrationMessage('Помилка зв’язку з сервером');
+  }
+};
+
+
+
+
 
   return (
     <div className="mainpage-container">

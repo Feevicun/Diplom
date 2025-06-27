@@ -35,23 +35,48 @@ function DeleteAccount() {
     return Object.keys(errors).length === 0;
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    setSuccessMessage('');
-    setErrorMessage('');
-    if (!validate()) return;
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setSuccessMessage('');
+  setErrorMessage('');
+  if (!validate()) return;
 
-    setSuccessMessage(
-      t('deleteAccount.successMessage', {
-        email,
-        role: t(`deleteAccount.roles.${role}`)
-      })
-    );
+  try {
+    const response = await fetch('http://localhost:3000/api/delete-account', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, role }),
+    });
 
-    setFieldErrors({});
-    setEmail('');
-    setRole('');
-  };
+    const data = await response.json();
+
+    if (response.ok) {
+      // Видалити всі локальні дані після успішного видалення акаунта
+      localStorage.removeItem('studentEmail');
+      localStorage.removeItem('registrationData');
+      localStorage.removeItem('avatar');
+
+      setSuccessMessage(
+        t('deleteAccount.successMessage', {
+          email,
+          role: t(`deleteAccount.roles.${role}`)
+        })
+      );
+      setEmail('');
+      setRole('');
+      setFieldErrors({});
+
+      // Можеш зробити редірект на сторінку логіну чи головну
+      navigate('/authorization');
+
+    } else {
+      setErrorMessage(data.message || t('deleteAccount.errorMessage'));
+    }
+  } catch (error) {
+    setErrorMessage(t('deleteAccount.errorMessage'));
+  }
+};
+
 
   return (
     <div className="delete-account-container">

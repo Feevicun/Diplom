@@ -1,15 +1,52 @@
 [
   {
-    "name": "Vika Osoba",
-    "email": "vikander.games@gmail.com",
-    "password": "Feevicun29",
+    "name": "Viktor ",
+    "email": "v47525470@gmail.com",
+    "password": "Feevicun123",
     "role": "Student",
     "verified": true
   },
   {
-    "name": "Vika Osoba",
+    "name": "Oleg",
+    "email": "v475254701@gmail.com",
+    "password": "Feevicun123",
+    "role": "Student",
+    "verified": false,
+    "token": "234f5263-76ec-49a4-bdbe-1a2a098b927a"
+  },
+  {
+    "name": "oleg ",
+    "email": "v4752547@gmail.com",
+    "password": "Feevicun123",
+    "role": "Student",
+    "verified": false,
+    "token": "594fd8a8-b1eb-4463-a2d4-32ffeb224263"
+  },
+  {
+    "name": "Ivan",
+    "email": "ivanosoba34@gmail.com",
+    "password": "123456",
+    "role": "Student",
+    "verified": true
+  },
+  {
+    "name": "Ivan",
+    "email": "ivanosoba24@gmail.com",
+    "password": "1234567",
+    "role": "Student",
+    "verified": true
+  },
+  {
+    "name": "Марта",
+    "email": "ivanosoba04@gmail.com",
+    "password": "qwerty123",
+    "role": "Student",
+    "verified": true
+  },
+  {
+    "name": "Galyna",
     "email": "vikander.work@gmail.com",
-    "password": "Feevicun12",
+    "password": "123qwe",
     "role": "Student",
     "verified": true
   }

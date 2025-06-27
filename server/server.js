@@ -1,3 +1,5 @@
+
+
 import express from 'express';
 import nodemailer from 'nodemailer';
 import { v4 as uuidv4 } from 'uuid';
@@ -150,6 +152,28 @@ app.post('/api/login', (req, res) => {
   });
 });
 
+app.post('/api/register-student-info', (req, res) => {
+  const { surname, firstName, course, group, faculty, department, email } = req.body;
+
+  if (!surname || !firstName || !course || !group || !faculty || !department || !email) {
+    return res.status(400).json({ message: 'Заповніть усі обов’язкові поля.' });
+  }
+
+  // Тут можна додати додаткову логіку (збереження в БД тощо)
+
+  // Логування події
+  logEvent({
+    userEmail: email,
+    type: 'register',
+    description: 'User registered student info',
+    meta: { surname, firstName, course, group, faculty, department },
+  });
+
+  res.status(200).json({ message: 'Інформація успішно збережена' });
+});
+
+
+
 // --- API: Підтвердження email ---
 app.get('/verify/:token', (req, res) => {
   const token = req.params.token;
@@ -187,6 +211,35 @@ app.post('/api/change-password', (req, res) => {
 
   res.status(200).json({ message: 'Пароль успішно змінено.' });
 });
+
+
+// --- API: Видалення акаунта ---
+app.post('/api/delete-account', (req, res) => {
+  const { email, role } = req.body;
+
+  if (!email || !role) {
+    return res.status(400).json({ message: 'Email і роль обов’язкові.' });
+  }
+
+  const initialLength = user.length;
+  user = user.filter(u => !(u.email === email && u.role.toLowerCase() === role.toLowerCase()));
+
+  if (user.length === initialLength) {
+    return res.status(404).json({ message: 'Користувача з таким email і роллю не знайдено.' });
+  }
+
+  saveUsersToFile();
+
+  logEvent({
+    userEmail: email,
+    type: 'account_deletion',
+    description: `Account with role ${role} deleted.`,
+  });
+
+  return res.status(200).json({ message: 'Акаунт успішно видалено.' });
+});
+
+
 
 // --- API: Генерація теми + викладачів через Hugging Face ---
 app.post('/api/generate-topic', async (req, res) => {
@@ -288,3 +341,6 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`✅ Server is running at http://localhost:${PORT}`);
 });
+
+
+
