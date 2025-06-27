@@ -232,7 +232,7 @@ const handleCloseDrawer = () => {
         <FolderOpen size={24} style={{ marginRight: 8 }} />
         {t("studentDashboard.header.profileDropdown.materials")}
       </div>
-      <div className="dropdown-item">
+      <div className="dropdown-item" onClick={() => navigate("/history")}>
         <Clock size={16} style={{ marginRight: 8 }} />
         {t("studentDashboard.header.profileDropdown.history")}
       </div>
