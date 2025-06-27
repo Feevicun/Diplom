@@ -122,7 +122,7 @@ body {
   padding: 32px;
   border-radius: 16px;
   max-width: 500px;
-  width: 90%;
+  width: 40%;
   box-shadow: 0 0 20px rgba(0, 0, 0, 0.4);
   text-align: left;
   animation: fadeIn 0.3s ease-in-out;
@@ -139,6 +139,8 @@ body {
   line-height: 1.5;
   margin-bottom: 24px;
 }
+
+
 
 /* Кнопки */
 .modal-buttons {
@@ -263,11 +265,23 @@ body.beige {
     object-fit: cover;
   }
   
-  .student-name {
-    font-size: 15px;
-    color: #f5f5f5;
-    margin-right: 6px;
-  }
+/* Плавне посування імені */
+.student-name {
+  transition: margin 0.3s ease, max-width 0.3s ease;
+}
+
+/* Значок кількості повідомлень */
+.notification-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background-color: red;
+  color: white;
+  font-size: 12px;
+  border-radius: 50%;
+  padding: 2px 6px;
+}
+
   
   .arrow {
     font-size: 14px;
@@ -276,18 +290,16 @@ body.beige {
   }
 
 
-  .student-dropdown {
-  position: absolute;
-  top: 100%;
-  right: 0;
-  background-color: rgba(30, 30, 30, 0.95);
-  border-radius: 12px;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
-  padding: 10px 0;
-  min-width: 150px;
-  z-index: 1000;
-  backdrop-filter: blur(8px);
-  transition: opacity 0.3s ease, transform 0.3s ease;
+.student-dropdown {
+    position: absolute;
+    top: 130%; 
+    left: 0;
+    width: 100%; 
+    border: "1px solid #ccc";
+    box-shadow:"0 4px 12px rgba(0, 0, 0, 0.1)";
+    z-index: 999;
+    border-radius: 10px;
+    background-color: #1e1e1e;
 }
 
 .dropdown-item {
@@ -777,6 +789,20 @@ body.beige .notifications-icon {
 
 
 
+.dropdown-item {
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.dropdown-item:hover {
+  background-color: #f5f5f5;
+}
+
+
+
 /* ========== СИСТЕМИ СПОВІЩЕНЬ ========== */
 
 .notifications-icon {
@@ -880,7 +906,7 @@ body.beige .notifications-icon {
 }
 
 .notification-mode-switcher-inside select {
-  appearance: none; /* Прибирає дефолтну стрілку в більшості браузерів */
+  appearance: none; 
   -webkit-appearance: none;
   -moz-appearance: none;
 

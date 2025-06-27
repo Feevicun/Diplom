@@ -12,46 +12,134 @@ const CourseworkLibrary = () => {
   const [examples, setExamples] = useState([]);
   const [filteredExamples, setFilteredExamples] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedSpecialty, setSelectedSpecialty] = useState('all');
   const [sortBy, setSortBy] = useState('year');
+  const [userFaculty, setUserFaculty] = useState('');
+  const [loading, setLoading] = useState(true);
 
-  const specialties = ['all', 'Програмування', 'Комп. науки', 'Інженерія', 'Математика'];
+  const getFacultySpecialties = (faculty) => {
+    const facultySpecialties = {
+      "Факультет прикладної математики та інформатики": [
+        'Програмування', 'Комп. науки', 'Інформаційні системи', 'Кібербезпека', 'Прикладна математика'
+      ],
+      "Факультет електроніки та комп'ютерних технологій": [
+        'Електроніка', 'Комп. технології', 'Радіофізика', 'Оптоелектроніка'
+      ],
+      "Механіко-математичний факультет": [
+        'Математика', 'Механіка', 'Математична статистика', 'Функціональний аналіз'
+      ],
+      "Фізичний факультет": [
+        'Фізика', 'Астрофізика', 'Експериментальна фізика', 'Фізика металів'
+      ],
+      "Хімічний факультет": [
+        'Аналітична хімія', 'Органічна хімія', 'Неорганічна хімія'
+      ],
+      "Біологічний факультет": [
+        'Біофізика', 'Біохімія', 'Ботаніка', 'Генетика', 'Екологія', 'Зоологія'
+      ],
+      "Економічний факультет": [
+        'Економіка', 'Менеджмент', 'Маркетинг', 'Облік і аудит', 'Статистика'
+      ],
+      "Юридичний факультет": [
+        'Адміністративне право', 'Конституційне право', 'Кримінальне право', 'Цивільне право'
+      ],
+      "Філологічний факультет": [
+        'Українська філологія', 'Слов\'янська філологія', 'Польська філологія', 'Мовознавство'
+      ],
+      "Факультет іноземних мов": [
+        'Англійська філологія', 'Німецька філологія', 'Французька філологія', 'Переклад'
+      ],
+      "Історичний факультет": [
+        'Історія', 'Етнологія', 'Соціологія', 'Краєзнавство'
+      ],
+      "Географічний факультет": [
+        'Географія', 'Екологія', 'Туризм', 'Готельно-ресторанна справа'
+      ],
+      "Геологічний факультет": [
+        'Геологія', 'Геофізика', 'Мінералогія', 'Гідрогеологія'
+      ],
+      "Філософський факультет": [
+        'Філософія', 'Політологія', 'Психологія', 'Культурологія'
+      ],
+      "Факультет журналістики": [
+        'Журналістика', 'Масова інформація', 'Мова ЗМІ'
+      ],
+      "Факультет культури і мистецтв": [
+        'Музичне мистецтво', 'Театрознавство', 'Хореографія', 'Культурний менеджмент'
+      ],
+      "Факультет міжнародних відносин": [
+        'Міжнародні відносини', 'Міжнародне право', 'Європейське право', 'Міжнародна безпека'
+      ],
+      "Факультет педагогічної освіти": [
+        'Педагогіка', 'Початкова освіта', 'Дошкільна освіта', 'Соціальна робота'
+      ],
+      "Факультет управління фінансами та бізнесу": [
+        'Фінанси', 'Фінансовий менеджмент', 'Цифрова економіка', 'Бізнес-аналітика'
+      ]
+    };
+    
+    return facultySpecialties[faculty] || [];
+  };
 
-  const mockExamples = [
-    {
-      id: 1,
-      title: "Розробка чат-бота для консультацій студентів",
-      description: "Приклад курсової роботи з розробки чат-бота на JavaScript для внутрішньої платформи університету.",
-      student: "Іван Коваль",
-      specialty: "Програмування",
-      year: 2023,
-      supervisor: "д-р. Ткаченко Л.М.",
-      rating: 4.7,
-      fileUrl: Example1
-    },
-    {
-      id: 2,
-      title: "Система розпізнавання облич на основі OpenCV",
-      description: "Курсова з комп'ютерного зору, яка демонструє використання бібліотеки OpenCV та алгоритмів машинного навчання.",
-      student: "Олена Дорошенко",
-      specialty: "Комп. науки",
-      year: 2022,
-      supervisor: "проф. Сидоренко А.П.",
-      rating: 4.9,
-      fileUrl: Example2
-    }
-  ];
+  const getAllCourseworks = () => {
+    return [
+      {
+        id: 1,
+        title: "Розробка чат-бота для консультацій студентів",
+        description: "Приклад курсової роботи з розробки чат-бота на JavaScript для внутрішньої платформи університету.",
+        student: "Іван Коваль",
+        specialty: "Програмування",
+        year: 2023,
+        supervisor: "д-р. Ткаченко Л.М.",
+        rating: 4.7,
+        fileUrl: Example1
+      },
+      {
+        id: 2,
+        title: "Система розпізнавання облич на основі OpenCV",
+        description: "Курсова з комп'ютерного зору, яка демонструє використання бібліотеки OpenCV та алгоритмів машинного навчання.",
+        student: "Олена Дорошенко",
+        specialty: "Комп. науки",
+        year: 2022,
+        supervisor: "проф. Сидоренко А.П.",
+        rating: 4.9,
+        fileUrl: Example2
+      },
+      {
+        id: 13,
+        title: "Розробка мікроконтролерної системи",
+        description: "Проектування системи автоматизації розумного дому на основі Arduino.",
+        student: "Максим Шевченко",
+        specialty: "Електроніка",
+        year: 2023,
+        supervisor: "доц. Захарченко О.П.",
+        rating: 4.6,
+        fileUrl: null
+      },
+    ];
+  };
 
   useEffect(() => {
-    setTimeout(() => {
-      setExamples(mockExamples);
-      setFilteredExamples(mockExamples);
-    }, 500);
-  }, []);
+    const storedData = JSON.parse(localStorage.getItem('registrationData'));
+    const faculty = storedData?.faculty?.replace(/[’]/g, "'");
+    if (faculty) {
+      setUserFaculty(faculty);
+      const allowedSpecialties = getFacultySpecialties(faculty);
+      setTimeout(() => {
+        const allCourseworks = getAllCourseworks();
+        const facultyCourseworks = allCourseworks.filter(work =>
+          allowedSpecialties.includes(work.specialty)
+        );
+        setExamples(facultyCourseworks);
+        setFilteredExamples(facultyCourseworks);
+        setLoading(false);
+      }, 500);
+    } else {
+      navigate('/');
+    }
+  }, [navigate]);
 
   useEffect(() => {
     let filtered = examples;
-
     if (searchTerm) {
       filtered = filtered.filter(item =>
         item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -59,11 +147,6 @@ const CourseworkLibrary = () => {
         item.student.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
-
-    if (selectedSpecialty !== 'all') {
-      filtered = filtered.filter(item => item.specialty === selectedSpecialty);
-    }
-
     switch (sortBy) {
       case 'year':
         filtered.sort((a, b) => b.year - a.year);
@@ -75,9 +158,8 @@ const CourseworkLibrary = () => {
         filtered.sort((a, b) => b.rating - a.rating);
         break;
     }
-
     setFilteredExamples(filtered);
-  }, [examples, searchTerm, selectedSpecialty, sortBy]);
+  }, [examples, searchTerm, sortBy]);
 
   const handleDownload = (example) => {
     if (example.fileUrl) {
@@ -100,16 +182,24 @@ const CourseworkLibrary = () => {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="materials-page" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
+        <div>Завантаження...</div>
+      </div>
+    );
+  }
+
   return (
     <div className="materials-page" style={{ position: 'relative' }}>
       <div className="back-arrow" onClick={() => navigate("/home")}>
-        ← 
+        ←
       </div>
 
       <div className="materials-header">
         <div className="header-left">
           <h1><BookOpen className="header-icon" /> Бібліотека робіт</h1>
-          <p>Реальні приклади курсових робіт від студентів попередніх років</p>
+          <p>Курсові роботи факультету: <strong>{userFaculty}</strong></p>
         </div>
         <div className="header-right">
           Знайдено: {filteredExamples.length} з {examples.length}
@@ -126,11 +216,6 @@ const CourseworkLibrary = () => {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-
-        <select value={selectedSpecialty} onChange={(e) => setSelectedSpecialty(e.target.value)}>
-          <option value="all">Всі спеціальності</option>
-          {specialties.slice(1).map(spec => <option key={spec} value={spec}>{spec}</option>)}
-        </select>
 
         <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
           <option value="year">За роком</option>
@@ -176,7 +261,11 @@ const CourseworkLibrary = () => {
         <div className="empty-state">
           <BookOpen className="empty-icon" />
           <h3>Нічого не знайдено</h3>
-          <p>Спробуйте інший пошук або змініть фільтри</p>
+          <p>
+            {examples.length === 0
+              ? `Поки що немає курсових робіт для факультету "${userFaculty}"`
+              : "Спробуйте інший пошук або змініть сортування"}
+          </p>
         </div>
       )}
     </div>

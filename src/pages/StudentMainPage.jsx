@@ -146,82 +146,104 @@ const handleCloseDrawer = () => {
       {/* Header */}
       <div className="student-header" style={{ marginBottom: "20px" }}>
 
-        <div
-          className="student-profile"
-          onClick={() => setShowDropdown(!showDropdown)}
-          style={{ display: "flex", alignItems: "center", cursor: "pointer" }}
-        >
-          <label htmlFor="avatar-upload" className="avatar-wrapper" style={{ cursor: "pointer", display: "inline-block" }}>
-            {avatar ? (
-              <img src={avatar} alt="Avatar" className="avatar-img" />
-            ) : (
-              <div style={{
-                width: "100px",
-                height: "100px",
-                border: "2px dashed #ccc",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "#888",
-              }}>
-                {t("studentDashboard.header.uploadPhoto")}
-              </div>
-            )}
-            <input
-              type="file"
-              id="avatar-upload"
-              style={{ display: "none" }}
-              onChange={handleAvatarChange}
-            />
-          </label>
+<div style={{ display: "flex", alignItems: "center" }}>
+  {/* Іконка сповіщень */}
+  <div
+    className="notifications-icon"
+    style={{ position: "relative", cursor: "pointer" }}
+    onClick={() => setShowNotifications(true)}
+  >
+    <Bell size={24} color="currentColor" />
+    {notificationsCount > 0 && (
+      <span className="notification-badge">{notificationsCount}</span>
+    )}
+  </div>
 
-          <span className="student-name" style={{ fontWeight: "bold", marginLeft: "10px" }}>
-            {studentName || t("studentDashboard.header.defaultName")}
-          </span>
-          <span className="arrow" style={{ marginLeft: "5px" }}>
-            &#9662;
-          </span>
+<div className="student-profile-wrapper" style={{ position: "relative", display: "inline-block" }}>
+  {/* Профіль */}
+  <div
+    className="student-profile"
+    onClick={() => setShowDropdown(!showDropdown)}
+    style={{
+      display: "flex",
+      alignItems: "center",
+      cursor: "pointer",
+      flexWrap: "nowrap",
+      minWidth: 0,
+    }}
+  >
+    <label htmlFor="avatar-upload" className="avatar-wrapper" style={{ cursor: "pointer" }}>
+      {avatar ? (
+        <img src={avatar} alt="Avatar" className="avatar-img" />
+      ) : (
+        <div style={{
+          width: "100px",
+          height: "100px",
+          border: "2px dashed #ccc",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          color: "#888",
+          flexShrink: 0,
+        }}>
+          {t("studentDashboard.header.uploadPhoto")}
         </div>
+      )}
+      <input
+        type="file"
+        id="avatar-upload"
+        style={{ display: "none" }}
+        onChange={handleAvatarChange}
+      />
+    </label>
 
-        <div
-          className="notifications-icon"
-          style={{ position: "relative", cursor: "pointer", top: "-36px", right: "150px" }}
-          onClick={() => setShowNotifications(true)}
-        >
-          <Bell size={24} color="currentColor" />
-          {notificationsCount > 0 && (
-            <span
-            >
-              {notificationsCount}
-            </span>
-          )}
-        </div>
+    <span
+      className="student-name"
+      style={{
+        fontWeight: "bold",
+        marginLeft: "10px",
+        whiteSpace: "nowrap",
+        textOverflow: "ellipsis",
+        overflow: "hidden",
+        maxWidth: "160px",
+        transition: "all 0.3s ease",
+      }}
+    >
+      {studentName || t("studentDashboard.header.defaultName")}
+    </span>
+    <span className="arrow" style={{ marginLeft: "5px" }}>&#9662;</span>
+  </div>
+</div>
 
-        {showDropdown && (
-          <div className="student-dropdown">
-            <div className="dropdown-item" onClick={() => navigate("/profile")}>
-              <User size={16} style={{ marginRight: 8 }} />
-              {t("studentDashboard.header.profileDropdown.profile")}
-            </div>
-            <div className="dropdown-item" onClick={() => navigate("/library")}>
-              <BookOpen size={20} style={{ marginRight: 8 }} />
-              {t("studentDashboard.header.profileDropdown.library")}
-            </div>
-            <div className="dropdown-item" onClick={() => navigate("/materials")}>
-              <FolderOpen size={24} style={{ marginRight: 8 }} />
-              {t("studentDashboard.header.profileDropdown.materials")}
-            </div>
-            <div className="dropdown-item">
-              <Clock size={16} style={{ marginRight: 8 }} />
-              {t("studentDashboard.header.profileDropdown.history")}
-            </div>
-            <div className="dropdown-item" onClick={() => navigate("/authorization")}>
-              <LogOut size={16} style={{ marginRight: 8 }} />
-              {t("studentDashboard.header.profileDropdown.logout")}
-            </div>
-          </div>
-        )}
+  {/* Dropdown */}
+  {showDropdown && (
+    <div
+      className="student-dropdown"
+    >
+      <div className="dropdown-item" onClick={() => navigate("/profile")}>
+        <User size={16} style={{ marginRight: 8 }} />
+        {t("studentDashboard.header.profileDropdown.profile")}
       </div>
+      <div className="dropdown-item" onClick={() => navigate("/library")}>
+        <BookOpen size={18} style={{ marginRight: 8 }} />
+        {t("studentDashboard.header.profileDropdown.library")}
+      </div>
+      <div className="dropdown-item" onClick={() => navigate("/materials")}>
+        <FolderOpen size={24} style={{ marginRight: 8 }} />
+        {t("studentDashboard.header.profileDropdown.materials")}
+      </div>
+      <div className="dropdown-item">
+        <Clock size={16} style={{ marginRight: 8 }} />
+        {t("studentDashboard.header.profileDropdown.history")}
+      </div>
+      <div className="dropdown-item" onClick={() => navigate("/authorization")}>
+        <LogOut size={16} style={{ marginRight: 8 }} />
+        {t("studentDashboard.header.profileDropdown.logout")}
+      </div>
+    </div>
+  )}
+</div>
+</div>
 
       {/* Основна частина */}
       <div className="dashboard-container" style={{ display: "flex", gap: "40px", minHeight: "80vh", alignItems: "flex-start" }}>

@@ -137,7 +137,7 @@ app.post('/api/change-password', (req, res) => {
 
 
 // 👉 Генерація теми + викладачів
-// Генерація теми за ідеєю студента + підбір викладачів
+// 👉 Генерація теми + викладачів через Hugging Face
 app.post('/api/generate-topic', async (req, res) => {
   const { idea } = req.body;
 
@@ -155,15 +155,7 @@ app.post('/api/generate-topic', async (req, res) => {
 
   const teacherList = teachers.map(t => `${t.id}. ${t.name} — ${t.description}`).join("\n");
 
-  try {
-    const response = await axios.post(
-      "https://openrouter.ai/api/v1/chat/completions",
-      {
-        model: "meta-llama/llama-4-maverick:free",
-        messages: [
-          {
-            role: "system",
-            content: `
+  const prompt = `
 Ти асистент університету. Завдання:
 1. Згенеруй академічну тему курсової роботи на основі ідеї студента.
 2. Вибери викладачів із списку, які підходять для керівництва цією темою.
@@ -174,46 +166,40 @@ app.post('/api/generate-topic', async (req, res) => {
   "recommendedTeachers": [id1, id2]
 }
 
+Ідея студента: ${idea}
+
 Викладачі:
 ${teacherList}
-`.trim()
-          },
-          {
-            role: "user",
-            content: `Ідея студента: ${idea}`,
-          },
-        ],
-        temperature: 0.7,
-        max_tokens: 300,
-      },
+  `.trim();
+
+  try {
+    const response = await axios.post(
+      "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2",
+      { inputs: prompt },
       {
         headers: {
-          Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
-          "Content-Type": "application/json",
-          "HTTP-Referer": "http://localhost:3000",
-          "X-Title": "CourseTopicAndMentorSelector",
+          Authorization: `Bearer ${process.env.HF_TOKEN}`,
         },
+        timeout: 60000
       }
     );
 
-    // Відповідь моделі
-    const raw = response.data.choices[0].message.content.trim();
-    console.log("🔵 RAW OpenRouter Response:\n", raw);
+    const raw = response.data?.[0]?.generated_text?.trim();
+    console.log("🔵 HuggingFace RAW:\n", raw);
 
-    // Спроба дістати JSON з тексту
     const jsonMatch = raw.match(/\{[\s\S]*?\}/);
     if (!jsonMatch) {
       return res.status(500).json({
         message: "Не вдалося знайти валідний JSON у відповіді",
-        raw
+        raw,
       });
     }
 
     const parsed = JSON.parse(jsonMatch[0]);
     res.json(parsed);
 
-  } catch (err) {
-    console.error("❌ OpenRouter error:", err.response?.data || err.message);
+  } catch (error) {
+    console.error("❌ Hugging Face error:", error.response?.data || error.message);
     res.status(500).json({ message: "Помилка генерації теми або викладачів." });
   }
 });
