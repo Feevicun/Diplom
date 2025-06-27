@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { useAuth } from '../context/AuthContext';
 
 export default function Authorization() {
   const { t } = useTranslation();
@@ -13,8 +14,11 @@ export default function Authorization() {
   const [registerName, setRegisterName] = useState('');
   const [registerEmail, setRegisterEmail] = useState('');
   const [registerPassword, setRegisterPassword] = useState('');
+  
 
   const navigate = useNavigate();
+  const { login } = useAuth();
+
 
   const switchToLogin = () => {
     setActiveTab('login');
@@ -33,41 +37,45 @@ export default function Authorization() {
     setDropdownOpen(false);
   };
 
-  const handleLogin = async () => {
-    let newErrors = {};
+const handleLogin = async () => {
+  let newErrors = {};
 
-    if (!selectedRole) newErrors.role = t('authorization.errors.role');
-    if (!loginEmail.trim()) newErrors.loginEmail = t('authorization.errors.loginEmail');
-    if (!loginPassword.trim()) newErrors.loginPassword = t('authorization.errors.loginPassword');
+  if (!selectedRole) newErrors.role = t('authorization.errors.role');
+  if (!loginEmail.trim()) newErrors.loginEmail = t('authorization.errors.loginEmail');
+  if (!loginPassword.trim()) newErrors.loginPassword = t('authorization.errors.loginPassword');
 
-    setErrors(newErrors);
-    if (Object.keys(newErrors).length > 0) return;
+  setErrors(newErrors);
+  if (Object.keys(newErrors).length > 0) return;
 
-    try {
-      const response = await fetch("http://localhost:3000/api/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: loginEmail,
-          password: loginPassword,
-          role: selectedRole,
-        }),
+  try {
+    const response = await fetch("http://localhost:3000/api/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: loginEmail,
+        password: loginPassword,
+        role: selectedRole,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      login({
+        email: loginEmail,
+        name: data.name,
+        role: selectedRole,
       });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        localStorage.setItem("studentEmail", loginEmail);
-        localStorage.setItem("studentName", data.name);
-        navigate(selectedRole === 'Student' ? '/home' : '/sthome');
-      } else {
-        alert(data.message);
-      }
-    } catch (error) {
-      console.error("Login error:", error);
-      alert("Something went wrong.");
+      navigate(selectedRole === 'Student' ? '/home' : '/sthome');
+    } else {
+      alert(data.message);
     }
-  };
+  } catch (error) {
+    console.error("Login error:", error);
+    alert("Something went wrong.");
+  }
+};
+
 
   const handleRegister = async () => {
     let newErrors = {};

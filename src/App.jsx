@@ -15,7 +15,7 @@ import CourseworkLibrary from './pages/CourseworkLibrary.jsx';
 import History from './pages/History.jsx';
 
 import EmailVerification from './components/EmailVerification.jsx';
-
+import { AuthProvider } from "./context/AuthContext.jsx";
 
 import { ThemeProvider } from './context/ThemeContext.jsx';
 import ThemeSwitcher from './components/ThemeSwitcher.jsx';
@@ -25,6 +25,7 @@ import LanguageSwitcher from './components/LanguageSwitcher';
 function App() {
   return (
     <ThemeProvider>
+       <AuthProvider>
       <Router>
         <div className="container">
           <ThemeSwitcher />
@@ -47,6 +48,7 @@ function App() {
       </Router>
 
       <LanguageSwitcher />
+       </AuthProvider>
     </ThemeProvider>
   );
 }

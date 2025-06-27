@@ -1,16 +1,22 @@
 import React, { useEffect, useState } from "react";
+import { useAuth } from '../context/AuthContext';
 
 const History = () => {
+    const { user } = useAuth();
+  const userEmail = user?.email;
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Завантаження історії з сервера
   useEffect(() => {
     async function fetchHistory() {
       try {
         setLoading(true);
-        const response = await fetch("/api/history"); // endpoint для отримання історії
+        let url = "/api/history";
+        if (userEmail) {
+          url += `?userEmail=${encodeURIComponent(userEmail)}`;
+        }
+        const response = await fetch(url);
         if (!response.ok) throw new Error("Failed to fetch history");
         const data = await response.json();
         setHistory(data);
@@ -21,7 +27,7 @@ const History = () => {
       }
     }
     fetchHistory();
-  }, []);
+  }, [userEmail]);
 
   if (loading) return <p>Завантаження історії...</p>;
   if (error) return <p style={{ color: "red" }}>Помилка: {error}</p>;
@@ -51,7 +57,7 @@ const History = () => {
                 <td style={{ padding: "8px" }}>{userEmail}</td>
                 <td style={{ padding: "8px", textTransform: "capitalize" }}>{type}</td>
                 <td style={{ padding: "8px" }}>{description}</td>
-                <td style={{ padding: "8px", fontSize: "0.9em", color: "#666" }}>
+                <td style={{ padding: "8px", fontSize: "0.9em", color: "#666", whiteSpace: "pre-wrap" }}>
                   {meta && Object.keys(meta).length > 0
                     ? JSON.stringify(meta, null, 2)
                     : "-"}

@@ -8,14 +8,13 @@ import axios from "axios";
 import dotenv from 'dotenv';
 dotenv.config();
 
-// Для ES-модуля
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Шлях до users.json
 const USERS_FILE = path.join(__dirname, 'users.json');
+const HISTORY_FILE = path.join(__dirname, 'history.json');
 
-// Завантаження користувачів із файлу
+// Завантаження користувачів
 let user = [];
 if (fs.existsSync(USERS_FILE)) {
   const fileContent = fs.readFileSync(USERS_FILE, 'utf-8').trim();
@@ -24,18 +23,42 @@ if (fs.existsSync(USERS_FILE)) {
   }
 }
 
+// Завантаження історії
+let history = [];
+if (fs.existsSync(HISTORY_FILE)) {
+  const fileContent = fs.readFileSync(HISTORY_FILE, 'utf-8').trim();
+  if (fileContent) {
+    history = JSON.parse(fileContent);
+  }
+}
+
 function saveUsersToFile() {
   fs.writeFileSync(USERS_FILE, JSON.stringify(user, null, 2), 'utf-8');
 }
 
-// React build path
+function saveHistoryToFile() {
+  fs.writeFileSync(HISTORY_FILE, JSON.stringify(history, null, 2), 'utf-8');
+}
+
 const distPath = path.join(__dirname, '..', 'dist');
 
 const app = express();
 app.use(express.json());
 
+function logEvent({ userEmail = "unknown", type, description, meta = {} }) {
+  const event = {
+    id: uuidv4(),
+    timestamp: new Date().toISOString(),
+    userEmail,
+    type,
+    description,
+    meta,
+  };
+  history.push(event);
+  saveHistoryToFile();
+}
 
-// 👉 Реєстрація користувача
+// --- API: Реєстрація ---
 app.post('/api/register', async (req, res) => {
   const { name, email, password, role } = req.body;
   const existing = user.find((u) => u.email === email);
@@ -45,6 +68,13 @@ app.post('/api/register', async (req, res) => {
   const newUser = { name, email, password, role, verified: false, token: verificationToken };
   user.push(newUser);
   saveUsersToFile();
+
+  logEvent({
+    userEmail: email,
+    type: "register",
+    description: "User registered",
+    meta: { role }
+  });
 
   try {
     const transporter = nodemailer.createTransport({
@@ -92,15 +122,26 @@ app.post('/api/register', async (req, res) => {
   }
 });
 
-
-// 👉 Логін користувача
+// --- API: Логін ---
 app.post('/api/login', (req, res) => {
   const { email, password, role } = req.body;
   const foundUser = user.find(u => u.email === email && u.role === role);
 
-  if (!foundUser) return res.status(400).json({ message: 'Account does not exist.' });
-  if (!foundUser.verified) return res.status(403).json({ message: 'Email not verified.' });
-  if (foundUser.password !== password) return res.status(401).json({ message: 'Invalid password.' });
+  if (!foundUser) {
+    return res.status(400).json({ message: 'Account does not exist.' });
+  }
+  if (!foundUser.verified) {
+    return res.status(403).json({ message: 'Email not verified.' });
+  }
+  if (foundUser.password !== password) {
+    return res.status(401).json({ message: 'Invalid password.' });
+  }
+
+  logEvent({
+    userEmail: email,
+    type: "login",
+    description: "User logged in",
+  });
 
   res.status(200).json({ 
     message: 'Login successful.', 
@@ -109,7 +150,7 @@ app.post('/api/login', (req, res) => {
   });
 });
 
-// 👉 Підтвердження email
+// --- API: Підтвердження email ---
 app.get('/verify/:token', (req, res) => {
   const token = req.params.token;
   const foundUser = user.find(u => u.token === token);
@@ -119,10 +160,16 @@ app.get('/verify/:token', (req, res) => {
   delete foundUser.token;
   saveUsersToFile();
 
+  logEvent({
+    userEmail: foundUser.email,
+    type: "email_verification",
+    description: "Email verified",
+  });
+
   res.redirect('/register');
 });
 
-// 👉 Зміна паролю
+// --- API: Зміна паролю ---
 app.post('/api/change-password', (req, res) => {
   const { email, oldPassword, newPassword } = req.body;
   const foundUser = user.find(u => u.email === email);
@@ -132,12 +179,16 @@ app.post('/api/change-password', (req, res) => {
   foundUser.password = newPassword;
   saveUsersToFile();
 
+  logEvent({
+    userEmail: email,
+    type: "password_change",
+    description: "Password changed",
+  });
+
   res.status(200).json({ message: 'Пароль успішно змінено.' });
 });
 
-
-// 👉 Генерація теми + викладачів
-// 👉 Генерація теми + викладачів через Hugging Face
+// --- API: Генерація теми + викладачів через Hugging Face ---
 app.post('/api/generate-topic', async (req, res) => {
   const { idea } = req.body;
 
@@ -196,6 +247,14 @@ ${teacherList}
     }
 
     const parsed = JSON.parse(jsonMatch[0]);
+
+    logEvent({
+      userEmail: "unknown", // якщо є контекст - можна передавати email
+      type: "generate_topic",
+      description: "Generated course topic and recommended teachers",
+      meta: { idea, topic: parsed.topic, recommendedTeachers: parsed.recommendedTeachers }
+    });
+
     res.json(parsed);
 
   } catch (error) {
@@ -204,11 +263,23 @@ ${teacherList}
   }
 });
 
+// --- API: Отримати історію подій ---
+app.get('/api/history', (req, res) => {
+  const { userEmail } = req.query;
 
-// 👉 Статика з React
+  let filteredHistory = history;
+  if (userEmail) {
+    filteredHistory = history.filter(e => e.userEmail === userEmail);
+  }
+
+  // Сортуємо за датою, останні зверху
+  filteredHistory = filteredHistory.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+  res.json(filteredHistory);
+});
+
+// --- Статика ---
 app.use(express.static(distPath));
-
-// 👉 Всі інші шляхи — на React
 app.get('/*', (req, res) => {
   res.sendFile(path.join(distPath, 'index.html'));
 });
