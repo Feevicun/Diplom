@@ -15,6 +15,28 @@ const CourseworkLibrary = () => {
   const [sortBy, setSortBy] = useState('year');
   const [userFaculty, setUserFaculty] = useState('');
   const [loading, setLoading] = useState(true);
+  const [userEmail, setUserEmail] = useState('');
+
+  useEffect(() => {
+    const storedData = JSON.parse(localStorage.getItem('registrationData'));
+    if (storedData?.email) setUserEmail(storedData.email);
+  }, []);
+
+  const logHistoryEvent = async ({ userEmail, type, description }) => {
+  try {
+    const response = await fetch('/api/history', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userEmail, type, description }),
+    });
+    if (!response.ok) {
+      console.error('Failed to log history event:', await response.text());
+    }
+  } catch (error) {
+    console.error('Error logging history event:', error);
+  }
+};
+
 
   const getFacultySpecialties = (faculty) => {
     const facultySpecialties = {
@@ -169,14 +191,25 @@ const CourseworkLibrary = () => {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+
+      logHistoryEvent({
+        userEmail,
+        type: 'download_coursework',
+        description: `Завантаження курсової: ${example.title}`
+      });
     } else {
       alert('Файл недоступний для завантаження');
     }
   };
 
-  const handlePreview = (example) => {
+const handlePreview = (example) => {
     if (example.fileUrl) {
       window.open(example.fileUrl, '_blank');
+      logHistoryEvent({
+        userEmail,
+        type: 'preview_coursework',
+        description: `Перегляд курсової: ${example.title}`
+      });
     } else {
       alert('Файл недоступний для перегляду');
     }

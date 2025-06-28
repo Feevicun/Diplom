@@ -3,6 +3,20 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { User, Clock, LogOut, Bell, BookOpen, FolderOpen } from "lucide-react";
 
+
+const logHistoryEvent = async ({ userEmail, type, description, meta = {} }) => {
+  try {
+    await fetch("/api/history", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userEmail, type, description, meta }),
+    });
+  } catch (error) {
+    console.error("Failed to log history event:", error);
+  }
+};
+
+
 const departmentTeachers = [
   { id: 1, name: "Іван Петренко", description: "Штучний інтелект, Java, алгоритми" },
   { id: 2, name: "Олена Коваленко", description: "Бази даних, SQL, хмарні технології" },
@@ -30,6 +44,17 @@ const StudentDashboard = () => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [notificationMode, setNotificationMode] = useState("slider");
   const [currentNotification, setCurrentNotification] = useState(0);
+  const [studentEmail, setStudentEmail] = useState("");
+
+useEffect(() => {
+  const storedData = JSON.parse(localStorage.getItem("registrationData")) || {};
+  if (storedData.firstName) setStudentName(storedData.firstName);
+  if (storedData.email) setStudentEmail(storedData.email);
+  const storedAvatar = localStorage.getItem("avatar");
+  if (storedAvatar) setAvatar(storedAvatar);
+}, []);
+
+
 
 const [notifications, setNotifications] = useState([
   { id: 1, read: false },
@@ -75,17 +100,25 @@ const handleCloseDrawer = () => {
 
 
   
-  const handleAvatarChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setAvatar(reader.result);
-        localStorage.setItem("avatar", reader.result);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
+const handleAvatarChange = (e) => {
+  const file = e.target.files[0];
+  if (file) {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setAvatar(reader.result);
+      localStorage.setItem("avatar", reader.result);
+
+      // Логування зміни аватара
+      logHistoryEvent({
+        userEmail: studentEmail,
+        type: "avatar_change",
+        description: "Користувач змінив аватар",
+      });
+    };
+    reader.readAsDataURL(file);
+  }
+};
+
 
   const handleTeacherClick = (teacher) => {
     setSelectedTeacher(teacher);
@@ -93,6 +126,13 @@ const handleCloseDrawer = () => {
 
   const handleConfirmBooking = () => {
     alert(`${t("studentDashboard.modal.book")} ${selectedTeacher.name}`);
+    logHistoryEvent({
+  userEmail: studentEmail,
+  type: "book_teacher",
+  description: `Студент забронював викладача ${selectedTeacher.name}`,
+  meta: { teacher: selectedTeacher.name, topic: generatedTopic }
+});
+
     setSelectedTeacher(null);
   };
 
@@ -110,6 +150,14 @@ const handleCloseDrawer = () => {
 
       const data = await response.json();
       setGeneratedTopic(data.topic || "Курсова робота");
+
+      logHistoryEvent({
+  userEmail: studentEmail,
+  type: "generate_topic",
+  description: "Студент згенерував тему курсової",
+  meta: { courseIdea, generatedTopic: data.topic, recommendedTeachers: data.recommendedTeachers }
+});
+
 
       const filtered = departmentTeachers.filter(t =>
         data.recommendedTeachers?.includes(t.id)
@@ -216,32 +264,86 @@ const handleCloseDrawer = () => {
 </div>
 
   {/* Dropdown */}
-  {showDropdown && (
+{/* Dropdown */}
+{showDropdown && (
+  <div className="student-dropdown">
     <div
-      className="student-dropdown"
+      className="dropdown-item"
+      onClick={() => {
+        logHistoryEvent({
+          userEmail: studentEmail,
+          type: "navigate",
+          description: "Перехід до профілю",
+        });
+        navigate("/profile");
+      }}
     >
-      <div className="dropdown-item" onClick={() => navigate("/profile")}>
-        <User size={16} style={{ marginRight: 8 }} />
-        {t("studentDashboard.header.profileDropdown.profile")}
-      </div>
-      <div className="dropdown-item" onClick={() => navigate("/library")}>
-        <BookOpen size={18} style={{ marginRight: 8 }} />
-        {t("studentDashboard.header.profileDropdown.library")}
-      </div>
-      <div className="dropdown-item" onClick={() => navigate("/materials")}>
-        <FolderOpen size={24} style={{ marginRight: 8 }} />
-        {t("studentDashboard.header.profileDropdown.materials")}
-      </div>
-      <div className="dropdown-item" onClick={() => navigate("/history")}>
-        <Clock size={16} style={{ marginRight: 8 }} />
-        {t("studentDashboard.header.profileDropdown.history")}
-      </div>
-      <div className="dropdown-item" onClick={() => navigate("/authorization")}>
-        <LogOut size={16} style={{ marginRight: 8 }} />
-        {t("studentDashboard.header.profileDropdown.logout")}
-      </div>
+      <User size={16} style={{ marginRight: 8 }} />
+      {t("studentDashboard.header.profileDropdown.profile")}
     </div>
-  )}
+
+    <div
+      className="dropdown-item"
+      onClick={() => {
+        logHistoryEvent({
+          userEmail: studentEmail,
+          type: "navigate",
+          description: "Перехід до бібліотеки",
+        });
+        navigate("/library");
+      }}
+    >
+      <BookOpen size={18} style={{ marginRight: 8 }} />
+      {t("studentDashboard.header.profileDropdown.library")}
+    </div>
+
+    <div
+      className="dropdown-item"
+      onClick={() => {
+        logHistoryEvent({
+          userEmail: studentEmail,
+          type: "navigate",
+          description: "Перехід до методичних матеріалів",
+        });
+        navigate("/materials");
+      }}
+    >
+      <FolderOpen size={24} style={{ marginRight: 8 }} />
+      {t("studentDashboard.header.profileDropdown.materials")}
+    </div>
+
+    <div
+      className="dropdown-item"
+      onClick={() => {
+        logHistoryEvent({
+          userEmail: studentEmail,
+          type: "navigate",
+          description: "Перехід до історії подій",
+        });
+        navigate("/history");
+      }}
+    >
+      <Clock size={16} style={{ marginRight: 8 }} />
+      {t("studentDashboard.header.profileDropdown.history")}
+    </div>
+
+    <div
+      className="dropdown-item"
+      onClick={() => {
+        logHistoryEvent({
+          userEmail: studentEmail,
+          type: "navigate",
+          description: "Вихід з акаунта",
+        });
+        navigate("/authorization");
+      }}
+    >
+      <LogOut size={16} style={{ marginRight: 8 }} />
+      {t("studentDashboard.header.profileDropdown.logout")}
+    </div>
+  </div>
+)}
+
 </div>
 </div>
 

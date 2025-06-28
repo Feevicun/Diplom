@@ -352,5 +352,231 @@
       "faculty": "Факультет електроніки та комп'ютерних технологій",
       "department": "системного проектування"
     }
+  },
+  {
+    "id": "cd987c09-0910-42c0-aba1-02f7fa1d0381",
+    "timestamp": "2025-06-28T21:33:10.417Z",
+    "userEmail": "vikander.work@gmail.com",
+    "type": "login",
+    "description": "User logged in",
+    "meta": {}
+  },
+  {
+    "id": "02f361b0-69da-4d05-8a10-11c76283c73b",
+    "timestamp": "2025-06-28T21:36:45.517Z",
+    "userEmail": "vikander.work@gmail.com",
+    "type": "login",
+    "description": "User logged in",
+    "meta": {}
+  },
+  {
+    "id": "200095dd-4741-4254-ab32-ab8453cd28d1",
+    "timestamp": "2025-06-28T21:36:56.900Z",
+    "userEmail": "vikander.work@gmail.com",
+    "type": "profile_update",
+    "description": "Оновлення профілю студентом",
+    "meta": {
+      "firstName": "Galyna",
+      "surname": "Osoba",
+      "email": "vikander.work@gmail.com",
+      "faculty": "Факультет електроніки та комп'ютерних технологій",
+      "department": "системного проектування",
+      "course": "2",
+      "group": "54"
+    }
+  },
+  {
+    "id": "735ba853-d85f-431b-9fff-b85eb6b006c7",
+    "timestamp": "2025-06-28T21:37:21.620Z",
+    "userEmail": "vikander.work@gmail.com",
+    "type": "profile_update",
+    "description": "Оновлення профілю студентом",
+    "meta": {
+      "firstName": "Galyna",
+      "surname": "Osoba",
+      "email": "vikander.work@gmail.com",
+      "faculty": "Факультет електроніки та комп'ютерних технологій",
+      "department": "системного проектування",
+      "course": "1",
+      "group": "54"
+    }
+  },
+  {
+    "id": "52ac3155-3480-47f0-b0e0-123a777a068b",
+    "timestamp": "2025-06-28T21:37:34.470Z",
+    "userEmail": "vikander.work@gmail.com",
+    "type": "profile_update",
+    "description": "Оновлення профілю студентом",
+    "meta": {
+      "firstName": "Galyna",
+      "surname": "Osoba",
+      "email": "vikander.work@gmail.com",
+      "faculty": "Факультет електроніки та комп'ютерних технологій",
+      "department": "системного проектування",
+      "course": "1",
+      "group": "54"
+    }
+  },
+  {
+    "id": "90ec361c-70df-429f-9631-eb1ca22c4c57",
+    "timestamp": "2025-06-28T21:44:42.049Z",
+    "userEmail": "vikander.work@gmail.com",
+    "type": "login",
+    "description": "User logged in",
+    "meta": {}
+  },
+  {
+    "id": "3ff72fec-8791-4745-9e0f-58f8906bd66e",
+    "timestamp": "2025-06-28T21:44:46.622Z",
+    "userEmail": "vikander.work@gmail.com",
+    "type": "navigate",
+    "description": "Перехід до методичних матеріалів",
+    "meta": {}
+  },
+  {
+    "id": "c2098f23-6656-49c5-8361-2380c4660154",
+    "timestamp": "2025-06-28T21:44:51.276Z",
+    "userEmail": "vikander.work@gmail.com",
+    "type": "navigate",
+    "description": "Перехід до історії подій",
+    "meta": {}
+  },
+  {
+    "id": "81656481-d495-4fd3-bc40-cd5ffa047722",
+    "timestamp": "2025-06-28T21:45:00.169Z",
+    "userEmail": "vikander.work@gmail.com",
+    "type": "generate_topic",
+    "description": "Студент згенерував тему курсової",
+    "meta": {
+      "courseIdea": ""
+    }
+  },
+  {
+    "id": "017c34e2-c4fc-4fb0-87a1-fd206f5318ab",
+    "timestamp": "2025-06-28T21:45:02.455Z",
+    "userEmail": "vikander.work@gmail.com",
+    "type": "navigate",
+    "description": "Перехід до історії подій",
+    "meta": {}
+  },
+  {
+    "id": "8f710cb3-4f53-4946-b7b3-2724f2fdc5b8",
+    "timestamp": "2025-06-28T21:45:18.585Z",
+    "userEmail": "vikander.work@gmail.com",
+    "type": "navigate",
+    "description": "Перехід до історії подій",
+    "meta": {}
+  },
+  {
+    "id": "95e914df-2ebc-442c-8b63-1ae2f7a4349e",
+    "timestamp": "2025-06-28T21:46:43.386Z",
+    "userEmail": "vikander.work@gmail.com",
+    "type": "navigate",
+    "description": "Перехід до методичних матеріалів",
+    "meta": {}
+  },
+  {
+    "id": "aecda296-8acd-4edd-b259-8cbc110c0ee9",
+    "timestamp": "2025-06-28T21:54:49.265Z",
+    "userEmail": "vikander.work@gmail.com",
+    "type": "login",
+    "description": "User logged in",
+    "meta": {}
+  },
+  {
+    "id": "089b78af-8e8d-4f0b-ad0d-48d2bb309f62",
+    "timestamp": "2025-06-28T21:54:53.160Z",
+    "userEmail": "vikander.work@gmail.com",
+    "type": "avatar_change",
+    "description": "Користувач змінив аватар",
+    "meta": {}
+  },
+  {
+    "id": "adfb6b6a-323c-4c0a-9bee-c8581700216a",
+    "timestamp": "2025-06-28T21:54:55.087Z",
+    "userEmail": "vikander.work@gmail.com",
+    "type": "navigate",
+    "description": "Перехід до історії подій",
+    "meta": {}
+  },
+  {
+    "id": "03c6df0c-fc8d-4be1-bb26-74063f9df2d1",
+    "timestamp": "2025-06-28T21:55:02.225Z",
+    "userEmail": "vikander.work@gmail.com",
+    "type": "navigate",
+    "description": "Перехід до методичних матеріалів",
+    "meta": {}
+  },
+  {
+    "id": "6ade7111-7c22-4a2a-92ba-2ed7902e46c0",
+    "timestamp": "2025-06-28T21:55:04.744Z",
+    "userEmail": "vikander.work@gmail.com",
+    "type": "preview_material",
+    "description": "Перегляд матеріалу: Методичні рекомендації з написання курсових робіт",
+    "meta": {}
+  },
+  {
+    "id": "3ce9980c-3f56-4fd7-bea6-315800181506",
+    "timestamp": "2025-06-28T21:55:10.824Z",
+    "userEmail": "vikander.work@gmail.com",
+    "type": "navigate",
+    "description": "Перехід до історії подій",
+    "meta": {}
+  },
+  {
+    "id": "ddeac9b7-0477-471a-ac9a-7f5f8832c94e",
+    "timestamp": "2025-06-28T21:55:21.488Z",
+    "userEmail": "vikander.work@gmail.com",
+    "type": "navigate",
+    "description": "Перехід до методичних матеріалів",
+    "meta": {}
+  },
+  {
+    "id": "fd5c8042-caf0-4c5b-98b8-d2a1316affd0",
+    "timestamp": "2025-06-28T21:55:25.208Z",
+    "userEmail": "vikander.work@gmail.com",
+    "type": "preview_material",
+    "description": "Перегляд матеріалу: Шаблон оформлення курсової роботи",
+    "meta": {}
+  },
+  {
+    "id": "b6da374d-fccd-4247-a7ef-b7a667ae7129",
+    "timestamp": "2025-06-28T21:55:31.535Z",
+    "userEmail": "vikander.work@gmail.com",
+    "type": "navigate",
+    "description": "Перехід до історії подій",
+    "meta": {}
+  },
+  {
+    "id": "6804333a-6fec-4533-a4d5-bc9b851ec737",
+    "timestamp": "2025-06-28T21:55:42.768Z",
+    "userEmail": "vikander.work@gmail.com",
+    "type": "navigate",
+    "description": "Перехід до історії подій",
+    "meta": {}
+  },
+  {
+    "id": "82b336f1-1e4c-4bd3-90a7-326fef5e27bc",
+    "timestamp": "2025-06-28T21:55:57.526Z",
+    "userEmail": "vikander.work@gmail.com",
+    "type": "navigate",
+    "description": "Перехід до історії подій",
+    "meta": {}
+  },
+  {
+    "id": "e914fece-84c7-4286-810d-eb5db0155bc1",
+    "timestamp": "2025-06-28T21:56:16.328Z",
+    "userEmail": "vikander.work@gmail.com",
+    "type": "avatar_change",
+    "description": "Користувач змінив аватар",
+    "meta": {}
+  },
+  {
+    "id": "cde368da-d684-4d44-9724-60aa4278e113",
+    "timestamp": "2025-06-28T21:56:18.594Z",
+    "userEmail": "vikander.work@gmail.com",
+    "type": "navigate",
+    "description": "Перехід до історії подій",
+    "meta": {}
   }
 ]

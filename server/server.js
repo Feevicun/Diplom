@@ -172,6 +172,28 @@ app.post('/api/register-student-info', (req, res) => {
   res.status(200).json({ message: 'Інформація успішно збережена' });
 });
 
+// --- API: Додати запис до історії подій ---
+app.post('/api/history', (req, res) => {
+  const { userEmail, type, description, meta = {} } = req.body;
+
+  if (!userEmail || !type || !description) {
+    return res.status(400).json({ message: 'Обовʼязкові поля: userEmail, type, description' });
+  }
+
+  const event = {
+    id: uuidv4(),
+    timestamp: new Date().toISOString(),
+    userEmail,
+    type,
+    description,
+    meta,
+  };
+
+  history.push(event);
+  saveHistoryToFile();
+
+  res.status(201).json({ message: 'Подію успішно записано в історію', event });
+});
 
 
 // --- API: Підтвердження email ---

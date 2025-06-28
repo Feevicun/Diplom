@@ -22,7 +22,27 @@ const MethodicalMaterials = () => {
   const [loading, setLoading] = useState(true);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
+  const [userEmail, setUserEmail] = useState('');
 
+useEffect(() => {
+  const data = JSON.parse(localStorage.getItem('registrationData')) || {};
+  if (data.email) setUserEmail(data.email);
+}, []);
+
+  const logHistoryEvent = async ({ userEmail, type, description }) => {
+  try {
+    const response = await fetch('/api/history', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userEmail, type, description }),
+    });
+    if (!response.ok) {
+      console.error('Failed to log history event:', await response.text());
+    }
+  } catch (error) {
+    console.error('Error logging history event:', error);
+  }
+};
   
 
 const mockMaterials = [
@@ -252,37 +272,49 @@ const mockMaterials = [
   });
 
   // Функція для завантаження файлу
-  const handleDownload = (material) => {
-    console.log('Завантаження:', material.title);
-    
-    if (material.fileUrl) {
-      const link = document.createElement('a');
-      link.href = material.fileUrl;
-      link.download = `${material.title}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      // Оновлюємо лічильник завантажень (в реальному проекті це буде API запит)
-      setMaterials(prev => prev.map(m => 
-        m.id === material.id ? { ...m, downloads: m.downloads + 1 } : m
-      ));
-    } else {
-      alert('Файл недоступний для завантаження');
-    }
-  };
+const handleDownload = (material) => {
+  console.log('Завантаження:', material.title);
+  
+  if (material.fileUrl) {
+    const link = document.createElement('a');
+    link.href = material.fileUrl;
+    link.download = `${material.title}.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    setMaterials(prev => prev.map(m => 
+      m.id === material.id ? { ...m, downloads: m.downloads + 1 } : m
+    ));
+
+    logHistoryEvent({
+      userEmail,
+      type: 'download_material',
+      description: `Завантаження матеріалу: ${material.title}`
+    });
+  } else {
+    alert('Файл недоступний для завантаження');
+  }
+};
+
 
   // Функція для попереднього перегляду PDF
-  const handlePreview = (material) => {
-    console.log('Перегляд:', material.title);
-    
-    if (material.fileUrl) {
-      // Відкрити в новій вкладці
-      window.open(material.fileUrl, '_blank');
-    } else {
-      alert('Файл недоступний для перегляду');
-    }
-  };
+const handlePreview = (material) => {
+  console.log('Перегляд:', material.title);
+  
+  if (material.fileUrl) {
+    window.open(material.fileUrl, '_blank');
+
+    logHistoryEvent({
+      userEmail,
+      type: 'preview_material',
+      description: `Перегляд матеріалу: ${material.title}`
+    });
+  } else {
+    alert('Файл недоступний для перегляду');
+  }
+};
+
 
   // Функція для закриття попереднього перегляду
   const closePreview = () => {

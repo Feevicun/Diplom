@@ -44,21 +44,31 @@ const StudentProfile = () => {
     }
   };
 
-  const handleSaveProfile = () => {
-    const updatedData = {
-      firstName: name,
-      surname: surname,
-      email: email,
-      faculty,
-      department,
-      course,
-      group,
-    };
-
-    localStorage.setItem("registrationData", JSON.stringify(updatedData));
-    localStorage.setItem("studentEmail", email);
-    alert(t("studentProfile.alerts.profileSaved"));
+const handleSaveProfile = () => {
+  const updatedData = {
+    firstName: name,
+    surname: surname,
+    email: email,
+    faculty,
+    department,
+    course,
+    group,
   };
+
+  localStorage.setItem("registrationData", JSON.stringify(updatedData));
+  localStorage.setItem("studentEmail", email);
+
+  // 🔄 Запис у історію
+  logHistoryEvent({
+    email,
+    type: "profile_update",
+    description: "Оновлення профілю студентом",
+    meta: updatedData,
+  });
+
+  alert(t("studentProfile.alerts.profileSaved"));
+};
+
 
   const handleChangePassword = () => {
     setIsModalOpen(true);
@@ -223,5 +233,26 @@ const handleLogout = () => {
     </>
   );
 };
+
+
+const logHistoryEvent = async ({ email, type, description, meta }) => {
+  try {
+    await fetch("/api/history", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        userEmail: email,
+        type,
+        description,
+        meta,
+      }),
+    });
+  } catch (error) {
+    console.error("Помилка запису в історію:", error);
+  }
+};
+
 
 export default StudentProfile;
