@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
-  Search, Download, Eye, Star, Calendar, BookOpen, FileText
+  Search, Download, Eye, Star, BookOpen, FileText
 } from 'lucide-react';
 
 import Example1 from '../documents/2023_ФеІ-23_Особа_В.Б._презентація.pdf';
@@ -9,6 +10,7 @@ import Example2 from '../documents/2023_ФеІ-22_Стельмащук_А.В._п
 
 const CourseworkLibrary = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [examples, setExamples] = useState([]);
   const [filteredExamples, setFilteredExamples] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -23,122 +25,67 @@ const CourseworkLibrary = () => {
   }, []);
 
   const logHistoryEvent = async ({ userEmail, type, description }) => {
-  try {
-    const response = await fetch('/api/history', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userEmail, type, description }),
-    });
-    if (!response.ok) {
-      console.error('Failed to log history event:', await response.text());
+    try {
+      const response = await fetch('/api/history', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userEmail, type, description }),
+      });
+      if (!response.ok) {
+        console.error('Failed to log history event:', await response.text());
+      }
+    } catch (error) {
+      console.error('Error logging history event:', error);
     }
-  } catch (error) {
-    console.error('Error logging history event:', error);
-  }
-};
-
+  };
 
   const getFacultySpecialties = (faculty) => {
     const facultySpecialties = {
-      "Факультет прикладної математики та інформатики": [
-        'Програмування', 'Комп. науки', 'Інформаційні системи', 'Кібербезпека', 'Прикладна математика'
-      ],
       "Факультет електроніки та комп'ютерних технологій": [
         'Електроніка', 'Комп. технології', 'Радіофізика', 'Оптоелектроніка'
       ],
-      "Механіко-математичний факультет": [
-        'Математика', 'Механіка', 'Математична статистика', 'Функціональний аналіз'
-      ],
-      "Фізичний факультет": [
-        'Фізика', 'Астрофізика', 'Експериментальна фізика', 'Фізика металів'
-      ],
-      "Хімічний факультет": [
-        'Аналітична хімія', 'Органічна хімія', 'Неорганічна хімія'
-      ],
-      "Біологічний факультет": [
-        'Біофізика', 'Біохімія', 'Ботаніка', 'Генетика', 'Екологія', 'Зоологія'
-      ],
-      "Економічний факультет": [
-        'Економіка', 'Менеджмент', 'Маркетинг', 'Облік і аудит', 'Статистика'
-      ],
-      "Юридичний факультет": [
-        'Адміністративне право', 'Конституційне право', 'Кримінальне право', 'Цивільне право'
-      ],
-      "Філологічний факультет": [
-        'Українська філологія', 'Слов\'янська філологія', 'Польська філологія', 'Мовознавство'
-      ],
-      "Факультет іноземних мов": [
-        'Англійська філологія', 'Німецька філологія', 'Французька філологія', 'Переклад'
-      ],
-      "Історичний факультет": [
-        'Історія', 'Етнологія', 'Соціологія', 'Краєзнавство'
-      ],
-      "Географічний факультет": [
-        'Географія', 'Екологія', 'Туризм', 'Готельно-ресторанна справа'
-      ],
-      "Геологічний факультет": [
-        'Геологія', 'Геофізика', 'Мінералогія', 'Гідрогеологія'
-      ],
-      "Філософський факультет": [
-        'Філософія', 'Політологія', 'Психологія', 'Культурологія'
-      ],
-      "Факультет журналістики": [
-        'Журналістика', 'Масова інформація', 'Мова ЗМІ'
-      ],
-      "Факультет культури і мистецтв": [
-        'Музичне мистецтво', 'Театрознавство', 'Хореографія', 'Культурний менеджмент'
-      ],
-      "Факультет міжнародних відносин": [
-        'Міжнародні відносини', 'Міжнародне право', 'Європейське право', 'Міжнародна безпека'
-      ],
-      "Факультет педагогічної освіти": [
-        'Педагогіка', 'Початкова освіта', 'Дошкільна освіта', 'Соціальна робота'
-      ],
-      "Факультет управління фінансами та бізнесу": [
-        'Фінанси', 'Фінансовий менеджмент', 'Цифрова економіка', 'Бізнес-аналітика'
+      "Факультет прикладної математики та інформатики": [
+        'Програмування', 'Комп. науки', 'Інформаційні системи', 'Кібербезпека', 'Прикладна математика'
       ]
     };
-    
     return facultySpecialties[faculty] || [];
   };
 
-  const getAllCourseworks = () => {
-    return [
-      {
-        id: 1,
-        title: "Розробка чат-бота для консультацій студентів",
-        description: "Приклад курсової роботи з розробки чат-бота на JavaScript для внутрішньої платформи університету.",
-        student: "Іван Коваль",
-        specialty: "Програмування",
-        year: 2023,
-        supervisor: "д-р. Ткаченко Л.М.",
-        rating: 4.7,
-        fileUrl: Example1
-      },
-      {
-        id: 2,
-        title: "Система розпізнавання облич на основі OpenCV",
-        description: "Курсова з комп'ютерного зору, яка демонструє використання бібліотеки OpenCV та алгоритмів машинного навчання.",
-        student: "Олена Дорошенко",
-        specialty: "Комп. науки",
-        year: 2022,
-        supervisor: "проф. Сидоренко А.П.",
-        rating: 4.9,
-        fileUrl: Example2
-      },
-      {
-        id: 13,
-        title: "Розробка мікроконтролерної системи",
-        description: "Проектування системи автоматизації розумного дому на основі Arduino.",
-        student: "Максим Шевченко",
-        specialty: "Електроніка",
-        year: 2023,
-        supervisor: "доц. Захарченко О.П.",
-        rating: 4.6,
-        fileUrl: null
-      },
-    ];
-  };
+  const getAllCourseworks = () => [
+    {
+      id: 1,
+      title: "Розробка чат-бота для консультацій студентів",
+      description: "Приклад курсової роботи з розробки чат-бота на JavaScript для внутрішньої платформи університету.",
+      student: "Іван Коваль",
+      specialty: "Програмування",
+      year: 2023,
+      supervisor: "д-р. Ткаченко Л.М.",
+      rating: 4.7,
+      fileUrl: Example1
+    },
+    {
+      id: 2,
+      title: "Система розпізнавання облич на основі OpenCV",
+      description: "Курсова з комп'ютерного зору, яка демонструє використання бібліотеки OpenCV та алгоритмів машинного навчання.",
+      student: "Олена Дорошенко",
+      specialty: "Комп. науки",
+      year: 2022,
+      supervisor: "проф. Сидоренко А.П.",
+      rating: 4.9,
+      fileUrl: Example2
+    },
+    {
+      id: 3,
+      title: "Розробка мікроконтролерної системи",
+      description: "Проектування системи автоматизації розумного дому на основі Arduino.",
+      student: "Максим Шевченко",
+      specialty: "Електроніка",
+      year: 2023,
+      supervisor: "доц. Захарченко О.П.",
+      rating: 4.6,
+      fileUrl: null
+    }
+  ];
 
   useEffect(() => {
     const storedData = JSON.parse(localStorage.getItem('registrationData'));
@@ -198,11 +145,11 @@ const CourseworkLibrary = () => {
         description: `Завантаження курсової: ${example.title}`
       });
     } else {
-      alert('Файл недоступний для завантаження');
+      alert(t("library.fileUnavailable", { action: t("library.download").toLowerCase() }));
     }
   };
 
-const handlePreview = (example) => {
+  const handlePreview = (example) => {
     if (example.fileUrl) {
       window.open(example.fileUrl, '_blank');
       logHistoryEvent({
@@ -211,7 +158,7 @@ const handlePreview = (example) => {
         description: `Перегляд курсової: ${example.title}`
       });
     } else {
-      alert('Файл недоступний для перегляду');
+      alert(t("library.fileUnavailable", { action: t("library.preview").toLowerCase() }));
     }
   };
 
@@ -231,11 +178,11 @@ const handlePreview = (example) => {
 
       <div className="materials-header">
         <div className="header-left">
-          <h1><BookOpen className="header-icon" /> Бібліотека робіт</h1>
-          <p>Курсові роботи факультету: <strong>{userFaculty}</strong></p>
+          <h1><BookOpen className="header-icon" /> {t("library.title")}</h1>
+          <p>{t("library.facultyCourseworks", { faculty: userFaculty })}</p>
         </div>
         <div className="header-right">
-          Знайдено: {filteredExamples.length} з {examples.length}
+          {t("library.found", { found: filteredExamples.length, total: examples.length })}
         </div>
       </div>
 
@@ -244,16 +191,16 @@ const handlePreview = (example) => {
           <Search className="search-icon" />
           <input
             type="text"
-            placeholder="Пошук за назвою або студентом..."
+            placeholder={t("library.searchPlaceholder")}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
 
         <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
-          <option value="year">За роком</option>
-          <option value="title">За назвою</option>
-          <option value="rating">За рейтингом</option>
+          <option value="year">{t("library.sort.year")}</option>
+          <option value="title">{t("library.sort.title")}</option>
+          <option value="rating">{t("library.sort.rating")}</option>
         </select>
       </div>
 
@@ -271,18 +218,18 @@ const handlePreview = (example) => {
             <h3 className="material-title">{example.title}</h3>
             <div className="card-body">
               <p className="material-desc">{example.description}</p>
-              <p><strong>Студент:</strong> {example.student}</p>
-              <p><strong>Спеціальність:</strong> {example.specialty}</p>
-              <p><strong>Керівник:</strong> {example.supervisor}</p>
-              <p><strong>Рік:</strong> {example.year}</p>
+              <p><strong>{t("library.student")}:</strong> {example.student}</p>
+              <p><strong>{t("library.specialty")}:</strong> {example.specialty}</p>
+              <p><strong>{t("library.supervisor")}:</strong> {example.supervisor}</p>
+              <p><strong>{t("library.year")}:</strong> {example.year}</p>
             </div>
             <div className="card-footer">
               <div className="actions">
                 <button onClick={() => handlePreview(example)} className="btn btn-light">
-                  <Eye className="icon-sm" /> Переглянути
+                  <Eye className="icon-sm" /> {t("library.preview")}
                 </button>
                 <button onClick={() => handleDownload(example)} className="btn btn-dark">
-                  <Download className="icon-sm" /> Завантажити
+                  <Download className="icon-sm" /> {t("library.download")}
                 </button>
               </div>
             </div>
@@ -293,11 +240,11 @@ const handlePreview = (example) => {
       {filteredExamples.length === 0 && (
         <div className="empty-state">
           <BookOpen className="empty-icon" />
-          <h3>Нічого не знайдено</h3>
+          <h3>{t("library.notFoundTitle")}</h3>
           <p>
             {examples.length === 0
-              ? `Поки що немає курсових робіт для факультету "${userFaculty}"`
-              : "Спробуйте інший пошук або змініть сортування"}
+              ? t("library.notFoundDescription.empty", { faculty: userFaculty })
+              : t("library.notFoundDescription.filtered")}
           </p>
         </div>
       )}

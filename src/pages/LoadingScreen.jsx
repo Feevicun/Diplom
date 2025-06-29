@@ -1,13 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 export default function LoadingScreen() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [showSecond, setShowSecond] = useState(false);
 
   useEffect(() => {
-    const firstTimer = setTimeout(() => setShowSecond(true), 3000);
-    const navTimer = setTimeout(() => navigate('/authorization'), 5000);
+    const firstTimer = setTimeout(() => setShowSecond(true), 5000);
+    const navTimer = setTimeout(() => navigate('/authorization'), 10000);
 
     return () => {
       clearTimeout(firstTimer);
@@ -18,20 +20,19 @@ export default function LoadingScreen() {
   return (
     <div className="meme-loading-container">
       <div className="meme-text fade-in">
-        Що роблять студенти перед дедлайном?
+        {t('loadingScreen.firstText')}
       </div>
       {showSecond && (
         <div className="meme-text fade-in delay">
-          Завантажують додаток...
+          {t('loadingScreen.secondText')}
         </div>
       )}
 
-      {/* Optional: funny meme GIF */}
       {showSecond && (
         <img
           className="meme-gif fade-in delay"
           src="https://media.giphy.com/media/3o7btPCcdNniyf0ArS/giphy.gif"
-          alt="student meme"
+          alt={t('loadingScreen.imageAlt')}
         />
       )}
     </div>

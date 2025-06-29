@@ -1,18 +1,19 @@
-// MethodicalMaterials.jsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   Search, Download, Eye, Star, Filter,
-  Calendar, BookOpen, FileText, Video, Link, ExternalLink
+  Calendar, BookOpen, FileText, Video, Link
 } from 'lucide-react';
 
-// Імпортуйте ваші PDF файли
 import Requirements from '../documents/Content_requirements.pdf';
 import Title from '../documents/Requirements_title.pdf';
 import Design from '../documents/design.pdf';
 
 const MethodicalMaterials = () => {
-    const navigate = useNavigate();
+  const navigate = useNavigate();
+  const { t } = useTranslation();
+
   const [materials, setMaterials] = useState([]);
   const [filteredMaterials, setFilteredMaterials] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -24,26 +25,25 @@ const MethodicalMaterials = () => {
   const [showPreview, setShowPreview] = useState(false);
   const [userEmail, setUserEmail] = useState('');
 
-useEffect(() => {
-  const data = JSON.parse(localStorage.getItem('registrationData')) || {};
-  if (data.email) setUserEmail(data.email);
-}, []);
+  useEffect(() => {
+    const data = JSON.parse(localStorage.getItem('registrationData')) || {};
+    if (data.email) setUserEmail(data.email);
+  }, []);
 
   const logHistoryEvent = async ({ userEmail, type, description }) => {
-  try {
-    const response = await fetch('/api/history', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userEmail, type, description }),
-    });
-    if (!response.ok) {
-      console.error('Failed to log history event:', await response.text());
+    try {
+      const response = await fetch('/api/history', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userEmail, type, description }),
+      });
+      if (!response.ok) {
+        console.error('Failed to log history event:', await response.text());
+      }
+    } catch (error) {
+      console.error('Error logging history event:', error);
     }
-  } catch (error) {
-    console.error('Error logging history event:', error);
-  }
-};
-  
+  };
 
 const mockMaterials = [
   {
@@ -212,8 +212,7 @@ const mockMaterials = [
     fileUrl: Design
   }
 ];
-
-  const categories = ['all', 'Програмування', 'Методологія', 'Оформлення', 'Ресурси', 'Захист', 'Перевірка'];
+const categories = ['all', 'Програмування', 'Методологія', 'Оформлення', 'Ресурси', 'Захист', 'Перевірка'];
   const types = ['all', 'PDF', 'Відео', 'DOCX', 'PPTX', 'Посилання'];
 
   useEffect(() => {
@@ -271,52 +270,42 @@ const mockMaterials = [
     year: 'numeric', month: 'long', day: 'numeric'
   });
 
-  // Функція для завантаження файлу
-const handleDownload = (material) => {
-  console.log('Завантаження:', material.title);
-  
-  if (material.fileUrl) {
-    const link = document.createElement('a');
-    link.href = material.fileUrl;
-    link.download = `${material.title}.pdf`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const handleDownload = (material) => {
+    if (material.fileUrl) {
+      const link = document.createElement('a');
+      link.href = material.fileUrl;
+      link.download = `${material.title}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
 
-    setMaterials(prev => prev.map(m => 
-      m.id === material.id ? { ...m, downloads: m.downloads + 1 } : m
-    ));
+      setMaterials(prev => prev.map(m => 
+        m.id === material.id ? { ...m, downloads: m.downloads + 1 } : m
+      ));
 
-    logHistoryEvent({
-      userEmail,
-      type: 'download_material',
-      description: `Завантаження матеріалу: ${material.title}`
-    });
-  } else {
-    alert('Файл недоступний для завантаження');
-  }
-};
+      logHistoryEvent({
+        userEmail,
+        type: 'download_material',
+        description: `Завантаження матеріалу: ${material.title}`
+      });
+    } else {
+      alert(t("methodical.errors.unavailableDownload"));
+    }
+  };
 
+  const handlePreview = (material) => {
+    if (material.fileUrl) {
+      window.open(material.fileUrl, '_blank');
+      logHistoryEvent({
+        userEmail,
+        type: 'preview_material',
+        description: `Перегляд матеріалу: ${material.title}`
+      });
+    } else {
+      alert(t("methodical.errors.unavailablePreview"));
+    }
+  };
 
-  // Функція для попереднього перегляду PDF
-const handlePreview = (material) => {
-  console.log('Перегляд:', material.title);
-  
-  if (material.fileUrl) {
-    window.open(material.fileUrl, '_blank');
-
-    logHistoryEvent({
-      userEmail,
-      type: 'preview_material',
-      description: `Перегляд матеріалу: ${material.title}`
-    });
-  } else {
-    alert('Файл недоступний для перегляду');
-  }
-};
-
-
-  // Функція для закриття попереднього перегляду
   const closePreview = () => {
     setShowPreview(false);
     setPreviewUrl(null);
@@ -325,30 +314,29 @@ const handlePreview = (material) => {
   if (loading) return (
     <div className="loader-wrapper">
       <div className="loader"></div>
-      <p className="loader-text">Завантаження матеріалів...</p>
+      <p className="loader-text">{t("methodical.loading")}</p>
     </div>
   );
 
   return (
     <div className="materials-page">
-      {/* Стрілка назад */}
       <div 
         className="back-arrow" 
         onClick={() => navigate("/home")}
         role="button"
         tabIndex={0}
         onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') navigate("/home") }}
-        aria-label="Повернутися на головну"
+        aria-label={t("common.back")}
       >
         ←
       </div>
       <div className="materials-header">
         <div className="header-left">
-          <h1><BookOpen className="header-icon" /> Методичні матеріали</h1>
-          <p>Корисні ресурси від викладачів для успішного написання курсових робіт</p>
+          <h1><BookOpen className="header-icon" /> {t("studentDashboard.header.profileDropdown.materials")}</h1>
+          <p>{t("methodical.description")}</p>
         </div>
         <div className="header-right">
-          Знайдено: {filteredMaterials.length} з {materials.length} матеріалів
+          {t("methodical.found", { count: filteredMaterials.length, total: materials.length })}
         </div>
       </div>
 
@@ -357,27 +345,31 @@ const handlePreview = (material) => {
           <Search className="search-icon" />
           <input
             type="text"
-            placeholder="Пошук матеріалів..."
+            placeholder={t("common.searchMaterials")}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
 
         <select value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)}>
-          <option value="all">Всі категорії</option>
-          {categories.slice(1).map(cat => <option key={cat} value={cat}>{cat}</option>)}
+          <option value="all">{t("methodical.filters.allCategories")}</option>
+          {categories.slice(1).map(cat => (
+            <option key={cat} value={cat}>{t(`methodical.categories.${cat}`)}</option>
+          ))}
         </select>
 
         <select value={selectedType} onChange={(e) => setSelectedType(e.target.value)}>
-          <option value="all">Всі типи</option>
-          {types.slice(1).map(t => <option key={t} value={t}>{t}</option>)}
+          <option value="all">{t("methodical.filters.allTypes")}</option>
+          {types.slice(1).map(t => (
+            <option key={t} value={t}>{t}</option>
+          ))}
         </select>
 
         <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
-          <option value="newest">Найновіші</option>
-          <option value="popular">Популярні</option>
-          <option value="rating">За назвою</option>
-          <option value="title">За рейтингом</option>
+          <option value="newest">{t("methodical.filters.sortNewest")}</option>
+          <option value="popular">{t("methodical.filters.sortPopular")}</option>
+          <option value="rating">{t("methodical.filters.sortRating")}</option>
+          <option value="title">{t("methodical.filters.sortTitle")}</option>
         </select>
       </div>
 
@@ -394,15 +386,15 @@ const handlePreview = (material) => {
             </div>
             <h3 className="material-title">{material.title}</h3>
             <div className="card-body">
-            <p className="material-desc">{material.description}</p>
-            <div className="tags">
-              {material.tags.slice(0, 3).map(tag => (
-                <span key={tag} className="tag">#{tag}</span>
-              ))}
-              {material.tags.length > 3 && (
-                <span className="tag">+{material.tags.length - 3}</span>
-              )}
-            </div>
+              <p className="material-desc">{material.description}</p>
+              <div className="tags">
+                {material.tags.slice(0, 3).map(tag => (
+                  <span key={tag} className="tag">#{tag}</span>
+                ))}
+                {material.tags.length > 3 && (
+                  <span className="tag">+{material.tags.length - 3}</span>
+                )}
+              </div>
             </div>
             <div className="card-footer">
               <div className="author">
@@ -418,19 +410,11 @@ const handlePreview = (material) => {
                 <span>{material.size}</span>
               </div>
               <div className="actions">
-                <button 
-                  onClick={() => handlePreview(material)} 
-                  className="btn btn-light"
-                  disabled={!material.fileUrl}
-                >
-                  <Eye className="icon-sm" /> Переглянути
+                <button onClick={() => handlePreview(material)} className="btn btn-light">
+                  <Eye className="icon-sm" /> {t("methodical.buttons.preview")}
                 </button>
-                <button 
-                  onClick={() => handleDownload(material)} 
-                  className="btn btn-dark"
-                  disabled={!material.fileUrl}
-                >
-                  <Download className="icon-sm" /> Завантажити
+                <button onClick={() => handleDownload(material)} className="btn btn-dark">
+                  <Download className="icon-sm" /> {t("methodical.buttons.download")}
                 </button>
               </div>
             </div>
@@ -441,28 +425,8 @@ const handlePreview = (material) => {
       {filteredMaterials.length === 0 && (
         <div className="empty-state">
           <BookOpen className="empty-icon" />
-          <h3>Матеріали не знайдено</h3>
-          <p>Спробуйте змінити фільтри або пошуковий запит</p>
-        </div>
-      )}
-
-      {/* Модальне вікно для попереднього перегляду PDF (опціонально) */}
-      {showPreview && previewUrl && (
-        <div className="modal-overlay" onClick={closePreview}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>Попередній перегляд PDF</h3>
-              <button onClick={closePreview} className="close-btn">×</button>
-            </div>
-            <div className="modal-body">
-              <iframe
-                src={previewUrl}
-                width="100%"
-                height="600px"
-                title="PDF Preview"
-              />
-            </div>
-          </div>
+          <h3>{t("methodical.empty.title")}</h3>
+          <p>{t("methodical.empty.description")}</p>
         </div>
       )}
     </div>

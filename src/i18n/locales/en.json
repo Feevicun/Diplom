@@ -68,8 +68,7 @@
         "history": "History",
         "logout": "Logout",
         "library": "Coursework examples",
-        "materials": "Methodological materials"
-        
+        "materials": "Methodical Materials"
       }
     },
     "sidebar": {
@@ -87,23 +86,21 @@
       "cancel": "Cancel"
     },
     "notification": {
-  "title": "Notifications",
-  "modeLabel": "Mode:",
-  "modeOptions": {
-    "slider": "Slider",
-    "scroll": "List",
-    "carousel": "Auto-scroll"
-  },
-  "messages": {
-    "1": "You have been assigned a course topic",
-    "2": "A new teacher has been added to the department",
-    "3": "Your profile has been updated"
-  },
-  "empty": "No new notifications",
-  "close": "Close"
-}
-
-
+      "title": "Notifications",
+      "modeLabel": "Mode:",
+      "modeOptions": {
+        "slider": "Slider",
+        "scroll": "List",
+        "carousel": "Auto-scroll"
+      },
+      "messages": {
+        "1": "You have been assigned a course topic",
+        "2": "A new teacher has been added to the department",
+        "3": "Your profile has been updated"
+      },
+      "empty": "No new notifications",
+      "close": "Close"
+    }
   },
 
   "studentProfile": {
@@ -187,7 +184,7 @@
     },
     "noBookedStudents": "No booked students yet."
   },
-  
+
   "registration": {
     "title": "Registration",
     "button": "Register",
@@ -210,6 +207,72 @@
       "course": "Please enter your course",
       "group": "Please enter your group"
     }
+  },
+
+  "common": {
+    "searchMaterials": "Search materials...",
+    "back": "Back"
+  },
+
+  "methodical": {
+    "description": "Useful resources from instructors to help you write your coursework successfully",
+    "found": "{{count}} of {{total}} materials found",
+    "filters": {
+      "allCategories": "All categories",
+      "allTypes": "All types",
+      "sortNewest": "Newest",
+      "sortPopular": "Most popular",
+      "sortRating": "By rating",
+      "sortTitle": "By title"
+    },
+    "categories": {
+      "Програмування": "Programming",
+      "Методологія": "Methodology",
+      "Оформлення": "Formatting",
+      "Ресурси": "Resources",
+      "Захист": "Defense",
+      "Перевірка": "Review"
+    },
+    "errors": {
+      "unavailableDownload": "Download link is unavailable.",
+      "unavailablePreview": "Preview is unavailable."
+    },
+    "buttons": {
+      "preview": "Preview",
+      "download": "Download"
+    },
+    "empty": {
+      "title": "No materials found",
+      "description": "Try changing filters or search query"
+    },
+    "loading": "Loading materials..."
+  },
+  "library": {
+  "title": "Coursework Library",
+  "facultyCourseworks": "Courseworks of the faculty: {{faculty}}",
+  "found": "Found: {{found}} of {{total}}",
+  "searchPlaceholder": "Search by title or student...",
+  "sort": {
+    "year": "By Year",
+    "title": "By Title",
+    "rating": "By Rating"
+  },
+  "student": "Student",
+  "specialty": "Specialty",
+  "supervisor": "Supervisor",
+  "year": "Year",
+  "preview": "Preview",
+  "download": "Download",
+  "notFoundTitle": "Nothing Found",
+  "notFoundDescription": {
+    "empty": "There are no courseworks yet for the faculty \"{{faculty}}\"",
+    "filtered": "Try another search or change sorting"
+  },
+  "fileUnavailable": "File unavailable for {{action}}"
+},
+  "loadingScreen": {
+    "firstText": "What do students do before the deadline?",
+    "secondText": "Loading the app...",
+    "imageAlt": "student meme"
   }
 }
-
