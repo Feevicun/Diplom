@@ -48,6 +48,17 @@ const handleLogin = async () => {
   setErrors(newErrors);
   if (Object.keys(newErrors).length > 0) return;
 
+  // 🛠 Перевірка на admin/admin
+  if (loginEmail === 'admin' && loginPassword === 'admin') {
+    login({
+      email: 'admin',
+      name: 'Admin',
+      role: 'Admin'
+    });
+    navigate('/admin');
+    return;
+  }
+
   try {
     const response = await fetch("http://localhost:3000/api/login", {
       method: "POST",
@@ -67,7 +78,7 @@ const handleLogin = async () => {
         name: data.name,
         role: selectedRole,
       });
-      localStorage.setItem("studentEmail", loginEmail); 
+      localStorage.setItem("studentEmail", loginEmail);
       navigate(selectedRole === 'Student' ? '/home' : '/sthome');
     } else {
       alert(data.message);
@@ -77,6 +88,7 @@ const handleLogin = async () => {
     alert("Something went wrong.");
   }
 };
+
 
 
   const handleRegister = async () => {

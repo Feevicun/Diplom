@@ -13,6 +13,7 @@ import TeacherProfile from './pages/TeacherProfile.jsx';
 import MethodicalMaterials from './pages/MethodicalMaterials.jsx';
 import CourseworkLibrary from './pages/CourseworkLibrary.jsx';
 import History from './pages/History.jsx';
+import AdminDashboard from './pages/AdminDashboard.jsx';
 
 import EmailVerification from './components/EmailVerification.jsx';
 import { AuthProvider } from "./context/AuthContext.jsx";
@@ -42,6 +43,7 @@ function App() {
             <Route path="/materials" element={<MethodicalMaterials />} /> 
             <Route path="/library" element={<CourseworkLibrary />} /> 
             <Route path="/history" element={<History />} /> 
+            <Route path="/admin" element={<AdminDashboard />} /> 
             <Route path="/verify/:token" element={<EmailVerification />} />
           </Routes>
         </div>
