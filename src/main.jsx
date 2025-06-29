@@ -13,6 +13,7 @@ import './styles/TeacherMainPage.css';
 import './styles/profile.css';
 import './styles/MethodicalMaterials.css';
 import './styles/CourseworkLibrary.css';
+import './styles/AdminDashboard.css';
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
