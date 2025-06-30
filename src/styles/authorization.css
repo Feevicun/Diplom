@@ -319,9 +319,6 @@ p a:focus {
     background-color: #8d56c4;
   }
   
-  body.purple p {
-    color: #ddd;
-  }
   body.purple a {
     color: #fff;
   }

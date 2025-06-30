@@ -12,17 +12,137 @@ const mockAnalytics = {
   downloads: 45,
 };
 
+const categories = ['Програмування', 'Методологія', 'Оформлення', 'Ресурси', 'Захист', 'Перевірка'];
+const types = ['PDF', 'Відео', 'DOCX', 'PPTX', 'Посилання'];
+
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('users');
   const [users, setUsers] = useState([]);
+  const [materials, setMaterials] = useState([]);
+  const [filter, setFilter] = useState('');
+  const [animated, setAnimated] = useState(false);
+
+  // Форма додавання матеріалу
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [author, setAuthor] = useState('');
+  const [authorAvatar, setAuthorAvatar] = useState('');
+  const [category, setCategory] = useState(categories[0]);
+  const [type, setType] = useState(types[0]);
+  const [uploadDate, setUploadDate] = useState(new Date().toISOString().slice(0, 10));
+  const [tags, setTags] = useState('');
+  const [size, setSize] = useState('');
+  const [fileUrl, setFileUrl] = useState('');
+  const [rating, setRating] = useState(5);
+  const [downloads, setDownloads] = useState(0);
 
   useEffect(() => {
     setUsers(mockUsers);
   }, []);
 
+  useEffect(() => {
+    // Завантажити матеріали з бекенда
+    fetch('/api/materials')
+      .then(res => res.json())
+      .then(data => setMaterials(data))
+      .catch(err => console.error('Помилка завантаження матеріалів:', err));
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'analytics') {
+      setTimeout(() => setAnimated(true), 100);
+    } else {
+      setAnimated(false);
+    }
+  }, [activeTab]);
+
   const handleDeleteUser = (id) => {
     if (window.confirm('Ви впевнені, що хочете видалити цього користувача?')) {
       setUsers(users.filter((u) => u.id !== id));
+    }
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setFileUrl(URL.createObjectURL(file));
+    setSize(`${(file.size / 1024 / 1024).toFixed(2)} MB`);
+  };
+
+  // Оновлений додавання матеріалу: POST на сервер
+  const handleAddMaterial = async () => {
+    if (!title || !fileUrl) {
+      alert('Вкажіть назву та завантажте файл!');
+      return;
+    }
+
+    const newMaterial = {
+      title,
+      description,
+      author,
+      authorAvatar,
+      category,
+      type,
+      uploadDate,
+      tags: tags.split(',').map(t => t.trim()).filter(Boolean),
+      size,
+      fileUrl,
+      rating,
+      downloads,
+    };
+
+    try {
+      const response = await fetch('/api/materials', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newMaterial),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        alert('Помилка додавання матеріалу: ' + errorData.message);
+        return;
+      }
+
+      const result = await response.json();
+
+      // Оновити локальний стейт матеріалів
+      setMaterials(prev => [result.material, ...prev]);
+
+      // Очистити форму
+      setTitle('');
+      setDescription('');
+      setAuthor('');
+      setAuthorAvatar('');
+      setCategory(categories[0]);
+      setType(types[0]);
+      setUploadDate(new Date().toISOString().slice(0, 10));
+      setTags('');
+      setSize('');
+      setFileUrl('');
+      setRating(5);
+      setDownloads(0);
+    } catch (error) {
+      alert('Помилка мережі або сервера: ' + error.message);
+    }
+  };
+
+  // Оновлений видалення матеріалу: DELETE на сервер
+  const handleDeleteMaterial = async (id) => {
+    if (window.confirm('Видалити цей матеріал?')) {
+      try {
+        const response = await fetch(`/api/materials/${id}`, {
+          method: 'DELETE',
+        });
+        if (!response.ok) {
+          const errorData = await response.json();
+          alert('Помилка видалення матеріалу: ' + errorData.message);
+          return;
+        }
+        setMaterials(prev => prev.filter(mat => mat.id !== id));
+      } catch (error) {
+        alert('Помилка мережі або сервера: ' + error.message);
+      }
     }
   };
 
@@ -59,12 +179,173 @@ export default function AdminDashboard() {
     </div>
   );
 
-  const renderMaterialsTab = () => (
-    <div>
-      <h2 className="admin-subtitle">Матеріали</h2>
-      <p>Тут буде таблиця матеріалів з кнопками для завантаження, видалення тощо.</p>
-    </div>
-  );
+  const renderMaterialsTab = () => {
+    const filteredMaterials = materials.filter((mat) =>
+      mat.title.toLowerCase().includes(filter.toLowerCase())
+    );
+
+    return (
+      <div>
+        <h2 className="admin-subtitle">Матеріали</h2>
+
+        <div style={{ marginBottom: 16 }}>
+          <input type="file" onChange={handleFileChange} />
+        </div>
+
+        <input
+          type="text"
+          placeholder="Пошук за назвою..."
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+          style={{
+            padding: '8px 12px',
+            borderRadius: '6px',
+            border: '1px solid var(--border-color)',
+            marginBottom: 16,
+            width: '100%',
+            maxWidth: 300,
+          }}
+        />
+
+        {/* Форма додавання матеріалу */}
+        <div style={{ marginBottom: 24, maxWidth: 600 }}>
+          <input
+            type="text"
+            placeholder="Назва"
+            value={title}
+            onChange={e => setTitle(e.target.value)}
+            style={{ width: '100%', marginBottom: 10, padding: 8 }}
+          />
+          <textarea
+            placeholder="Опис"
+            value={description}
+            onChange={e => setDescription(e.target.value)}
+            rows={3}
+            style={{ width: '100%', marginBottom: 10, padding: 8 }}
+          />
+          <input
+            type="text"
+            placeholder="Автор"
+            value={author}
+            onChange={e => setAuthor(e.target.value)}
+            style={{ width: '100%', marginBottom: 10, padding: 8 }}
+          />
+          <input
+            type="text"
+            placeholder="Посилання на аватар автора"
+            value={authorAvatar}
+            onChange={e => setAuthorAvatar(e.target.value)}
+            style={{ width: '100%', marginBottom: 10, padding: 8 }}
+          />
+          <label>Категорія:</label>
+          <select
+            value={category}
+            onChange={e => setCategory(e.target.value)}
+            style={{ width: '100%', marginBottom: 10, padding: 8 }}
+          >
+            {categories.map(c => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
+          <label>Тип:</label>
+          <select
+            value={type}
+            onChange={e => setType(e.target.value)}
+            style={{ width: '100%', marginBottom: 10, padding: 8 }}
+          >
+            {types.map(t => (
+              <option key={t} value={t}>{t}</option>
+            ))}
+          </select>
+          <label>Дата завантаження:</label>
+          <input
+            type="date"
+            value={uploadDate}
+            onChange={e => setUploadDate(e.target.value)}
+            style={{ width: '100%', marginBottom: 10, padding: 8 }}
+          />
+          <input
+            type="text"
+            placeholder="Теги через кому"
+            value={tags}
+            onChange={e => setTags(e.target.value)}
+            style={{ width: '100%', marginBottom: 10, padding: 8 }}
+          />
+          <label>Рейтинг (1-5):</label>
+          <input
+            type="number"
+            min="1"
+            max="5"
+            value={rating}
+            onChange={e => setRating(Number(e.target.value))}
+            style={{ width: 60, marginBottom: 10, padding: 8 }}
+          />
+          <label>Завантажень:</label>
+          <input
+            type="number"
+            min="0"
+            value={downloads}
+            onChange={e => setDownloads(Number(e.target.value))}
+            style={{ width: 100, marginBottom: 10, padding: 8 }}
+          />
+
+          {size && <div>Розмір файлу: {size}</div>}
+
+          <button
+            onClick={handleAddMaterial}
+            style={{ padding: '10px 20px', cursor: 'pointer', marginTop: 10 }}
+          >
+            Додати матеріал
+          </button>
+        </div>
+
+        {filteredMaterials.length === 0 ? (
+          <p>Немає матеріалів.</p>
+        ) : (
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th>Назва</th>
+                <th>Автор</th>
+                <th>Категорія</th>
+                <th>Тип</th>
+                <th>Дата</th>
+                <th>Рейтинг</th>
+                <th>Завантажень</th>
+                <th>Дії</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredMaterials.map((mat) => (
+                <tr key={mat.id}>
+                  <td>{mat.title}</td>
+                  <td>{mat.author}</td>
+                  <td>{mat.category}</td>
+                  <td>{mat.type}</td>
+                  <td>{mat.uploadDate}</td>
+                  <td>{mat.rating}</td>
+                  <td>{mat.downloads}</td>
+                  <td>
+                    <a
+                      href={mat.fileUrl}
+                      download={mat.title}
+                      className="edit-btn"
+                      style={{ marginRight: 8 }}
+                    >
+                      Завантажити
+                    </a>
+                    <button className="delete-btn" onClick={() => handleDeleteMaterial(mat.id)}>
+                      Видалити
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    );
+  };
 
   const renderHistoryTab = () => (
     <div>
@@ -76,293 +357,103 @@ export default function AdminDashboard() {
   const renderAnalyticsTab = () => {
     const maxValue = Math.max(...mockAnalytics.registrations);
     const days = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Нд'];
-    
+
     return (
-      <div>
+      <div className={animated ? 'fade-in' : ''}>
         <h2 className="admin-subtitle">Аналітика</h2>
-        
-        {/* Статистичні картки */}
+
         <div className="stats-grid">
-          <div className="stat-card stat-blue">
+          <div className={`stat-card ${animated ? 'animate' : ''}`}>
             <div className="stat-icon">📊</div>
             <div className="stat-content">
               <h3>{mockAnalytics.materialViews}</h3>
-              <p>Переглядів матеріалів</p>
+              <p style={{ color: 'var(--text-color)' }}>Переглядів матеріалів</p>
             </div>
           </div>
-          <div className="stat-card stat-green">
+          <div className={`stat-card ${animated ? 'animate' : ''}`}>
             <div className="stat-icon">⬇️</div>
             <div className="stat-content">
               <h3>{mockAnalytics.downloads}</h3>
-              <p>Завантажень</p>
+              <p style={{ color: 'var(--text-color)' }}>Завантажень</p>
             </div>
           </div>
-          <div className="stat-card stat-purple">
+          <div className={`stat-card ${animated ? 'animate' : ''}`}>
             <div className="stat-icon">👥</div>
             <div className="stat-content">
               <h3>{mockAnalytics.registrations.reduce((a, b) => a + b, 0)}</h3>
-              <p>Реєстрацій за тиждень</p>
+              <p style={{ color: 'var(--text-color)' }}>Реєстрацій за тиждень</p>
             </div>
           </div>
         </div>
 
-        {/* Графік реєстрацій */}
-        <div className="chart-container">
-          <h3 className="chart-title">Реєстрації за останній тиждень</h3>
-          <div className="chart-wrapper">
-            <div className="chart-bars">
-              {mockAnalytics.registrations.map((value, idx) => (
-                <div key={idx} className="bar-wrapper">
-                  <div 
-                    className="chart-bar"
-                    style={{ 
-                      height: `${(value / maxValue) * 100}%`,
-                      backgroundColor: `hsl(${210 + idx * 10}, 70%, 50%)`
+        <div style={{ marginTop: 24 }}>
+          <h3>Реєстрації за останній тиждень</h3>
+          <div style={{ display: 'flex', alignItems: 'flex-end', height: 200, gap: 12 }}>
+            {mockAnalytics.registrations.map((value, idx) => {
+              const heightPercent = (value / maxValue) * 100;
+              return (
+                <div key={idx} style={{ textAlign: 'center' }}>
+                  <div
+                    style={{
+                      height: `${heightPercent}%`,
+                      width: 30,
+                      backgroundColor: 'var(--primary-color)',
+                      borderRadius: 4,
+                      transition: 'height 0.5s',
                     }}
-                    title={`${days[idx]}: ${value} реєстрацій`}
-                  >
-                    <span className="bar-value">{value}</span>
-                  </div>
-                  <span className="bar-label">{days[idx]}</span>
+                  />
+                  <div style={{ marginTop: 6 }}>{days[idx]}</div>
+                  <div style={{ fontSize: 12 }}>{value}</div>
                 </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Додаткова аналітика */}
-        <div className="additional-stats">
-          <div className="progress-item">
-            <div className="progress-header">
-              <span>Активність користувачів</span>
-              <span>75%</span>
-            </div>
-            <div className="progress-bar">
-              <div className="progress-fill" style={{width: '75%'}}></div>
-            </div>
-          </div>
-          <div className="progress-item">
-            <div className="progress-header">
-              <span>Популярність матеріалів</span>
-              <span>60%</span>
-            </div>
-            <div className="progress-bar">
-              <div className="progress-fill" style={{width: '60%'}}></div>
-            </div>
-          </div>
-          <div className="progress-item">
-            <div className="progress-header">
-              <span>Завершеність курсів</span>
-              <span>40%</span>
-            </div>
-            <div className="progress-bar">
-              <div className="progress-fill" style={{width: '40%'}}></div>
-            </div>
+              );
+            })}
           </div>
         </div>
       </div>
     );
   };
 
-  const renderTabContent = () => {
-    switch (activeTab) {
-      case 'users': return renderUsersTab();
-      case 'materials': return renderMaterialsTab();
-      case 'history': return renderHistoryTab();
-      case 'analytics': return renderAnalyticsTab();
-      default: return null;
-    }
-  };
-
-  const tabs = [
-    { id: 'users', label: 'Користувачі', icon: <User size={16} /> },
-    { id: 'materials', label: 'Матеріали', icon: <BookOpen size={16} /> },
-    { id: 'history', label: 'Історія', icon: <FileText size={16} /> },
-    { id: 'analytics', label: 'Аналітика', icon: <BarChart size={16} /> },
-  ];
-
   return (
-    <div className="admin-container">
-      <h1 className="admin-title">Панель адміністратора</h1>
-      <div className="admin-tabs">
-        {tabs.map(({ id, label, icon }) => (
-          <button
-            key={id}
-            onClick={() => setActiveTab(id)}
-            className={`tab-button ${activeTab === id ? 'active' : ''}`}
-          >
-            {icon} <span>{label}</span>
-          </button>
-        ))}
-      </div>
-      <div className="admin-content">{renderTabContent()}</div>
-      
-      <style jsx>{`
-        /* Статистичні картки */
-        .stats-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-          gap: 20px;
-          margin-bottom: 30px;
-        }
-        
-        .stat-card {
-          background: white;
-          border-radius: 12px;
-          padding: 20px;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-          display: flex;
-          align-items: center;
-          gap: 15px;
-          transition: transform 0.2s, box-shadow 0.2s;
-        }
-        
-        .stat-card:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 6px 20px rgba(0,0,0,0.15);
-        }
-        
-        .stat-blue { border-left: 5px solid #4285f4; }
-        .stat-green { border-left: 5px solid #34a853; }
-        .stat-purple { border-left: 5px solid #9c27b0; }
-        
-        .stat-icon {
-          font-size: 2.5rem;
-          opacity: 0.8;
-        }
-        
-        .stat-content h3 {
-          font-size: 2rem;
-          font-weight: bold;
-          margin: 0;
-          color: #333;
-        }
-        
-        .stat-content p {
-          margin: 5px 0 0 0;
-          color: #666;
-          font-size: 0.9rem;
-        }
-        
-        /* Графік */
-        .chart-container {
-          background: white;
-          border-radius: 12px;
-          padding: 25px;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-          margin-bottom: 30px;
-        }
-        
-        .chart-title {
-          font-size: 1.2rem;
-          font-weight: 600;
-          color: #333;
-          margin: 0 0 20px 0;
-        }
-        
-        .chart-wrapper {
-          background: #f8f9fa;
-          border-radius: 8px;
-          padding: 20px;
-          border: 1px solid #e9ecef;
-        }
-        
-        .chart-bars {
-          display: flex;
-          align-items: flex-end;
-          justify-content: space-around;
-          height: 200px;
-          gap: 10px;
-        }
-        
-        .bar-wrapper {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          flex: 1;
-          max-width: 60px;
-        }
-        
-        .chart-bar {
-          width: 100%;
-          min-height: 20px;
-          border-radius: 4px 4px 0 0;
-          position: relative;
-          cursor: pointer;
-          transition: all 0.3s ease;
-          display: flex;
-          align-items: flex-end;
-          justify-content: center;
-          padding-bottom: 5px;
-        }
-        
-        .chart-bar:hover {
-          opacity: 0.8;
-          transform: scale(1.05);
-        }
-        
-        .bar-value {
-          color: white;
-          font-size: 0.8rem;
-          font-weight: bold;
-          text-shadow: 0 1px 2px rgba(0,0,0,0.3);
-        }
-        
-        .bar-label {
-          margin-top: 8px;
-          font-size: 0.85rem;
-          color: #666;
-          font-weight: 500;
-        }
-        
-        /* Додаткова аналітика */
-        .additional-stats {
-          background: white;
-          border-radius: 12px;
-          padding: 25px;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        }
-        
-        .progress-item {
-          margin-bottom: 20px;
-        }
-        
-        .progress-item:last-child {
-          margin-bottom: 0;
-        }
-        
-        .progress-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 8px;
-          font-size: 0.9rem;
-        }
-        
-        .progress-header span:first-child {
-          color: #333;
-          font-weight: 500;
-        }
-        
-        .progress-header span:last-child {
-          color: #4285f4;
-          font-weight: bold;
-        }
-        
-        .progress-bar {
-          height: 8px;
-          background: #e9ecef;
-          border-radius: 4px;
-          overflow: hidden;
-        }
-        
-        .progress-fill {
-          height: 100%;
-          background: linear-gradient(90deg, #4285f4, #34a853);
-          border-radius: 4px;
-          transition: width 0.8s ease;
-        }
-      `}</style>
-    </div>
+    <main className="admin-panel" style={{ backgroundColor: '#fff', color: '#000', padding: 24 }}>
+      <h1 className="admin-title">Адмін панель курсів</h1>
+
+      <nav className="admin-tabs" style={{ marginBottom: 24, display: 'flex', gap: 20 }}>
+        <button
+          className={activeTab === 'users' ? 'active' : ''}
+          onClick={() => setActiveTab('users')}
+          style={{ cursor: 'pointer' }}
+        >
+          Користувачі
+        </button>
+        <button
+          className={activeTab === 'materials' ? 'active' : ''}
+          onClick={() => setActiveTab('materials')}
+          style={{ cursor: 'pointer' }}
+        >
+          Матеріали
+        </button>
+        <button
+          className={activeTab === 'history' ? 'active' : ''}
+          onClick={() => setActiveTab('history')}
+          style={{ cursor: 'pointer' }}
+        >
+          Журнал дій
+        </button>
+        <button
+          className={activeTab === 'analytics' ? 'active' : ''}
+          onClick={() => setActiveTab('analytics')}
+          style={{ cursor: 'pointer' }}
+        >
+          Аналітика
+        </button>
+      </nav>
+
+      <section className="admin-content">
+        {activeTab === 'users' && renderUsersTab()}
+        {activeTab === 'materials' && renderMaterialsTab()}
+        {activeTab === 'history' && renderHistoryTab()}
+        {activeTab === 'analytics' && renderAnalyticsTab()}
+      </section>
+    </main>
   );
 }

@@ -578,5 +578,13 @@
     "type": "navigate",
     "description": "Перехід до історії подій",
     "meta": {}
+  },
+  {
+    "id": "23d3bffe-26ea-4e82-a0be-75be86b0a997",
+    "timestamp": "2025-06-30T12:22:25.942Z",
+    "userEmail": "vikander.work@gmail.com",
+    "type": "navigate",
+    "description": "Перехід до методичних матеріалів",
+    "meta": {}
   }
 ]

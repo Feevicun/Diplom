@@ -1,0 +1,282 @@
+.admin-container {
+  padding: 24px;
+  font-family: 'Segoe UI', sans-serif;
+  min-height: 100vh;
+}
+
+.admin-title {
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--text-color);
+  margin-bottom: 24px;
+}
+
+.admin-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.tab-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: none;
+  background-color: var(--accent-light);
+  color: var(--text-color);
+  font-weight: 500;
+  transition: 0.2s ease;
+  cursor: pointer;
+}
+
+.tab-button:hover,
+.tab-button.active {
+  background-color: var(--accent);
+  color: white;
+}
+
+.admin-content {
+  padding: 24px;
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  /* background removed */
+  background: transparent;
+}
+
+.admin-subtitle {
+  font-size: 20px;
+  margin-bottom: 16px;
+  color: var(--text-color);
+  background: transparent; /* explicitly no background */
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.admin-table th,
+.admin-table td {
+  padding: 12px;
+  border-bottom: 1px solid var(--border-color);
+  text-align: left;
+  color: var(--text-color);
+}
+
+.admin-table th {
+  font-weight: 600;
+  background: transparent;
+}
+
+.edit-btn,
+.delete-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.edit-btn {
+  background-color: var(--accent-light);
+  color: var(--accent);
+}
+
+.edit-btn:hover {
+  background-color: var(--accent);
+  color: white;
+}
+
+.delete-btn {
+  background-color: var(--danger-bg, #fee2e2);
+  color: var(--danger, #b91c1c);
+}
+
+.delete-btn:hover {
+  background-color: var(--danger, #b91c1c);
+  color: white;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.stat-card {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  padding: 16px;
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+  background: transparent;
+}
+
+.stat-icon {
+  font-size: 24px;
+  opacity: 0.8;
+}
+
+.stat-content h3 {
+  margin: 0;
+  font-size: 20px;
+  color: var(--text-color);
+}
+
+.stat-content p {
+  margin: 0;
+  font-size: 14px;
+  color: var(--muted-light);
+}
+
+.chart-container {
+  margin-bottom: 24px;
+}
+
+.chart-title {
+  font-size: 16px;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.chart-wrapper {
+  padding: 16px;
+  border-radius: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  height: 180px;
+  background: transparent;
+}
+
+.chart-bars {
+  display: flex;
+  gap: 8px;
+  flex: 1;
+  justify-content: space-around;
+  align-items: flex-end;
+  height: 100%;
+}
+
+.bar-wrapper {
+  text-align: center;
+  flex: 1;
+}
+
+.chart-bar {
+  width: 100%;
+  border-radius: 6px 6px 0 0;
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  color: white;
+  font-size: 12px;
+  font-weight: 600;
+  padding-bottom: 4px;
+  transition: 0.2s ease;
+}
+
+.chart-bar:hover {
+  opacity: 0.9;
+  transform: scaleY(1.05);
+}
+
+.bar-label {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--muted-light);
+}
+
+.additional-stats {
+  margin-top: 24px;
+}
+
+.progress-item {
+  margin-bottom: 20px;
+}
+
+.progress-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+  color: var(--muted-light);
+  margin-bottom: 6px;
+}
+
+.progress-bar {
+  height: 8px;
+  border-radius: 4px;
+  overflow: hidden;
+  background: var(--border-color);
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.4s ease;
+  border-radius: 4px;
+}
+
+/* Анімація fade-in для аналітики */
+.fade-in {
+  animation: fadeIn 0.6s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.stat-card {
+  opacity: 0;
+  transform: translateY(10px);
+  transition: all 0.4s ease;
+}
+.stat-card.animate {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.chart-bar {
+  width: 100%;
+  border-radius: 6px 6px 0 0;
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  color: white;
+  font-size: 12px;
+  font-weight: 600;
+  padding-bottom: 4px;
+  transition: height 0.6s ease-out, transform 0.4s ease;
+  transform-origin: bottom;
+  transform: scaleY(0);
+  opacity: 0;
+}
+
+.chart-bar.animate {
+  transform: scaleY(1);
+  opacity: 1;
+}
+
+
+.progress-fill {
+  transition: width 0.8s ease-in-out;
+}
+

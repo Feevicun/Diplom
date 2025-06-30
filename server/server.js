@@ -353,6 +353,114 @@ app.get('/api/history', (req, res) => {
   res.json(filteredHistory);
 });
 
+
+
+const MATERIALS_FILE = path.join(__dirname, 'materials.json');
+let materials = [];
+if (fs.existsSync(MATERIALS_FILE)) {
+  const fileContent = fs.readFileSync(MATERIALS_FILE, 'utf-8').trim();
+  if (fileContent) {
+    materials = JSON.parse(fileContent);
+  }
+}
+
+function saveMaterialsToFile() {
+  fs.writeFileSync(MATERIALS_FILE, JSON.stringify(materials, null, 2), 'utf-8');
+}
+
+// API отримати всі матеріали
+app.get('/api/materials', (req, res) => {
+  res.json(materials);
+});
+
+// API додати матеріал
+app.post('/api/materials', (req, res) => {
+  const {
+    title,
+    description,
+    author,
+    authorAvatar,
+    category,
+    type,
+    uploadDate,
+    downloads = 0,
+    rating = 0,
+    size,
+    tags = [],
+    fileUrl
+  } = req.body;
+
+  if (!title || !description || !author || !category || !type || !uploadDate || !fileUrl) {
+    return res.status(400).json({ message: 'Необхідні поля не заповнені.' });
+  }
+
+  const newMaterial = {
+    id: uuidv4(),
+    title,
+    description,
+    author,
+    authorAvatar: authorAvatar || '',
+    category,
+    type,
+    uploadDate,
+    downloads,
+    rating,
+    size,
+    tags,
+    fileUrl,
+  };
+
+  materials.push(newMaterial);
+  saveMaterialsToFile();
+
+  logEvent({
+    userEmail: "unknown",
+    type: "add_material",
+    description: `Додано новий матеріал: ${title}`,
+  });
+
+  res.status(201).json({ message: 'Матеріал додано', material: newMaterial });
+});
+
+// Опційно: видалення
+app.delete('/api/materials/:id', (req, res) => {
+  const { id } = req.params;
+  const initialLength = materials.length;
+  materials = materials.filter(m => m.id !== id);
+  if (materials.length === initialLength) {
+    return res.status(404).json({ message: 'Матеріал не знайдено.' });
+  }
+  saveMaterialsToFile();
+
+  logEvent({
+    userEmail: "unknown",
+    type: "delete_material",
+    description: `Видалено матеріал з id ${id}`,
+  });
+
+  res.json({ message: 'Матеріал видалено' });
+});
+
+// Опційно: оновлення
+app.put('/api/materials/:id', (req, res) => {
+  const { id } = req.params;
+  const idx = materials.findIndex(m => m.id === id);
+  if (idx === -1) return res.status(404).json({ message: 'Матеріал не знайдено.' });
+
+  const updatedFields = req.body;
+  materials[idx] = { ...materials[idx], ...updatedFields };
+  saveMaterialsToFile();
+
+  logEvent({
+    userEmail: "unknown",
+    type: "update_material",
+    description: `Оновлено матеріал з id ${id}`,
+  });
+
+  res.json({ message: 'Матеріал оновлено', material: materials[idx] });
+});
+
+
 // --- Статика ---
 app.use(express.static(distPath));
 app.get('/*', (req, res) => {
