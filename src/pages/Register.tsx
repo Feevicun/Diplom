@@ -15,6 +15,8 @@ import {
 } from "@/components/ui/select";
 import { GlassButton } from "@/components/GlassButton";
 import { GraduationCap } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+
 
 // Мокані дані: факультети з кафедрами, спеціальностей нема
 const facultyData: Record<string, { departments: string[] }> = {
@@ -220,25 +222,58 @@ const RegisterPage = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
+  const [role, setRole] = useState("student"); // додано
   const [selectedFaculty, setSelectedFaculty] = useState("");
   const [selectedDepartment, setSelectedDepartment] = useState("");
+
+  const navigate = useNavigate();
 
   const departments = selectedFaculty
     ? facultyData[selectedFaculty]?.departments || []
     : [];
 
-  const handleSubmit = () => {
-    const formData = {
-      firstName,
-      lastName,
-      email,
-      password,
-      faculty: selectedFaculty,
-      department: selectedDepartment,
-    };
-    console.log("Form Data:", formData);
-    alert("Реєстрація успішна ✅");
+const handleSubmit = async () => {
+  const formData = {
+    firstName,
+    lastName,
+    email,
+    password,
+    faculty: selectedFaculty,
+    department: selectedDepartment,
+    role,
   };
+
+  try {
+    const res = await fetch("http://localhost:4000/api/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(formData),
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+     
+      // Збереження користувача у localStorage
+      localStorage.setItem("currentUser", JSON.stringify(data.user));
+      
+      if (data.user.role === "student") {
+        navigate("/dashboard");
+      } else if (data.user.role === "teacher") {
+        navigate("/analytics");
+      } else {
+        navigate("/"); // fallback
+      }
+
+    } else {
+      const data = await res.json();
+      alert(`Помилка: ${data.message}`);
+    }
+  } catch (error) {
+    console.error("Помилка мережі:", error);
+    alert("Помилка мережі. Спробуйте пізніше.");
+  }
+};
+
 
   return (
     <div className="min-h-screen bg-[#0e0f11] flex items-center justify-center px-4 py-12 relative overflow-hidden">
@@ -248,18 +283,33 @@ const RegisterPage = () => {
 
       <div className="w-full max-w-3xl z-10">
         <Card className="bg-white/5 border border-white/10 backdrop-blur-xl rounded-2xl p-8 shadow-md transition-all duration-300 hover:shadow-blue-500/20 hover:scale-[1.01]">
-          <CardHeader className="text-center">
-            <div className="mx-auto w-14 h-14 bg-white/10 backdrop-blur-md rounded-xl flex items-center justify-center mb-4">
-              <GraduationCap className="w-7 h-7 text-white/80" />
-            </div>
-            <CardTitle className="text-xl font-semibold text-white">
-              Реєстрація студента
-            </CardTitle>
-          </CardHeader>
+<CardHeader className="text-center">
+  <div className="mx-auto w-14 h-14 bg-white/10 backdrop-blur-md rounded-xl flex items-center justify-center mb-4">
+    <GraduationCap className="w-7 h-7 text-white/80" />
+  </div>
+  <CardTitle className="text-xl font-semibold text-white">
+    Реєстрація користувача
+  </CardTitle>
+
+  {/* Role Field: moved here */}
+  <div className="mt-6 w-full md:w-1/2 mx-auto">
+    <Label className="text-white/80 mb-1 block text-left">Роль</Label>
+    <Select value={role} onValueChange={(val) => setRole(val)}>
+      <SelectTrigger className="w-full bg-white/10 border border-white/10 text-white/90">
+        <SelectValue placeholder="Оберіть роль" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="student">Студент</SelectItem>
+        <SelectItem value="teacher">Викладач</SelectItem>
+      </SelectContent>
+    </Select>
+  </div>
+</CardHeader>
+
 
           <CardContent className="mt-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Name */}
+              {/* First Name */}
               <div>
                 <Label className="text-white/80 mb-1 block">Імʼя</Label>
                 <input
@@ -271,7 +321,7 @@ const RegisterPage = () => {
                 />
               </div>
 
-              {/* Surname */}
+              {/* Last Name */}
               <div>
                 <Label className="text-white/80 mb-1 block">Прізвище</Label>
                 <input
@@ -352,10 +402,12 @@ const RegisterPage = () => {
               </div>
             </div>
 
+            {/* Submit Button */}
             <GlassButton
               className="w-full mt-8 text-sm py-2"
               variant="primary"
-              onClick={handleSubmit} >
+              onClick={handleSubmit}
+            >
               Зареєструватися
             </GlassButton>
           </CardContent>

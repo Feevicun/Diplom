@@ -3,7 +3,6 @@ import {
   Activity,
   TrendingUp,
   BarChart2,
-  PieChart,
   Gauge,
   Clock,
 } from 'lucide-react';
@@ -144,7 +143,7 @@ export default function Analytics() {
                       outerRadius={80}
                       label
                     >
-                      {pieData.map((entry, index) => (
+                      {pieData.map((_, index) => (
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>

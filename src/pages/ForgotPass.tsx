@@ -9,14 +9,17 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { GlassButton } from "@/components/GlassButton";
 import { KeyRound } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const ForgotPasswordPage = () => {
   const [email, setEmail] = useState("");
+  const [role, setRole] = useState("student");
 
   const handleReset = () => {
     if (!email) return alert("Введіть пошту!");
+    if (!role) return alert("Оберіть роль!");
 
-    console.log("Request to reset password for:", email);
+    console.log("Request to reset password for:", email, "as", role);
     alert("На пошту відправлено інструкції з відновлення.");
   };
 
@@ -27,7 +30,7 @@ const ForgotPasswordPage = () => {
       <div className="absolute bottom-[-100px] left-[-80px] w-[300px] h-[300px] bg-blue-500/20 rounded-full blur-[100px] z-0" />
 
       <div className="w-full max-w-md z-10">
-        <Card className="bg-white/5 border border-white/10 backdrop-blur-xl rounded-2xl p-8 shadow-md transition-all duration-300 hover:shadow-blue-500/20 hover:scale-[1.01] transition-all duration-300">
+        <Card className="bg-white/5 border border-white/10 backdrop-blur-xl rounded-2xl p-8 shadow-md hover:shadow-blue-500/20 hover:scale-[1.01] transition-all duration-300">
           <CardHeader className="text-center">
             <div className="mx-auto w-14 h-14 bg-white/10 backdrop-blur-md rounded-xl flex items-center justify-center mb-4">
               <KeyRound className="w-7 h-7 text-white/80" />
@@ -49,6 +52,19 @@ const ForgotPasswordPage = () => {
               />
             </div>
 
+            <div>
+              <Label className="text-white/80 mb-1 block">Роль</Label>
+              <Select value={role} onValueChange={(val) => setRole(val)}>
+                <SelectTrigger className="w-full bg-white/10 border border-white/10 text-white/90">
+                  <SelectValue placeholder="Оберіть роль" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="student">Студент</SelectItem>
+                  <SelectItem value="teacher">Викладач</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
             <GlassButton
               className="w-full mt-6 text-sm py-2"
               variant="primary"
@@ -64,3 +80,4 @@ const ForgotPasswordPage = () => {
 };
 
 export default ForgotPasswordPage;
+

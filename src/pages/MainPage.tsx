@@ -39,7 +39,7 @@ const MainPage = () => {
                 <Users className="w-4 h-4" />
               </div>
               <CardTitle className="text-lg font-semibold text-white">
-                Для студентів
+                Доступ до порталу
               </CardTitle>
               <CardDescription className="text-white/50 text-sm mt-1">
                 Авторизуйтесь, щоб увійти до системи

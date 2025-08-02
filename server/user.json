@@ -1,0 +1,37 @@
+[
+  {
+    "firstName": "Vika",
+    "lastName": "Osoba",
+    "email": "vika@lnu.edu.ua",
+    "password": "123456",
+    "faculty": "Факультет управління фінансами та бізнесу",
+    "department": "обліку, аналізу і контролю"
+  },
+  {
+    "firstName": "ffkfkfk",
+    "lastName": "Osoba",
+    "email": "vika@lnuedu.ua",
+    "password": "124566",
+    "faculty": "Філологічний факультет",
+    "department": "словʼянської філології",
+    "role": "teacher"
+  },
+  {
+    "firstName": "",
+    "lastName": "",
+    "email": "",
+    "password": "",
+    "faculty": "",
+    "department": "",
+    "role": "student"
+  },
+  {
+    "firstName": "Oleh",
+    "lastName": "Osoba",
+    "email": "oleh@lnu.edu.ua",
+    "password": "123575443",
+    "faculty": "Факультет управління фінансами та бізнесу",
+    "department": "публічного адміністрування та управління бізнесом",
+    "role": "student"
+  }
+]
