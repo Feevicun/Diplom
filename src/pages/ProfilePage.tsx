@@ -10,11 +10,10 @@ import Header from "@/components/Header";
 import Sidebar from "@/components/Sidebar";
 
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 
 const ProfilePage = () => {
   const { t } = useTranslation();
-  const navigate = useNavigate();
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -36,7 +35,7 @@ const ProfilePage = () => {
 
   const handleLogout = () => {
     localStorage.removeItem("currentUser");
-    navigate("/"); //  на головну сторінку
+    // Перенаправлення відбудеться через Link нижче
   };
 
   return (
@@ -105,9 +104,12 @@ const ProfilePage = () => {
                 <Button onClick={handleSave} className="w-full">
                   {t("profile.save")}
                 </Button>
-                <Button onClick={handleLogout} className="w-full">
-                  {t("sidebar.logout")}
-                </Button>
+
+                <Link to="/" onClick={handleLogout}>
+                  <Button variant="outline" className="w-full">
+                    {t("sidebar.logout")}
+                  </Button>
+                </Link>
               </div>
             </CardContent>
           </Card>

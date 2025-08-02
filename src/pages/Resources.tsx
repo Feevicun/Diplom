@@ -17,11 +17,10 @@ import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 
 const Resources = () => {
   const { t } = useTranslation();
-  const navigate = useNavigate();
 
   const resources = [
     {
@@ -91,16 +90,21 @@ const Resources = () => {
                   </div>
                 </CardHeader>
                 <CardContent className="p-0 mt-3">
-                  <Button variant="outline" className="w-full text-sm"
-                        onClick={() => {
-                          if (link.startsWith('http')) {
-                            window.open(link, '_blank');
-                          } else {
-                            navigate(link);
-                          }
-                        }}>
-                          {action}
+                  {link.startsWith('http') ? (
+                    <Button
+                      variant="outline"
+                      className="w-full text-sm"
+                      onClick={() => window.open(link, '_blank')}
+                    >
+                      {action}
                     </Button>
+                  ) : (
+                    <Link to={link}>
+                      <Button variant="outline" className="w-full text-sm">
+                        {action}
+                      </Button>
+                    </Link>
+                  )}
                 </CardContent>
               </Card>
             ))}

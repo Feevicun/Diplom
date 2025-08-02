@@ -307,11 +307,13 @@ const Dashboard = () => {
                         </div>
                         {t('index.planner')}
                       </Button>
-                      <Button variant="outline" className="w-full justify-start">
-                        <div className="w-8 h-8 bg-primary/10 rounded-xl flex items-center justify-center mr-3">
-                          <BarChart3 className="h-4 w-4 text-primary" />
-                        </div>
-                        {t('index.analytics')}
+                      <Button variant="outline" className="w-full justify-start" asChild>
+                        <Link to="/analytics">
+                          <div className="w-8 h-8 bg-primary/10 rounded-xl flex items-center justify-center mr-3">
+                            <BarChart3 className="h-4 w-4 text-primary" />
+                          </div>
+                            {t('index.analytics')}
+                          </Link>
                       </Button>
                     </CardContent>
                   </Card>
