@@ -5,6 +5,7 @@
     "create": "Create",
     "searchPlaceholder": "Search projects, tasks, documents...",
     "online": "Online",
+    "offline": "Offline",
     "language": "Language",
     "theme": "Theme"
   },

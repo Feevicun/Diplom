@@ -39,8 +39,6 @@ import {
             return;
         }
 
-        alert(`Успішний вхід як ${role === "student" ? "студент" : "викладач"}`);
-
         // Переадресація залежно від ролі
         if (role === "student") {
         window.location.href = "/dashboard";

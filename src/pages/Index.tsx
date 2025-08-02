@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import {
@@ -35,6 +36,14 @@ import { useTranslation } from 'react-i18next';
 
 const Dashboard = () => {
   const { t } = useTranslation();
+  const [user, setUser] = useState<{ firstName?: string; lastName?: string } | null>(null);
+
+    useEffect(() => {
+    const storedUser = localStorage.getItem("currentUser");
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
+    }
+  }, []);
 
   const currentWork = {
     title: t('index.title'),
@@ -127,7 +136,7 @@ const Dashboard = () => {
                       <span className="text-sm font-medium text-primary">{t('index.projectType')}</span>
                     </div>
                     <h1 className="text-4xl font-bold mb-4 text-foreground">
-                      {t('index.welcomeTitle', { name: 'Олександр' })}
+                      {t('index.welcomeTitle', { name: user?.firstName || "Користувач" })}
                     </h1>
                     <p className="text-xl text-muted-foreground mb-6">
                       {t('index.encouragement')}

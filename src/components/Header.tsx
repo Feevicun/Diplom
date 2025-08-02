@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -20,10 +21,30 @@ const Header = () => {
   const { t, i18n } = useTranslation();
   const { theme, setTheme } = useTheme();
 
+  const [firstName, setFirstName] = useState('');
+  const [isOnline, setIsOnline] = useState(true);
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem('currentUser');
+    if (storedUser) {
+      const user = JSON.parse(storedUser);
+      setFirstName(user.firstName || '');
+    }
+
+    const storedStatus = localStorage.getItem('userStatus');
+    setIsOnline(storedStatus === null ? true : storedStatus === 'online');
+  }, []);
+
   const toggleLanguage = () => {
     const newLang = i18n.language === 'en' ? 'ua' : 'en';
     i18n.changeLanguage(newLang);
     localStorage.setItem('i18nextLng', newLang);
+  };
+
+  const toggleOnlineStatus = () => {
+    const newStatus = !isOnline;
+    setIsOnline(newStatus);
+    localStorage.setItem('userStatus', newStatus ? 'online' : 'offline');
   };
 
   return (
@@ -83,13 +104,20 @@ const Header = () => {
           <div className="w-px h-6 bg-border mx-2" />
 
           <div className="hidden sm:flex items-center gap-3">
-            <div className="text-right">
-              <p className="text-sm font-medium">Олександр</p>
-              <p className="text-xs text-muted-foreground">
-                {t('header.online')}
+            <div className="text-right leading-tight">
+              <p className="text-sm font-medium">{firstName}</p>
+              <p
+                onClick={toggleOnlineStatus}
+                className="text-xs text-muted-foreground cursor-pointer"
+              >
+                {isOnline ? t('header.online') : t('header.offline')}
               </p>
             </div>
-            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+            <div
+              className={`w-2 h-2 rounded-full ${
+                isOnline ? 'bg-green-500' : 'bg-gray-400'
+              }`}
+            ></div>
           </div>
         </div>
       </div>

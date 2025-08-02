@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -19,6 +20,20 @@ import {
 import { useTranslation } from 'react-i18next';
 
 const Sidebar = () => {
+
+  const [userName, setUserName] = useState<string>("Користувач");
+  const [userRole, setUserRole] = useState<string>("");
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem("currentUser");
+    if (storedUser) {
+      const user = JSON.parse(storedUser);
+      setUserName(`${user.firstName} ${user.lastName}`);
+      setUserRole(user.role || "");
+    }
+  }, []);
+
+
   const location = useLocation();
   const { t } = useTranslation();
 
@@ -159,15 +174,18 @@ const Sidebar = () => {
         >
           <Avatar className="h-8 w-8">
             <AvatarFallback className="bg-primary text-primary-foreground text-sm">
-              ОП
+              {userName ? userName .split(" ") .filter(Boolean) .map((n) => n[0].toUpperCase()) .join(""): "К"}
             </AvatarFallback>
+
           </Avatar>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-foreground truncate">
-              Олександр Петренко
-            </p>
+            <p className="text-sm font-medium text-foreground truncate">{userName}</p>
             <p className="text-xs text-muted-foreground truncate">
-              Студент 4 курсу
+              {userRole === "student"
+                ? "Студент"
+                : userRole === "teacher"
+                ? "Викладач"
+                : ""}
             </p>
           </div>
           <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">

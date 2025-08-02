@@ -33,5 +33,41 @@
     "faculty": "Факультет управління фінансами та бізнесу",
     "department": "публічного адміністрування та управління бізнесом",
     "role": "student"
+  },
+  {
+    "firstName": "Віктор",
+    "lastName": "Дзидз",
+    "email": "viktor.dzydz@lnu.edu.ua",
+    "password": "3gtktk54",
+    "faculty": "Фізичний факультет",
+    "department": "експериментальної фізики",
+    "role": "student"
+  },
+  {
+    "firstName": "Вікторія",
+    "lastName": "Особа",
+    "email": "viktoriia.osoba@lnu.edu.ua",
+    "password": "fjmgjti4433",
+    "faculty": "Філософський факультет",
+    "department": "психології",
+    "role": "student"
+  },
+  {
+    "firstName": "Ivan ",
+    "lastName": "Osoba",
+    "email": "ivan.osoba@lnu.edu.ua",
+    "password": "fjfjr4321",
+    "faculty": "Філософський факультет",
+    "department": "теорії та історії культури",
+    "role": "student"
+  },
+  {
+    "firstName": "Dima",
+    "lastName": "Qwerty",
+    "email": "qwerty.dima@lnu.edu.ua",
+    "password": "fjfgkit543",
+    "faculty": "Факультет прикладної математики та інформатики",
+    "department": "математичного моделювання соціально-економічних процесів",
+    "role": "student"
   }
 ]
