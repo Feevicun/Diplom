@@ -1,0 +1,327 @@
+{
+  "header": {
+    "welcome": "Welcome, {{name}}!",
+    "projectInProgress": "ACTIVE PROJECT!",
+    "create": "Create",
+    "searchPlaceholder": "Search projects, tasks, documents...",
+    "online": "Online",
+    "language": "Language",
+    "theme": "Theme"
+  },
+  "sidebar": {
+    "sectionMain": "Main",
+    "sectionTools": "Tools",
+    "sectionActions": "Actions",
+    "dashboard": "Dashboard",
+    "projects": "Projects",
+    "tasks": "Chat",
+    "calendar": "Calendar",
+    "aiAssistant": "AI Assistant",
+    "analytics": "Analytics",
+    "resources": "Resources",
+    "documents": "Documents",
+    "team": "Team",
+    "notifications": "Notifications",
+    "settings": "Settings",
+    "logout": "Logout"
+  },
+  "index": {
+    "title": "Development of a Web-Based Scientific Research Management System",
+    "supervisor": "Prof. Ivanenko I.I.",
+    "supervisorName": "science doctor",
+    "deadline": "January 15, 2025",
+    "status": "Under Review",
+    "welcomeTitle": "Welcome, {{name}}!",
+    "encouragement": "Keep up the excellent work on your thesis project.",
+    "progressCompleted": "{{progress}}% completed",
+    "projectType": "ACTIVE PROJECT",
+    "projectProgress": "Project Progress",
+    "detailedView": "Detailed View",
+    "chatWithSupervisor": "Chat with Supervisor",
+    "quickActions": "Quick Actions",
+    "aiAssistant": "AI Assistant",
+    "planner": "Planner",
+    "analytics": "Analytics",
+    "stats": {
+      "overallProgress": "Overall Progress",
+      "chaptersReady": "Chapters Ready",
+      "daysLeft": "Days Left",
+      "aiSuggestions": "AI Suggestions",
+      "progressChange": "+5% this week",
+      "chaptersChange": "+1 chapter",
+      "urgent": "Urgent!",
+      "newTips": "New Tips"
+    },
+    "milestones": {
+      "intro": "Introduction",
+      "literature": "Literature Review",
+      "methodology": "Methodology",
+      "implementation": "Implementation",
+      "testing": "Testing",
+      "conclusion": "Conclusion",
+      "completed": "Completed",
+      "inProgress": "In Progress",
+      "pending": "Pending"
+    },
+    "recentActivity": {
+      "title": "Recent Activity",
+      "activities": {
+        "comment": "New comment to part 2",
+        "deadline": "Reminder: deadline is tomorrow",
+        "approval": "Part 1 has been approved"
+      },
+      "times": {
+        "comment": "2 hours ago",
+        "deadline": "1 day ago",
+        "approval": "3 days ago"
+      }
+    },
+    "aiRecommendations": {
+      "title": "AI Recommendations",
+      "description": "Personalized suggestions to improve your work",
+      "view": "View",
+      "literatureReview": {
+        "title": "Literature Review",
+        "description": "Add more up-to-date sources to enhance relevance",
+        "priority": "High"
+      },
+      "methodology": {
+        "title": "Methodology",
+        "description": "Expand experiment descriptions and add diagrams",
+        "priority": "Medium"
+      },
+      "conclusion": {
+        "title": "Conclusions",
+        "description": "Improve results structure and add recommendations",
+        "priority": "Low"
+      }
+    }
+  },
+  "chat": {
+    "placeholder": "Write a message...",
+    "attachFile": "Add file",
+    "send": "Send",
+    "example": {
+      "supervisor1": "Hello! I reviewed your work. The introduction needs some refinement.",
+      "student1": "Thank you for your feedback! I will start working on the corrections today.",
+      "supervisor2": "Okay. Don't forget to structure the bibliography according to our department's requirements.",
+      "student2": "Got it, thanks! I'll finish up the material and send it to you for review by the end of the week. Have a great day!"
+    }
+  },
+  "thesis": {
+    "cardTitle": "Diploma project",
+    "supervisor": "Supervisor",
+    "startDate": "Start",
+    "deadline": "Deadline",
+    "progress": "Progress",
+    "export": "Export report",
+    "chapters": {
+      "intro": "Introduction",
+      "theory": "Theoretical foundations",
+      "design": "System design",
+      "implementation": "Realization",
+      "conclusion": "Conclusions",
+      "appendix": "Appendices",
+      "sources": "List of sources",
+      "abstract": "Annotation",
+      "cover": "Title page",
+      "content": "Contents"
+    },
+    "chapterDescriptions": {
+      "intro": "Relevance, purpose, and objectives of the study",
+      "theory": "Overview of the subject area",
+      "design": "Architecture and modules",
+      "implementation": "Functionality development, testing",
+      "conclusion": "Results, achievements, recommendations",
+      "appendix": "Code snippets, mockups",
+      "sources": "Design in accordance with standards",
+      "abstract": "Brief summary of the main provisions",
+      "cover": "Design in accordance with requirements",
+      "content": "Structured list of sections"
+    },
+    "statuses": {
+      "completed": "Completed",
+      "review": "Under review",
+      "inProgress": "In progress",
+      "pending": "Expected"
+    },
+    "actions": {
+      "sendForReview": "Send for review",
+      "file": "File"
+    }
+  },
+  "profile": {
+    "title": "User profile",
+    "subtitle": "Edit your personal data",
+    "name": "Name",
+    "namePlaceholder": "Enter your name",
+    "email": "Email",
+    "emailPlaceholder": "Enter your email",
+    "role": "Role",
+    "rolePlaceholder": "Enter status",
+    "save": "Save changes"
+  },
+  "aiAssistant": {
+    "title": "AI Assistant",
+    "description": "Artificial intelligence to improve your scientific work",
+    "features": {
+      "structure": {
+        "title": "Structure generation",
+        "description": "Automatic creation of a work plan based on a topic",
+        "status": "Active"
+      },
+      "topics": {
+        "title": "Topic hints",
+        "description": "Recommendations for topics according to your specialty",
+        "status": "Active"
+      },
+      "plagiarism": {
+        "title": "Plagiarism check",
+        "description": "Automatic verification of text uniqueness",
+        "status": "Soon"
+      },
+      "analysis": {
+        "title": "Quality analysis",
+        "description": "Assessment of the structure and content of the work",
+        "status": "Soon"
+      }
+    },
+    "tabs": {
+      "suggestions": "Topic hints",
+      "structure": "Structure generation",
+      "analysis": "Text analysis"
+    },
+    "suggestions": {
+      "title": "Recommended topics",
+      "description": "Based on your profile",
+      "relevance": "Conformity",
+      "choose": "Select a topic",
+      "title1": "Optimization of data processing algorithms",
+      "category1": "Computer science",
+      "description1": "Research into methods for accelerating the processing of large volumes of information.",
+      "title2": "The impact of artificial intelligence on medicine",
+      "category2": "Medicine",
+      "description2": "Analysis of the use of AI for the diagnosis and treatment of diseases.",
+      "title3": "Environmental monitoring using drones",
+      "category3": "Ecology",
+      "description3": "Studying methods for collecting and analyzing environmental data using drones.",
+      "title4": "Development of chatbots for user support",
+      "category4": "Information technology",
+      "description4": "Creating effective chatbots for automating customer service."
+    },
+    "structure": {
+      "title": "Structure generation",
+      "description": "Based on the topic introduced",
+      "placeholder": "Enter a theme...",
+      "generate": "Generate",
+      "generating": "Generation...",
+      "resultTitle": "Generated structure",
+      "copy": "Copy"
+    },
+    "analysis": {
+      "title": "Text analysis",
+      "description": "Function in development",
+      "textareaPlaceholder": "Insert text...",
+      "plagiarism": "Check for plagiarism",
+      "quality": "Quality analysis",
+      "comingSoonNote": "This feature will be available soon. We are actively working on it!"
+    },
+    "status": {
+      "active": "Active",
+      "comingSoon": "Soon"
+    }
+  },
+  "calendar": {
+    "pageTitle": "Calendar",
+    "pageDescription": "Manage events, deadlines, and meetings in one place.",
+    "card": {
+      "calendarTitle": "Calendar",
+      "calendarDescription": "Select a date to view events or create new ones.",
+      "eventsTitle": "Events on {{date}}",
+      "eventsDescription": "Your events for the selected date.",
+      "noEvents": "No events.",
+      "eventCount_one": "{{count}} events",
+      "eventCount_few": "{{count}} events",
+      "eventCount_many": "{{count}} events"
+    },
+    "button": {
+      "addEvent": "Add event",
+      "viewMore": "View all"
+    },
+    "eventTypes": {
+      "meeting": "Meeting",
+      "deadline": "Deadline",
+      "task": "Task"
+    },
+    "features": {
+      "upcoming": "Upcoming events",
+      "tasks": "Task",
+      "addEvent": "Add event",
+      "deadlines": "Deadlines",
+      "upcomingDesc": "Review upcoming meetings and deadlines",
+      "tasksDesc": "Your planned tasks",
+      "addEventDesc": "Quickly create a new event",
+      "deadlinesDesc": "Monitoring important deadlines"
+    },
+    "badge": {
+      "comingSoon": "Soon"
+    },
+    "mockEvents": {
+      "meeting1": "Consultation with the manager",
+      "deadline1": "Submit the first section",
+      "task1": "Interim testing"
+    }
+  },
+   "analytics": {
+    "title": "Analytics",
+    "description": "Review your project's key metrics",
+    "lastUpdated": "Just updated",
+    "visits": "Visits",
+    "thisMonth": "this month",
+    "conversions": "Conversions",
+    "growthRate": "growth rate",
+    "bounceRate": "Failure rate",
+    "low": "low level",
+    "averageTime": "Average time",
+    "perVisit": "on visits",
+    "trafficOverview": "Traffic overview",
+    "lineChartDescription": "Visits by month",
+    "departmentStats": "Distribution by departments",
+    "pieChartDescription": "Percentage distribution of tasks"
+  },
+  "resources": {
+  "title": "Materials for coursework/thesis",
+  "cards": {
+    "templates": {
+      "title": "Design samples",
+      "description": "Rules for formatting coursework and theses (titles, tables, references, etc.).",
+      "action": "View"
+    },
+    "examples": {
+      "title": "Examples of works",
+      "description": "Ready-made examples of previous coursework and thesis projects.",
+      "action": "View"
+    },
+    "guidelines": {
+      "title": "Methodological guidelines",
+      "description": "Official instructions and guidelines for completing coursework and dissertations.",
+      "action": "Download"
+    },
+    "literature": {
+      "title": "Useful literature",
+      "description": "A selection of books, articles, and online resources for a deeper understanding of the topic.",
+      "action": "Open list"
+    },
+    "faq": {
+      "title": "Frequently asked questions (FAQ)",
+      "description": "Answers to frequently asked questions about the structure, content, and protection of the work.",
+      "action": "View FAQ"
+    },
+    "defense": {
+      "title": "Tips for protection",
+      "description": "How to effectively prepare for defense and present your work.",
+      "action": "Detailed"
+    }
+  }
+}
+}
