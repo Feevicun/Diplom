@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,6 +19,7 @@ import {
 } from '@/components/ui/select';
 
 const Header = () => {
+  const navigate = useNavigate();
   const { t, i18n } = useTranslation();
   const { theme, setTheme } = useTheme();
 
@@ -97,7 +99,7 @@ const Header = () => {
             {i18n.language === 'ua' ? 'UA' : 'EN'}
           </Button>
 
-          <Button variant="ghost" size="icon" className="rounded-full">
+          <Button variant="ghost" size="icon" className="rounded-full" onClick={() => navigate('/profile')}>
             <Settings className="h-4 w-4" />
           </Button>
 

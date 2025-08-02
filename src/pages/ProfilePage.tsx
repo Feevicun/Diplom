@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,39 +10,53 @@ import Header from "@/components/Header";
 import Sidebar from "@/components/Sidebar";
 
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 
 const ProfilePage = () => {
   const { t } = useTranslation();
-  const [name, setName] = useState("Олександр Петренко");
-  const [email, setEmail] = useState("petrenko@student.university.ua");
-  const [role, setRole] = useState("Студент 4 курсу");
+  const navigate = useNavigate();
+
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [role, setRole] = useState("");
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem("currentUser");
+    if (storedUser) {
+      const user = JSON.parse(storedUser);
+      setName(`${user.firstName} ${user.lastName}`);
+      setEmail(user.email);
+      setRole(user.role === "student" ? "Студент" : "Викладач");
+    }
+  }, []);
 
   const handleSave = () => {
     console.log("Збережено:", { name, email, role });
   };
 
   const handleLogout = () => {
-    console.log("Користувач вийшов з акаунту!");
+    localStorage.removeItem("currentUser");
+    navigate("/"); //  на головну сторінку
   };
 
   return (
     <div className="flex h-screen bg-background text-foreground">
-      {/* Sidebar */}
       <Sidebar />
 
-      {/* Main Content */}
       <div className="flex flex-col flex-1 overflow-hidden">
-        {/* Header */}
         <Header />
 
-        {/* Content */}
         <main className="flex-1 overflow-y-auto p-8 max-w-3xl mx-auto w-full">
           <Card>
             <CardHeader>
               <div className="flex items-center gap-4">
                 <Avatar className="h-12 w-12">
                   <AvatarFallback className="bg-primary text-primary-foreground">
-                    ОП
+                    {name
+                      .split(" ")
+                      .map((n) => n[0])
+                      .join("")
+                      .toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
                 <div>
@@ -63,7 +77,7 @@ const ProfilePage = () => {
                   id="name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Введіть імʼя"
+                  placeholder={t("profile.namePlaceholder")}
                 />
               </div>
 
@@ -73,7 +87,7 @@ const ProfilePage = () => {
                   id="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Введіть email"
+                  placeholder={t("profile.emailPlaceholder")}
                 />
               </div>
 
@@ -83,11 +97,10 @@ const ProfilePage = () => {
                   id="role"
                   value={role}
                   onChange={(e) => setRole(e.target.value)}
-                  placeholder="Введіть статус"
+                  placeholder={t("profile.rolePlaceholder")}
                 />
               </div>
 
-              {/* Buttons */}
               <div className="space-y-2">
                 <Button onClick={handleSave} className="w-full">
                   {t("profile.save")}

@@ -69,5 +69,32 @@
     "faculty": "Факультет прикладної математики та інформатики",
     "department": "математичного моделювання соціально-економічних процесів",
     "role": "student"
+  },
+  {
+    "firstName": "Marta",
+    "lastName": "Osoba",
+    "email": "osoba.marta@lnu.edu.ua",
+    "password": "dghytr346",
+    "faculty": "Фізичний факультет",
+    "department": "експериментальної фізики",
+    "role": "student"
+  },
+  {
+    "firstName": "Vika",
+    "lastName": "Osoba",
+    "email": "osoba.vika12@lnu.edu.ua",
+    "password": "fjgjg5443",
+    "faculty": "Факультет педагогічної освіти",
+    "department": "соціальної освіти",
+    "role": "student"
+  },
+  {
+    "firstName": "Martak",
+    "lastName": "Habak",
+    "email": "fjgjg@lnu.edu.ua",
+    "password": "ggtr36",
+    "faculty": "Філософський факультет",
+    "department": "психології",
+    "role": "student"
   }
 ]
