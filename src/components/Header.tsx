@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -25,6 +25,9 @@ const Header = () => {
 
   const [firstName, setFirstName] = useState('');
   const [isOnline, setIsOnline] = useState(true);
+  const [isCreateMenuOpen, setIsCreateMenuOpen] = useState(false);
+
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const storedUser = localStorage.getItem('currentUser');
@@ -37,6 +40,23 @@ const Header = () => {
     setIsOnline(storedStatus === null ? true : storedStatus === 'online');
   }, []);
 
+  // Закриття меню при кліку поза ним
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setIsCreateMenuOpen(false);
+      }
+    }
+    if (isCreateMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    } else {
+      document.removeEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isCreateMenuOpen]);
+
   const toggleLanguage = () => {
     const newLang = i18n.language === 'en' ? 'ua' : 'en';
     i18n.changeLanguage(newLang);
@@ -48,6 +68,20 @@ const Header = () => {
     setIsOnline(newStatus);
     localStorage.setItem('userStatus', newStatus ? 'online' : 'offline');
   };
+
+  // Обробка вибору пункту меню "Створити"
+const handleCreateSelect = (type: string) => {
+  setIsCreateMenuOpen(false);
+  
+  if (type === 'coursework') {
+    navigate('/tracker?type=coursework');
+  } else if (type === 'diploma') {
+    navigate('/tracker?type=diploma');
+  } else if (type === 'practice') {
+    navigate('/tracker?type=practice');
+  }
+};
+
 
   return (
     <header className="h-16 bg-[--sidebar]/95 backdrop-blur border-b sticky top-0 z-50 text-[--sidebar-foreground]">
@@ -68,15 +102,47 @@ const Header = () => {
         </div>
 
         {/* Actions */}
-        <div className="hidden md:flex items-center gap-6">
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-2 w-[110px] justify-center"
-          >
-            <Plus className="h-4 w-4" />
-            {t('header.create')}
-          </Button>
+        <div className="hidden md:flex items-center gap-6 relative">
+          {/* Кнопка "Створити" з меню */}
+          <div ref={menuRef} className="relative">
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2 w-[110px] justify-center"
+              onClick={() => setIsCreateMenuOpen(!isCreateMenuOpen)}
+              aria-expanded={isCreateMenuOpen}
+              aria-haspopup="true"
+            >
+              <Plus className="h-4 w-4" />
+              {t('header.create')}
+            </Button>
+
+            {isCreateMenuOpen && (
+              <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg z-50">
+                <button
+                  className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
+                  onClick={() => handleCreateSelect('coursework')}
+                  type="button"
+                >
+                  Курсова робота
+                </button>
+                <button
+                  className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
+                  onClick={() => handleCreateSelect('diploma')}
+                  type="button"
+                >
+                  Дипломна
+                </button>
+                <button
+                  className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
+                  onClick={() => handleCreateSelect('practice')}
+                  type="button"
+                >
+                  Практика
+                </button>
+              </div>
+            )}
+          </div>
 
           <Select value={theme} onValueChange={(value) => setTheme(value as any)}>
             <SelectTrigger className="w-[110px]">
@@ -119,7 +185,7 @@ const Header = () => {
               className={`w-2 h-2 rounded-full ${
                 isOnline ? 'bg-green-500' : 'bg-gray-400'
               }`}
-            ></div>
+            />
           </div>
         </div>
       </div>
