@@ -110,6 +110,11 @@
     }
   },
   "thesis": {
+    "projectTypes": {
+      "diploma": "Diploma project",
+      "coursework": "Coursework",
+      "practice": "Practice"
+    },
     "cardTitle": "Diploma project",
     "supervisor": "Supervisor",
     "startDate": "Start",
@@ -126,7 +131,10 @@
       "sources": "List of sources",
       "abstract": "Annotation",
       "cover": "Title page",
-      "content": "Contents"
+      "content": "Contents",
+      "tasks": "Tasks",
+      "diary": "Diary",
+      "report": "Report"
     },
     "chapterDescriptions": {
       "intro": "Relevance, purpose, and objectives of the study",
@@ -138,7 +146,10 @@
       "sources": "Design in accordance with standards",
       "abstract": "Brief summary of the main provisions",
       "cover": "Design in accordance with requirements",
-      "content": "Structured list of sections"
+      "content": "Structured list of sections",
+      "tasks": "Description of assigned tasks",
+      "diary": "Practice progress notes",
+      "report": "Official report"
     },
     "statuses": {
       "completed": "Completed",
@@ -149,8 +160,13 @@
     "actions": {
       "sendForReview": "Send for review",
       "file": "File"
-    }
-  },
+    },
+  "index": {
+    "chatWithSupervisor": "Chat with supervisor",
+    "planner": "Planner",
+    "projectProgress": "Project progress"
+  }
+},
   "profile": {
     "title": "User profile",
     "subtitle": "Edit your personal data",

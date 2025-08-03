@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -6,18 +7,50 @@ import { MessageSquare, Calendar, Download, CheckCircle, Clock, FileText, AlertC
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
 
-const chapters = [
-  { id: 1, key: 'intro', progress: 100, status: 'completed' },
-  { id: 2, key: 'theory', progress: 85, status: 'review' },
-  { id: 3, key: 'design', progress: 50, status: 'inProgress' },
-  { id: 4, key: 'implementation', progress: 30, status: 'inProgress' },
-  { id: 5, key: 'conclusion', progress: 20, status: 'inProgress' },
-  { id: 6, key: 'appendix', progress: 0, status: 'pending' },
-  { id: 7, key: 'sources', progress: 75, status: 'review' },
-  { id: 8, key: 'abstract', progress: 10, status: 'inProgress' },
-  { id: 9, key: 'cover', progress: 100, status: 'completed' },
-  { id: 10, key: 'content', progress: 100, status: 'completed' }
-];
+const chapterTemplates: Record<string, {
+  id: number;
+  key: string;
+  progress: number;
+  status: 'completed' | 'review' | 'inProgress' | 'pending';
+}[]> = {
+  diploma: [
+    { id: 1, key: 'intro', progress: 100, status: 'completed' },
+    { id: 2, key: 'theory', progress: 85, status: 'review' },
+    { id: 3, key: 'design', progress: 50, status: 'inProgress' },
+    { id: 4, key: 'implementation', progress: 30, status: 'inProgress' },
+    { id: 5, key: 'conclusion', progress: 20, status: 'inProgress' },
+    { id: 6, key: 'appendix', progress: 0, status: 'pending' },
+    { id: 7, key: 'sources', progress: 75, status: 'review' },
+    { id: 8, key: 'abstract', progress: 10, status: 'inProgress' },
+    { id: 9, key: 'cover', progress: 100, status: 'completed' },
+    { id: 10, key: 'content', progress: 100, status: 'completed' }
+  ],
+  coursework: [
+    { id: 1, key: 'intro', progress: 80, status: 'review' },
+    { id: 2, key: 'theory', progress: 60, status: 'inProgress' },
+    { id: 3, key: 'design', progress: 0, status: 'pending' },
+    { id: 4, key: 'implementation', progress: 0, status: 'pending' },
+    { id: 5, key: 'conclusion', progress: 0, status: 'pending' },
+    { id: 6, key: 'appendix', progress: 0, status: 'pending' },
+    { id: 7, key: 'sources', progress: 0, status: 'pending' },
+    { id: 8, key: 'abstract', progress: 0, status: 'pending' },
+    { id: 9, key: 'cover', progress: 100, status: 'completed' },
+    { id: 10, key: 'content', progress: 100, status: 'completed' }
+  ],
+  practice: [
+    { id: 1, key: 'intro', progress: 80, status: 'review' },
+    { id: 2, key: 'tasks', progress: 60, status: 'inProgress' },
+    { id: 3, key: 'diary', progress: 40, status: 'inProgress' },
+    { id: 4, key: 'conclusion', progress: 10, status: 'inProgress' },
+    { id: 5, key: 'report', progress: 0, status: 'pending' }
+  ]
+};
+
+const projectTitles: Record<string, string> = {
+  diploma: 'Дипломний проєкт',
+  coursework: 'Курсова робота',
+  practice: 'Навчальна практика',
+};
 
 const getStatusIcon = (status: string) => {
   switch (status) {
@@ -35,6 +68,15 @@ const getStatusIcon = (status: string) => {
 const ThesisTracker = () => {
   const { t } = useTranslation();
 
+  const [projectType, setProjectType] = useState<'diploma' | 'coursework' | 'practice'>('diploma');
+
+  const chapters = chapterTemplates[projectType];
+
+  // Calculate total progress % for display
+  const totalProgress = Math.round(
+    chapters.reduce((sum, ch) => sum + ch.progress, 0) / chapters.length
+  );
+
   return (
     <div className="min-h-screen bg-[var(--background)] flex text-[var(--foreground)]">
       <div className="hidden md:block sticky top-0 h-screen bg-[var(--sidebar)] border-r border-[var(--sidebar-border)]">
@@ -48,11 +90,47 @@ const ThesisTracker = () => {
 
         <main className="flex-1 overflow-y-auto bg-[var(--background)]">
           <div className="max-w-6xl mx-auto py-6 px-4 space-y-6 pb-20">
+
+            {/* Project Type Selector */}
+            <div className="flex gap-4 mb-6">
+              <button
+                onClick={() => setProjectType('diploma')}
+                className={`px-4 py-2 rounded-lg font-semibold transition ${
+                  projectType === 'diploma'
+                    ? 'bg-[var(--primary)] text-[var(--primary-foreground)]'
+                    : 'bg-[var(--muted)] text-[var(--muted-foreground)] hover:bg-[var(--muted-hover)]'
+                }`}
+              >
+                {t('thesis.projectTypes.diploma')}
+              </button>
+              <button
+                onClick={() => setProjectType('coursework')}
+                className={`px-4 py-2 rounded-lg font-semibold transition ${
+                  projectType === 'coursework'
+                    ? 'bg-[var(--primary)] text-[var(--primary-foreground)]'
+                    : 'bg-[var(--muted)] text-[var(--muted-foreground)] hover:bg-[var(--muted-hover)]'
+                }`}
+              >
+                {t('thesis.projectTypes.coursework')}
+              </button>
+              <button
+                onClick={() => setProjectType('practice')}
+                className={`px-4 py-2 rounded-lg font-semibold transition ${
+                  projectType === 'practice'
+                    ? 'bg-[var(--primary)] text-[var(--primary-foreground)]'
+                    : 'bg-[var(--muted)] text-[var(--muted-foreground)] hover:bg-[var(--muted-hover)]'
+                }`}
+              >
+                {t('thesis.projectTypes.practice')}
+              </button>
+            </div>
+
             {/* Основна карточка з інформацією про роботу */}
             <Card className="bg-[var(--card)] text-[var(--card-foreground)]">
               <CardHeader>
                 <CardTitle className="text-lg md:text-xl">
-                  {t('thesis.cardTitle')}
+                  {/* Динамічний заголовок */}
+                  {t(`thesis.projectTypes.${projectType}`) || projectTitles[projectType]}
                 </CardTitle>
                 <CardDescription className="text-sm text-[var(--muted-foreground)] mt-1">
                   {t('thesis.supervisor')}
@@ -69,11 +147,11 @@ const ThesisTracker = () => {
                     </p>
                   </div>
                   <div className="text-right">
-                    <div className="text-3xl font-bold text-[var(--primary)]">65%</div>
+                    <div className="text-3xl font-bold text-[var(--primary)]">{totalProgress}%</div>
                     <p className="text-sm text-[var(--muted-foreground)]">{t('thesis.progress')}</p>
                   </div>
                 </div>
-                <Progress value={65} className="h-2 bg-[var(--muted)]" />
+                <Progress value={totalProgress} className="h-2 bg-[var(--muted)]" />
                 <div className="flex gap-3 flex-wrap">
                   <Button className="bg-[var(--primary)] text-[var(--primary-foreground)] hover:bg-[var(--primary-foreground)] hover:text-[var(--primary)]">
                     <MessageSquare className="w-4 h-4 mr-2" />
@@ -129,6 +207,7 @@ const ThesisTracker = () => {
                 ))}
               </CardContent>
             </Card>
+
           </div>
         </main>
       </div>

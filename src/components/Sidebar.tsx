@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -20,7 +20,6 @@ import {
 import { useTranslation } from 'react-i18next';
 
 const Sidebar = () => {
-  const navigate = useNavigate();
 
   const [userName, setUserName] = useState<string>("Користувач");
   const [userRole, setUserRole] = useState<string>("");
@@ -189,9 +188,11 @@ const Sidebar = () => {
                 : ""}
             </p>
           </div>
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={() => navigate('/')}>
-            <LogOut className="h-4 w-4" />
-          </Button>
+          <Link to="/">
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
+              <LogOut className="h-4 w-4" />
+            </Button>
+          </Link>
         </Link>
       </div>
     </div>
