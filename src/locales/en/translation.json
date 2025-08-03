@@ -109,6 +109,44 @@
       "student2": "Got it, thanks! I'll finish up the material and send it to you for review by the end of the week. Have a great day!"
     }
   },
+  "welcome": {
+  "heading": "Choose Work Type",
+  "subheading": "Select the type of academic work you want to focus on",
+
+  "diploma": {
+    "title": "Thesis Project",
+    "description": "Create and track the progress of your thesis"
+  },
+  "coursework": {
+    "title": "Coursework",
+    "description": "Organize and manage your course project"
+  },
+  "practice": {
+    "title": "Internship",
+    "description": "Keep a record of your internship experience"
+  },
+
+  "help": {
+    "title": "Not sure where to start?",
+    "subtitle": "Our assistant will help you organize your work and track your progress"
+  },
+
+  "howItWorks": {
+    "title": "📋 How the system works:",
+    "step1": "Choose a work type",
+    "step2": "Upload files for each section",
+    "step3": "Track your progress",
+    "step4": "Communicate with your supervisor"
+  },
+
+  "tips": {
+    "title": "💡 Helpful Tips:",
+    "tip1": "Start with the introduction and literature review",
+    "tip2": "Regularly save your intermediate results",
+    "tip3": "Stick to the given deadlines",
+    "tip4": "Coordinate changes with your supervisor"
+  }
+},
   "thesis": {
     "projectTypes": {
       "diploma": "Diploma project",

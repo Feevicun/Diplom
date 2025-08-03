@@ -70,38 +70,39 @@ const getStatusIcon = (status: string) => {
 const WelcomeScreen = ({ onSelectProject }: { onSelectProject: (type: 'diploma' | 'coursework' | 'practice') => void }) => {
   const { t } = useTranslation();
 
-  const projectOptions = [
-    {
-      type: 'diploma' as const,
-      icon: GraduationCap,
-      title: 'Дипломна робота',
-      description: 'Створіть та відстежуйте прогрес дипломної роботи',
-      color: 'bg-[var(--muted)]'
-    },
-    {
-      type: 'coursework' as const,
-      icon: BookOpen,
-      title: 'Курсова робота',
-      description: 'Організуйте роботу над курсовим проєктом',
-      color: 'bg-[var(--muted)]'
-    },
-    {
-      type: 'practice' as const,
-      icon: Briefcase,
-      title: 'Навчальна практика',
-      description: 'Ведіть звіт про проходження практики',
-      color: 'bg-[var(--muted)]'
-    }
-  ];
+const projectOptions = [
+  {
+    type: 'diploma' as const,
+    icon: GraduationCap,
+    title: t('welcome.diploma.title'),
+    description: t('welcome.diploma.description'),
+    color: 'bg-[var(--muted)]'
+  },
+  {
+    type: 'coursework' as const,
+    icon: BookOpen,
+    title: t('welcome.coursework.title'),
+    description: t('welcome.coursework.description'),
+    color: 'bg-[var(--muted)]'
+  },
+  {
+    type: 'practice' as const,
+    icon: Briefcase,
+    title: t('welcome.practice.title'),
+    description: t('welcome.practice.description'),
+    color: 'bg-[var(--muted)]'
+  }
+];
+
 
   return (
     <div className="max-w-4xl mx-auto py-12 px-4">
       <div className="text-center mb-12">
         <h1 className="text-3xl font-bold text-[var(--foreground)] mb-4">
-          Оберіть тип роботи
+          {t('welcome.heading')}
         </h1>
         <p className="text-lg text-[var(--muted-foreground)]">
-          Виберіть тип навчальної роботи, над якою ви хочете працювати
+          {t('welcome.subheading')}
         </p>
       </div>
 
@@ -136,43 +137,44 @@ const WelcomeScreen = ({ onSelectProject }: { onSelectProject: (type: 'diploma' 
         })}
       </div>
 
-      <div className="mt-12">
-        <Card className="bg-[var(--muted)]/50 border-dashed border-2 border-[var(--border)]">
-          <CardContent className="py-6">
-            <div className="text-center mb-4">
-              <FileText className="w-10 h-10 text-[var(--muted-foreground)] mx-auto mb-3" />
-              <h3 className="text-lg font-semibold text-[var(--foreground)] mb-2">
-                Не знаєте, з чого почати?
-              </h3>
-              <p className="text-[var(--muted-foreground)] mb-4">
-                Наш помічник допоможе вам організувати роботу та відстежувати прогрес
-              </p>
-            </div>
-            
-            <div className="grid md:grid-cols-2 gap-4 text-left">
-              <div>
-                <h4 className="font-medium text-[var(--foreground)] mb-2">📋 Як працює система:</h4>
-                <ul className="space-y-1 text-sm text-[var(--muted-foreground)]">
-                  <li>• Оберіть тип роботи (дипломна, курсова, практика)</li>
-                  <li>• Завантажуйте файли для кожного розділу</li>
-                  <li>• Відстежуйте прогрес виконання</li>
-                  <li>• Спілкуйтеся з науковим керівником</li>
-                </ul>
-              </div>
-              
-              <div>
-                <h4 className="font-medium text-[var(--foreground)] mb-2">💡 Корисні поради:</h4>
-                <ul className="space-y-1 text-sm text-[var(--muted-foreground)]">
-                  <li>• Починайте з вступу та огляду літератури</li>
-                  <li>• Регулярно зберігайте проміжні результати</li>
-                  <li>• Дотримуйтесь встановлених дедлайнів</li>
-                  <li>• Узгоджуйте зміни з керівником</li>
-                </ul>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="mt-12 flex justify-center">
+  <Card className="w-full max-w-5xl bg-[var(--muted)]/50 border-dashed border-2 border-[var(--border)]">
+    <CardContent className="py-10">
+      <div className="text-center mb-8">
+        <FileText className="w-10 h-10 text-[var(--muted-foreground)] mx-auto mb-3" />
+        <h3 className="text-xl font-semibold text-[var(--foreground)] mb-2">
+          {t('welcome.help.title')}
+        </h3>
+        <p className="text-[var(--muted-foreground)] text-base">
+          {t('welcome.help.subtitle')}
+        </p>
       </div>
+
+      <div className="grid md:grid-cols-2 gap-8 text-left px-4 md:px-12">
+        <div>
+          <h4 className="font-medium text-[var(--foreground)] mb-2">{t('welcome.howItWorks.title')}</h4>
+          <ul className="space-y-1 text-sm text-[var(--muted-foreground)]">
+            <li>• {t('welcome.howItWorks.step1')}</li>
+            <li>• {t('welcome.howItWorks.step2')}</li>
+            <li>• {t('welcome.howItWorks.step3')}</li>
+            <li>• {t('welcome.howItWorks.step4')}</li>
+          </ul>
+        </div>
+
+        <div>
+          <h4 className="font-medium text-[var(--foreground)] mb-2">{t('welcome.tips.title')}</h4>
+          <ul className="space-y-1 text-sm text-[var(--muted-foreground)]">
+            <li>• {t('welcome.tips.tip1')}</li>
+            <li>• {t('welcome.tips.tip2')}</li>
+            <li>• {t('welcome.tips.tip3')}</li>
+            <li>• {t('welcome.tips.tip4')}</li>
+          </ul>
+        </div>
+      </div>
+    </CardContent>
+  </Card>
+</div>
+
     </div>
   );
 };
