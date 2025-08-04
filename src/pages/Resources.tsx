@@ -68,10 +68,15 @@ const Resources = () => {
   ];
 
   return (
-    <div className="flex min-h-screen bg-muted/40">
-      <Sidebar />
-      <div className="flex-1">
-        <Header />
+    <div className="min-h-screen bg-[var(--background)] flex text-[var(--foreground)]">
+      <div className="hidden md:block sticky top-0 h-screen bg-[var(--sidebar)] border-r border-[var(--sidebar-border)]">
+        <Sidebar />
+      </div>
+
+      <div className="flex-1 flex flex-col h-screen">
+        <div className="sticky top-0 z-10 bg-[var(--card)] border-b border-[var(--border)]">
+          <Header />
+        </div>
         <main className="p-6">
           <h1 className="text-2xl font-semibold mb-6">{t('resources.title')}</h1>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

@@ -1,10 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 import Header from "@/components/Header";
 import Sidebar from "@/components/Sidebar";
@@ -18,6 +18,9 @@ const ProfilePage = () => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [role, setRole] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const storedUser = localStorage.getItem("currentUser");
@@ -26,16 +29,39 @@ const ProfilePage = () => {
       setName(`${user.firstName} ${user.lastName}`);
       setEmail(user.email);
       setRole(user.role === "student" ? "Студент" : "Викладач");
+      if(user.avatarUrl) {
+        setAvatarUrl(user.avatarUrl);
+      }
     }
   }, []);
 
   const handleSave = () => {
-    console.log("Збережено:", { name, email, role });
+    const userData = { 
+      firstName: name.split(" ")[0] || "", 
+      lastName: name.split(" ")[1] || "", 
+      email, 
+      role: role === "Студент" ? "student" : "teacher",
+      avatarUrl,
+    };
+    localStorage.setItem("currentUser", JSON.stringify(userData));
+    console.log("Збережено:", userData);
   };
 
   const handleLogout = () => {
     localStorage.removeItem("currentUser");
-    // Перенаправлення відбудеться через Link нижче
+  };
+
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (reader.result) {
+          setAvatarUrl(reader.result as string);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   return (
@@ -49,15 +75,26 @@ const ProfilePage = () => {
           <Card>
             <CardHeader>
               <div className="flex items-center gap-4">
-                <Avatar className="h-12 w-12">
-                  <AvatarFallback className="bg-primary text-primary-foreground">
-                    {name
-                      .split(" ")
-                      .map((n) => n[0])
-                      .join("")
-                      .toUpperCase()}
-                  </AvatarFallback>
+                <Avatar className="h-12 w-12 cursor-pointer" onClick={() => fileInputRef.current?.click()}>
+                  {avatarUrl ? (
+                    <AvatarImage src={avatarUrl} alt="User avatar" />
+                  ) : (
+                    <AvatarFallback className="bg-primary text-primary-foreground">
+                      {name
+                        .split(" ")
+                        .map((n) => n[0])
+                        .join("")
+                        .toUpperCase()}
+                    </AvatarFallback>
+                  )}
                 </Avatar>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  ref={fileInputRef}
+                  onChange={handleAvatarChange}
+                />
                 <div>
                   <CardTitle>{t("profile.title")}</CardTitle>
                   <p className="text-sm text-muted-foreground">

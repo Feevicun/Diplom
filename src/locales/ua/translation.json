@@ -11,7 +11,8 @@
     "create": "Створити",
     "createCoursework": "Курсова робота",
     "createDiploma": "Дипломна",
-    "createPractice": "Практика"
+    "createPractice": "Практика",
+     "menu": "Меню"
   },
   "sidebar": {
     "sectionMain": "Головне",

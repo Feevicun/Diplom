@@ -11,7 +11,8 @@
     "create": "Create",
     "createCoursework": "Coursework",
     "createDiploma": "Diplom",
-    "createPractice": "Practice"
+    "createPractice": "Practice",
+    "menu": "Menu"
   },
   "sidebar": {
     "sectionMain": "Main",
