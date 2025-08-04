@@ -70,30 +70,29 @@ const getStatusIcon = (status: string) => {
 const WelcomeScreen = ({ onSelectProject }: { onSelectProject: (type: 'diploma' | 'coursework' | 'practice') => void }) => {
   const { t } = useTranslation();
 
-const projectOptions = [
-  {
-    type: 'diploma' as const,
-    icon: GraduationCap,
-    title: t('welcome.diploma.title'),
-    description: t('welcome.diploma.description'),
-    color: 'bg-[var(--muted)]'
-  },
-  {
-    type: 'coursework' as const,
-    icon: BookOpen,
-    title: t('welcome.coursework.title'),
-    description: t('welcome.coursework.description'),
-    color: 'bg-[var(--muted)]'
-  },
-  {
-    type: 'practice' as const,
-    icon: Briefcase,
-    title: t('welcome.practice.title'),
-    description: t('welcome.practice.description'),
-    color: 'bg-[var(--muted)]'
-  }
-];
-
+  const projectOptions = [
+    {
+      type: 'diploma' as const,
+      icon: GraduationCap,
+      title: t('welcome.diploma.title'),
+      description: t('welcome.diploma.description'),
+      color: 'bg-[var(--muted)]'
+    },
+    {
+      type: 'coursework' as const,
+      icon: BookOpen,
+      title: t('welcome.coursework.title'),
+      description: t('welcome.coursework.description'),
+      color: 'bg-[var(--muted)]'
+    },
+    {
+      type: 'practice' as const,
+      icon: Briefcase,
+      title: t('welcome.practice.title'),
+      description: t('welcome.practice.description'),
+      color: 'bg-[var(--muted)]'
+    }
+  ];
 
   return (
     <div className="max-w-4xl mx-auto py-12 px-4">
@@ -138,42 +137,42 @@ const projectOptions = [
       </div>
 
       <div className="mt-12 flex justify-center">
-  <Card className="w-full max-w-5xl bg-[var(--muted)]/50 border-dashed border-2 border-[var(--border)]">
-    <CardContent className="py-10">
-      <div className="text-center mb-8">
-        <FileText className="w-10 h-10 text-[var(--muted-foreground)] mx-auto mb-3" />
-        <h3 className="text-xl font-semibold text-[var(--foreground)] mb-2">
-          {t('welcome.help.title')}
-        </h3>
-        <p className="text-[var(--muted-foreground)] text-base">
-          {t('welcome.help.subtitle')}
-        </p>
-      </div>
+        <Card className="w-full max-w-5xl bg-[var(--muted)]/50 border-dashed border-2 border-[var(--border)]">
+          <CardContent className="py-10">
+            <div className="text-center mb-8">
+              <FileText className="w-10 h-10 text-[var(--muted-foreground)] mx-auto mb-3" />
+              <h3 className="text-xl font-semibold text-[var(--foreground)] mb-2">
+                {t('welcome.help.title')}
+              </h3>
+              <p className="text-[var(--muted-foreground)] text-base">
+                {t('welcome.help.subtitle')}
+              </p>
+            </div>
 
-      <div className="grid md:grid-cols-2 gap-8 text-left px-4 md:px-12">
-        <div>
-          <h4 className="font-medium text-[var(--foreground)] mb-2">{t('welcome.howItWorks.title')}</h4>
-          <ul className="space-y-1 text-sm text-[var(--muted-foreground)]">
-            <li>• {t('welcome.howItWorks.step1')}</li>
-            <li>• {t('welcome.howItWorks.step2')}</li>
-            <li>• {t('welcome.howItWorks.step3')}</li>
-            <li>• {t('welcome.howItWorks.step4')}</li>
-          </ul>
-        </div>
+            <div className="grid md:grid-cols-2 gap-8 text-left px-4 md:px-12">
+              <div>
+                <h4 className="font-medium text-[var(--foreground)] mb-2">{t('welcome.howItWorks.title')}</h4>
+                <ul className="space-y-1 text-sm text-[var(--muted-foreground)]">
+                  <li>• {t('welcome.howItWorks.step1')}</li>
+                  <li>• {t('welcome.howItWorks.step2')}</li>
+                  <li>• {t('welcome.howItWorks.step3')}</li>
+                  <li>• {t('welcome.howItWorks.step4')}</li>
+                </ul>
+              </div>
 
-        <div>
-          <h4 className="font-medium text-[var(--foreground)] mb-2">{t('welcome.tips.title')}</h4>
-          <ul className="space-y-1 text-sm text-[var(--muted-foreground)]">
-            <li>• {t('welcome.tips.tip1')}</li>
-            <li>• {t('welcome.tips.tip2')}</li>
-            <li>• {t('welcome.tips.tip3')}</li>
-            <li>• {t('welcome.tips.tip4')}</li>
-          </ul>
-        </div>
+              <div>
+                <h4 className="font-medium text-[var(--foreground)] mb-2">{t('welcome.tips.title')}</h4>
+                <ul className="space-y-1 text-sm text-[var(--muted-foreground)]">
+                  <li>• {t('welcome.tips.tip1')}</li>
+                  <li>• {t('welcome.tips.tip2')}</li>
+                  <li>• {t('welcome.tips.tip3')}</li>
+                  <li>• {t('welcome.tips.tip4')}</li>
+                </ul>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
-    </CardContent>
-  </Card>
-</div>
 
     </div>
   );
@@ -189,15 +188,39 @@ const ThesisTracker = () => {
   };
 
   const urlType = getQueryParam('type');
+
+  // Ключі для localStorage
+  const STORAGE_PROJECT_TYPE = 'thesisTrackerProjectType';
+  const STORAGE_CHAPTERS = 'thesisTrackerChapters';
+
+  // Зчитуємо з localStorage при початковому рендері
   const [projectType, setProjectType] = useState<'diploma' | 'coursework' | 'practice' | null>(() => {
     if (urlType === 'coursework' || urlType === 'practice' || urlType === 'diploma') {
       return urlType;
     }
+    const savedType = localStorage.getItem(STORAGE_PROJECT_TYPE);
+    if (savedType === 'coursework' || savedType === 'practice' || savedType === 'diploma') {
+      return savedType;
+    }
     return null;
   });
 
-  const [chapters, setChapters] = useState<typeof chapterTemplates[keyof typeof chapterTemplates]>([]);
+  const [chapters, setChapters] = useState<typeof chapterTemplates[keyof typeof chapterTemplates]>(() => {
+    if (urlType === 'coursework' || urlType === 'practice' || urlType === 'diploma') {
+      return [...chapterTemplates[urlType]];
+    }
+    const savedChapters = localStorage.getItem(STORAGE_CHAPTERS);
+    if (savedChapters) {
+      try {
+        return JSON.parse(savedChapters);
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  });
 
+  // Синхронізуємо локальний стан з URL при зміні urlType
   useEffect(() => {
     if (urlType === 'coursework' || urlType === 'practice' || urlType === 'diploma') {
       setProjectType(urlType);
@@ -205,10 +228,23 @@ const ThesisTracker = () => {
     }
   }, [urlType]);
 
+  // Зберігаємо projectType в localStorage при зміні
+  useEffect(() => {
+    if (projectType) {
+      localStorage.setItem(STORAGE_PROJECT_TYPE, projectType);
+    }
+  }, [projectType]);
+
+  // Зберігаємо chapters в localStorage при зміні
+  useEffect(() => {
+    if (chapters.length > 0) {
+      localStorage.setItem(STORAGE_CHAPTERS, JSON.stringify(chapters));
+    }
+  }, [chapters]);
+
   const handleSelectProject = (type: 'diploma' | 'coursework' | 'practice') => {
     setProjectType(type);
     setChapters([...chapterTemplates[type]]);
-    // Оновлюємо URL
     window.history.pushState({}, '', `/tracker?type=${type}`);
   };
 
@@ -252,7 +288,6 @@ const ThesisTracker = () => {
             <WelcomeScreen onSelectProject={handleSelectProject} />
           ) : (
             <div className="max-w-6xl mx-auto py-6 px-4 space-y-6 pb-20">
-              {/* Info Card */}
               <Card className="bg-[var(--card)] text-[var(--card-foreground)]">
                 <CardHeader>
                   <CardTitle className="text-lg md:text-xl">
@@ -291,7 +326,6 @@ const ThesisTracker = () => {
                 </CardContent>
               </Card>
 
-              {/* Chapter Cards */}
               <Card className="bg-[var(--card)] text-[var(--card-foreground)]">
                 <CardHeader>
                   <CardTitle>{t('index.projectProgress')}</CardTitle>

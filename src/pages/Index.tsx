@@ -34,14 +34,23 @@ import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
 import { useTranslation } from 'react-i18next';
 
+
+
 const Dashboard = () => {
   const { t } = useTranslation();
   const [user, setUser] = useState<{ firstName?: string; lastName?: string } | null>(null);
+  const [isFirstVisit, setIsFirstVisit] = useState(false);
 
     useEffect(() => {
     const storedUser = localStorage.getItem("currentUser");
     if (storedUser) {
       setUser(JSON.parse(storedUser));
+    }
+
+    const firstVisitFlag = localStorage.getItem("firstVisitDone");
+    if (!firstVisitFlag) {
+      setIsFirstVisit(true);
+      localStorage.setItem("firstVisitDone", "true");
     }
   }, []);
 
@@ -139,7 +148,7 @@ const Dashboard = () => {
                       {t('index.welcomeTitle', { name: user?.firstName || "Користувач" })}
                     </h1>
                     <p className="text-xl text-muted-foreground mb-6">
-                      {t('index.encouragement')}
+                      {isFirstVisit ? t('index.encouragementFirstTime') : t('index.encouragement')}
                     </p>
                     <div className="flex flex-wrap items-center gap-3">
                       <Badge variant="outline" className="px-4 py-2 bg-background/50">

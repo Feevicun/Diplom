@@ -1,4 +1,4 @@
-import { useTranslation } from 'react-i18next';
+// import { useTranslation } from 'react-i18next';
 import {
   Activity,
   Clock,
@@ -97,7 +97,7 @@ const workIntensityData = [
 
 
 export default function Analytics() {
-  const { t } = useTranslation();
+  // const { t } = useTranslation();
 
   const totalSessions = dailyActivityData.reduce((sum, day) => sum + day.sessions, 0);
   const totalTimeSpent = dailyActivityData.reduce((sum, day) => sum + day.timeSpent, 0);
@@ -105,7 +105,6 @@ export default function Analytics() {
   const totalSaves = dailyActivityData.reduce((sum, day) => sum + day.saves, 0);
   const averageSessionTime = totalTimeSpent / totalSessions;
   
-  const completedChapters = chaptersProgress.filter(ch => ch.status === 'approved').length;
   const totalPages = chaptersProgress.reduce((sum, ch) => sum + ch.pages, 0);
   const overallProgress = chaptersProgress.reduce((sum, ch) => sum + ch.progress, 0) / chaptersProgress.length;
 
@@ -352,7 +351,7 @@ export default function Analytics() {
                       cx="50%"
                       cy="50%"
                       outerRadius={100}
-                      label={({type, count}) => `${count}`}
+                      label={({count}) => `${count}`}
                     >
                       {fileActivityData.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.color} />

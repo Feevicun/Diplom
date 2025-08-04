@@ -96,5 +96,14 @@
     "faculty": "Філософський факультет",
     "department": "психології",
     "role": "student"
+  },
+  {
+    "firstName": "Vlad",
+    "lastName": "Girorkf",
+    "email": "Vlad.Girorkf@lnu.edu.ua",
+    "password": "4eurjrj43",
+    "faculty": "Фізичний факультет",
+    "department": "загальної фізики",
+    "role": "student"
   }
 ]
