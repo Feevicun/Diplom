@@ -7,7 +7,11 @@
     "online": "Online",
     "offline": "Offline",
     "language": "Language",
-    "theme": "Theme"
+    "theme": "Theme",
+    "create": "Create",
+    "createCoursework": "Coursework",
+    "createDiploma": "Diplom",
+    "createPractice": "Practice"
   },
   "sidebar": {
     "sectionMain": "Main",
@@ -145,7 +149,8 @@
     "tip2": "Regularly save your intermediate results",
     "tip3": "Stick to the given deadlines",
     "tip4": "Coordinate changes with your supervisor"
-  }
+  },
+  "startButton": "Start"
 },
   "thesis": {
     "projectTypes": {

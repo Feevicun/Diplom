@@ -129,7 +129,7 @@ const projectOptions = [
                   className="w-full bg-[var(--primary)] text-[var(--primary-foreground)] hover:bg-[var(--primary-foreground)] hover:text-[var(--primary)]"
                   onClick={() => onSelectProject(option.type)}
                 >
-                  Розпочати
+                  {t('welcome.startButton')}
                 </Button>
               </CardContent>
             </Card>

@@ -7,7 +7,11 @@
     "online": "Онлайн",
     "offline": "Офлайн",
     "language": "Мова",
-    "theme": "Тема"
+    "theme": "Тема",
+    "create": "Створити",
+    "createCoursework": "Курсова робота",
+    "createDiploma": "Дипломна",
+    "createPractice": "Практика"
   },
   "sidebar": {
     "sectionMain": "Головне",
@@ -142,7 +146,8 @@
     "tip2": "Регулярно зберігайте проміжні результати",
     "tip3": "Дотримуйтесь встановлених дедлайнів",
     "tip4": "Узгоджуйте зміни з керівником"
-  }
+  },
+  "startButton": "Розпочати"
 },
   "thesis": {
     "projectTypes": {

@@ -118,30 +118,31 @@ const handleCreateSelect = (type: string) => {
             </Button>
 
             {isCreateMenuOpen && (
-              <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg z-50">
-                <button
-                  className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
-                  onClick={() => handleCreateSelect('coursework')}
-                  type="button"
-                >
-                  Курсова робота
-                </button>
-                <button
-                  className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
-                  onClick={() => handleCreateSelect('diploma')}
-                  type="button"
-                >
-                  Дипломна
-                </button>
-                <button
-                  className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
-                  onClick={() => handleCreateSelect('practice')}
-                  type="button"
-                >
-                  Практика
-                </button>
-              </div>
-            )}
+  <div className="absolute right-0 mt-2 w-48 rounded-xl border bg-popover text-popover-foreground shadow-xl z-50">
+    <button
+      className="w-full text-left px-4 py-2 text-sm rounded-t-xl hover:bg-accent hover:text-accent-foreground transition-colors"
+      onClick={() => handleCreateSelect('coursework')}
+      type="button"
+    >
+      {t('header.createCoursework')}
+    </button>
+    <button
+      className="w-full text-left px-4 py-2 text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
+      onClick={() => handleCreateSelect('diploma')}
+      type="button"
+    >
+      {t('header.createDiploma')}
+    </button>
+    <button
+      className="w-full text-left px-4 py-2 text-sm rounded-b-xl hover:bg-accent hover:text-accent-foreground transition-colors"
+      onClick={() => handleCreateSelect('practice')}
+      type="button"
+    >
+      {t('header.createPractice')}
+    </button>
+  </div>
+)}
+
           </div>
 
           <Select value={theme} onValueChange={(value) => setTheme(value as any)}>
