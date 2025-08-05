@@ -11,11 +11,9 @@ import {
   Menu,
   X,
   User,
-  Globe,
-  Palette,
-  Moon,
-  Sun,
-  Sparkles
+  BookOpen,
+  GraduationCap,
+  Briefcase,
 } from 'lucide-react';
 import { useTheme } from '@/context/ThemeContext';
 import {
@@ -26,6 +24,8 @@ import {
   SelectItem,
 } from '@/components/ui/select';
 import Sidebar from './Sidebar';
+
+type ThemeType = 'light' | 'dark' | 'rose' | 'mint';
 
 const Header = () => {
   const navigate = useNavigate();
@@ -89,29 +89,18 @@ const Header = () => {
     setTimeout(() => {
       setIsMobileMenuOpen(false);
       setIsClosing(false);
-    }, 300);
-  };
-
-  const getThemeIcon = (themeValue: string) => {
-    switch (themeValue) {
-      case 'light': return <Sun className="h-4 w-4" />;
-      case 'dark': return <Moon className="h-4 w-4" />;
-      case 'rose': return <Sparkles className="h-4 w-4" />;
-      case 'mint': return <Palette className="h-4 w-4" />;
-      default: return <Palette className="h-4 w-4" />;
-    }
+    }, 400);
   };
 
   return (
     <>
       <header className="h-16 bg-[--sidebar]/95 backdrop-blur border-b sticky top-0 z-50 text-[--sidebar-foreground]">
         <div className="container flex h-16 items-center justify-between px-6">
-          {/* Left: Mobile burger and search */}
           <div className="flex items-center gap-4 flex-1">
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="md:hidden relative overflow-hidden group" 
+            <Button
+              variant="ghost"
+              size="icon"
+              className="md:hidden relative overflow-hidden group"
               onClick={() => setIsMobileMenuOpen(true)}
             >
               <Menu className="h-5 w-5 transition-transform group-hover:scale-110" />
@@ -127,7 +116,6 @@ const Header = () => {
             </div>
           </div>
 
-          {/* Right: Full menu */}
           <div className="hidden md:flex items-center gap-6 relative">
             <div ref={menuRef} className="relative">
               <Button
@@ -135,32 +123,34 @@ const Header = () => {
                 size="sm"
                 className="gap-2 w-[110px] justify-center transition-all duration-200 hover:scale-105"
                 onClick={() => setIsCreateMenuOpen(!isCreateMenuOpen)}
-                aria-expanded={isCreateMenuOpen}
-                aria-haspopup="true"
               >
-                <Plus className={`h-4 w-4 transition-transform duration-300 ${isCreateMenuOpen ? 'rotate-45' : ''}`} />
+                <Plus
+                  className={`h-4 w-4 transition-transform duration-300 ${
+                    isCreateMenuOpen ? 'rotate-45' : ''
+                  }`}
+                />
                 {t('header.create')}
               </Button>
 
               {isCreateMenuOpen && (
                 <div className="absolute right-0 mt-2 w-48 rounded-xl border bg-popover text-popover-foreground shadow-xl z-50 animate-in slide-in-from-top-2 duration-200">
-                  <button 
-                    onClick={() => handleCreateSelect('coursework')} 
-                    className="w-full text-left px-4 py-3 text-sm rounded-t-xl hover:bg-accent transition-colors duration-200 flex items-center gap-3"
+                  <button
+                    onClick={() => handleCreateSelect('coursework')}
+                    className="w-full text-left px-4 py-3 text-sm rounded-t-xl hover:bg-accent flex items-center gap-3"
                   >
                     <BookOpen className="h-4 w-4" />
                     {t('header.createCoursework')}
                   </button>
-                  <button 
-                    onClick={() => handleCreateSelect('diploma')} 
-                    className="w-full text-left px-4 py-3 text-sm hover:bg-accent transition-colors duration-200 flex items-center gap-3"
+                  <button
+                    onClick={() => handleCreateSelect('diploma')}
+                    className="w-full text-left px-4 py-3 text-sm hover:bg-accent flex items-center gap-3"
                   >
                     <GraduationCap className="h-4 w-4" />
                     {t('header.createDiploma')}
                   </button>
-                  <button 
-                    onClick={() => handleCreateSelect('practice')} 
-                    className="w-full text-left px-4 py-3 text-sm rounded-b-xl hover:bg-accent transition-colors duration-200 flex items-center gap-3"
+                  <button
+                    onClick={() => handleCreateSelect('practice')}
+                    className="w-full text-left px-4 py-3 text-sm rounded-b-xl hover:bg-accent flex items-center gap-3"
                   >
                     <Briefcase className="h-4 w-4" />
                     {t('header.createPractice')}
@@ -169,46 +159,36 @@ const Header = () => {
               )}
             </div>
 
-            <Select value={theme} onValueChange={(value) => setTheme(value as any)}>
+            <Select
+              value={theme}
+              onValueChange={(value) => setTheme(value as ThemeType)}
+            >
               <SelectTrigger className="w-[110px] transition-all duration-200 hover:scale-105">
                 <SelectValue placeholder={t('header.theme')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="light" className="flex items-center gap-2">
-                  <Sun className="h-4 w-4" />
-                  Light
-                </SelectItem>
-                <SelectItem value="dark" className="flex items-center gap-2">
-                  <Moon className="h-4 w-4" />
-                  Dark
-                </SelectItem>
-                <SelectItem value="rose" className="flex items-center gap-2">
-                  <Sparkles className="h-4 w-4" />
-                  Rose
-                </SelectItem>
-                <SelectItem value="mint" className="flex items-center gap-2">
-                  <Palette className="h-4 w-4" />
-                  Mint
-                </SelectItem>
+                <SelectItem value="light">Light</SelectItem>
+                <SelectItem value="dark">Dark</SelectItem>
+                <SelectItem value="rose">Rose</SelectItem>
+                <SelectItem value="mint">Mint</SelectItem>
               </SelectContent>
             </Select>
 
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={toggleLanguage} 
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={toggleLanguage}
               className="rounded-full text-sm px-3 py-1 transition-all duration-200 hover:scale-110 relative overflow-hidden group"
             >
-              <Globe className="h-4 w-4 mr-1" />
               {i18n.language === 'ua' ? 'UA' : 'EN'}
               <div className="absolute inset-0 bg-gradient-to-r from-green-500/0 via-green-500/20 to-green-500/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
             </Button>
 
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="rounded-full transition-all duration-200 hover:scale-110 hover:rotate-12" 
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={() => navigate('/profile')}
+              className="rounded-full transition-all duration-200 hover:scale-110 hover:rotate-12"
             >
               <Settings className="h-4 w-4" />
             </Button>
@@ -218,25 +198,34 @@ const Header = () => {
             <div className="hidden sm:flex items-center gap-3">
               <div className="text-right leading-tight">
                 <p className="text-sm font-medium">{firstName}</p>
-                <p 
-                  onClick={toggleOnlineStatus} 
-                  className="text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors duration-200"
+                <p
+                  onClick={toggleOnlineStatus}
+                  className="text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
                 >
                   {isOnline ? t('header.online') : t('header.offline')}
                 </p>
               </div>
-              <div className={`w-2 h-2 rounded-full transition-all duration-300 ${isOnline ? 'bg-green-500 shadow-lg shadow-green-500/50' : 'bg-gray-400'}`} />
+              <div
+                className={`w-2 h-2 rounded-full ${
+                  isOnline ? 'bg-green-500 shadow-green-500/50 shadow-lg' : 'bg-gray-400'
+                }`}
+              />
             </div>
           </div>
         </div>
       </header>
 
-      {/* Enhanced Mobile Menu */}
       {isMobileMenuOpen && (
-        <div className={`fixed inset-0 z-50 bg-black/50 backdrop-blur-sm md:hidden transition-opacity duration-300 ${isClosing ? 'opacity-0' : 'opacity-100'}`}>
-          <div className={`fixed top-0 left-0 w-77 h-full bg-background border-r border-border text-foreground shadow-2xl flex flex-col transition-transform duration-300 ease-out ${isClosing ? '-translate-x-full' : 'translate-x-0'}`}>
-            
-            {/* Header */}
+        <div
+          className={`fixed inset-0 z-50 bg-black/50 backdrop-blur-sm md:hidden transition-opacity duration-300 ${
+            isClosing ? 'opacity-0' : 'opacity-100'
+          }`}
+        >
+          <div
+            className={`fixed top-0 left-0 w-77 h-full bg-background border-r border-border text-foreground shadow-2xl flex flex-col ${
+              isClosing ? 'menu-animation-exit' : 'menu-animation-enter'
+            }`}
+          >
             <div className="relative py-2 px-3 bg-muted/30 border-b border-border">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -244,93 +233,71 @@ const Header = () => {
                     <User className="h-3 w-3 text-primary" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <h2 className="text-sm font-semibold truncate">
-                      {firstName || 'User'}
-                    </h2>
+                    <h2 className="text-sm font-semibold truncate">{firstName || 'User'}</h2>
                     <div className="flex items-center gap-1">
                       <div className={`w-1 h-1 rounded-full ${isOnline ? 'bg-green-500' : 'bg-gray-400'}`} />
-                      <span 
+                      <span
                         onClick={toggleOnlineStatus}
-                        className="text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors truncate"
+                        className="text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
                       >
                         {isOnline ? t('header.online') : t('header.offline')}
                       </span>
                     </div>
                   </div>
                 </div>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
+                <Button
+                  variant="ghost"
+                  size="icon"
                   onClick={closeMobileMenu}
-                  className="rounded-full hover:bg-destructive/10 hover:text-destructive transition-all duration-200 h-6 w-6 flex-shrink-0"
+                  className="rounded-full hover:bg-destructive/10 hover:text-destructive transition-all duration-200 h-6 w-6"
                 >
                   <X className="h-3 w-3" />
                 </Button>
               </div>
             </div>
 
-            {/* Sidebar Navigation */}
-            <div className="flex-1 overflow-y-auto">
-              <div 
-                className="p-2"
-                style={{ 
-                  animation: isClosing ? 'none' : 'slideInLeft 0.3s ease-out forwards'
-                }}
-              >
+            <div className="flex-1 overflow-y-auto menu-item-animate">
+              <div className="p-2">
                 <Sidebar />
               </div>
             </div>
 
-            {/* Footer Controls */}
-            <div className="p-2 border-t border-border space-y-2">
+            {/* Redesigned Footer */}
+            <div className="p-3 border-t border-border space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-muted-foreground">Lang</span>
-                <Button 
-                  onClick={toggleLanguage}
-                  variant="outline"
-                  size="sm"
-                  className="gap-1 h-6 px-2 text-xs"
-                >
-                  <Globe className="h-3 w-3" />
-                  {i18n.language === 'ua' ? 'EN' : 'UA'}
-                </Button>
+                <span className="text-xs font-semibold text-muted-foreground">Language</span>
+                <div className="flex gap-1">
+                  {['ua', 'en'].map((lang) => (
+                    <Button
+                      key={lang}
+                      onClick={() => {
+                        i18n.changeLanguage(lang);
+                        localStorage.setItem('i18nextLng', lang);
+                      }}
+                      variant={i18n.language === lang ? 'default' : 'outline'}
+                      size="sm"
+                      className="h-6 px-2 text-xs"
+                    >
+                      {lang.toUpperCase()}
+                    </Button>
+                  ))}
+                </div>
               </div>
 
-              <div className="space-y-1">
-                <span className="text-xs font-medium text-muted-foreground">Theme</span>
-                <div className="flex gap-0.5 justify-between">
-                  <Button
-                    variant={theme === 'light' ? 'default' : 'ghost'}
-                    size="sm"
-                    onClick={() => setTheme('light')}
-                    className="p-1 h-6 w-6 flex-1"
-                  >
-                    <Sun className="h-3 w-3" />
-                  </Button>
-                  <Button
-                    variant={theme === 'dark' ? 'default' : 'ghost'}
-                    size="sm"
-                    onClick={() => setTheme('dark')}
-                    className="p-1 h-6 w-6 flex-1"
-                  >
-                    <Moon className="h-3 w-3" />
-                  </Button>
-                  <Button
-                    variant={theme === 'rose' ? 'default' : 'ghost'}
-                    size="sm"
-                    onClick={() => setTheme('rose')}
-                    className="p-1 h-6 w-6 flex-1"
-                  >
-                    <Sparkles className="h-3 w-3" />
-                  </Button>
-                  <Button
-                    variant={theme === 'mint' ? 'default' : 'ghost'}
-                    size="sm"
-                    onClick={() => setTheme('mint')}
-                    className="p-1 h-6 w-6 flex-1"
-                  >
-                    <Palette className="h-3 w-3" />
-                  </Button>
+              <div>
+                <span className="text-xs font-semibold text-muted-foreground block mb-1">Theme</span>
+                <div className="grid grid-cols-4 gap-1">
+                  {(['light', 'dark', 'rose', 'mint'] as ThemeType[]).map((t) => (
+                    <Button
+                      key={t}
+                      variant={theme === t ? 'default' : 'ghost'}
+                      size="sm"
+                      onClick={() => setTheme(t)}
+                      className="flex flex-col items-center justify-center h-10 px-1 text-[10px] leading-tight"
+                    >
+                      <span className="capitalize">{t}</span>
+                    </Button>
+                  ))}
                 </div>
               </div>
             </div>
@@ -338,18 +305,49 @@ const Header = () => {
         </div>
       )}
 
-      <style jsx>{`
-        @keyframes slideInLeft {
-          from {
-            opacity: 0;
-            transform: translateX(-20px);
+      <style>
+        {`
+          @keyframes menuEnter {
+            from {
+              opacity: 0;
+              transform: translateX(-20px) scale(0.98);
+            }
+            to {
+              opacity: 1;
+              transform: translateX(0) scale(1);
+            }
           }
-          to {
-            opacity: 1;
-            transform: translateX(0);
+          @keyframes menuExit {
+            from {
+              opacity: 1;
+              transform: translateX(0) scale(1);
+            }
+            to {
+              opacity: 0;
+              transform: translateX(-20px) scale(0.98);
+            }
           }
-        }
-      `}</style>
+          .menu-animation-enter {
+            animation: menuEnter 0.4s ease-out forwards;
+          }
+          .menu-animation-exit {
+            animation: menuExit 0.4s ease-in forwards;
+          }
+          @keyframes menuItemFade {
+            from {
+              opacity: 0;
+              transform: translateY(5px);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0);
+            }
+          }
+          .menu-item-animate {
+            animation: menuItemFade 0.5s ease-out forwards;
+          }
+        `}
+      </style>
     </>
   );
 };

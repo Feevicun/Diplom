@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Menu } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -131,21 +130,14 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-background flex">
-      {/* Desktop Sidebar */}
-      <div className="hidden xl:block">
+      {/* Desktop Sidebar - показується тільки на великих екранах */}
+      <div className="hidden md:block">
         <Sidebar />
       </div>
 
-      {/* Mobile Burger Menu Button */}
-      <div className="xl:hidden fixed top-4 left-4 z-50">
-        <Button variant="outline" size="icon" onClick={() => setSidebarOpen(true)}>
-          <Menu className="w-5 h-5" />
-        </Button>
-      </div>
-
-      {/* Mobile Sidebar + Overlay */}
+      {/* Mobile Sidebar + Overlay - показується на всіх екранах менше md */}
       {sidebarOpen && (
-        <div className="fixed inset-0 z-40 flex xl:hidden">
+        <div className="fixed inset-0 z-40 flex md:hidden">
           {/* Overlay */}
           <div
             className="fixed inset-0 bg-black/50 backdrop-blur-sm"
@@ -165,10 +157,12 @@ const Dashboard = () => {
       )}
 
       <div className="flex-1 flex flex-col">
+        {/* Header завжди присутній */}
         <Header />
         <main className="flex-1">
           <ScrollArea className="h-[calc(100vh-4rem)]">
-            <div className="p-8 space-y-8 pb-20 max-w-7xl mx-auto">
+            {/* Контент з відступом зліва тільки на мобільних для бургер кнопки */}
+            <div className="p-8 lg:p-8 space-y-8 pb-20 max-w-7xl mx-auto">
               <div className="rounded-2xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-8 border">
                 <div className="flex items-center justify-between">
                   <div className="flex-1 max-w-3xl">
@@ -176,10 +170,10 @@ const Dashboard = () => {
                       <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
                       <span className="text-sm font-medium text-primary">{t('index.projectType')}</span>
                     </div>
-                    <h1 className="text-4xl font-bold mb-4 text-foreground">
+                    <h1 className="text-2xl md:text-4xl font-bold mb-4 text-foreground">
                       {t('index.welcomeTitle', { name: user?.firstName || "Користувач" })}
                     </h1>
-                    <p className="text-xl text-muted-foreground mb-6">
+                    <p className="text-lg md:text-xl text-muted-foreground mb-6">
                       {isFirstVisit ? t('index.encouragementFirstTime') : t('index.encouragement')}
                     </p>
                     <div className="flex flex-wrap items-center gap-3">
@@ -193,7 +187,7 @@ const Dashboard = () => {
                       </Badge>
                     </div>
                   </div>
-                  <div className="hidden xl:block ml-8">
+                  <div className="hidden md:block ml-8">
                     <div className="w-32 h-32 bg-primary/10 rounded-2xl flex items-center justify-center">
                       <Trophy className="w-16 h-16 text-primary" />
                     </div>
@@ -201,7 +195,7 @@ const Dashboard = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {quickStats.map((stat, index) => {
                   const Icon = stat.icon;
                   return (
@@ -225,8 +219,8 @@ const Dashboard = () => {
                 })}
               </div>
 
-              <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-                <div className="xl:col-span-2">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div className="md:col-span-2">
                   <Card className="hover:shadow-lg transition-shadow">
                     <CardHeader className="pb-6">
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
@@ -235,7 +229,7 @@ const Dashboard = () => {
                             <div className="w-2 h-2 bg-primary rounded-full"></div>
                             <span className="text-sm font-medium text-primary">{t('index.projectType')}</span>
                           </div>
-                          <CardTitle className="text-2xl font-bold mb-2">{t('index.projectProgress')}</CardTitle>
+                          <CardTitle className="text-xl md:text-2xl font-bold mb-2">{t('index.projectProgress')}</CardTitle>
                           <CardDescription className="text-base">{currentWork.title}</CardDescription>
                         </div>
                         <div className="flex items-center space-x-3 p-4 border rounded-xl bg-muted/50">
@@ -327,7 +321,6 @@ const Dashboard = () => {
                       </div>
                     </CardContent>
                   </Card>
-
 
                   <Card className="hover:shadow-lg transition-shadow">
                     <CardHeader>

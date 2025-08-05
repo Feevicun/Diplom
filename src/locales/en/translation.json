@@ -332,6 +332,13 @@
       "meeting1": "Consultation with the manager",
       "deadline1": "Submit the first section",
       "task1": "Interim testing"
+    },
+    "dialog": {
+      "title": "Add New Event",
+      "placeholder": "Enter event title",
+      "selectType": "Select event type",
+      "cancel": "Cancel",
+      "save": "Save"
     }
   },
    "analytics": {
