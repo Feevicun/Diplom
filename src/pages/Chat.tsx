@@ -58,7 +58,6 @@ const ChatPage = () => {
 
   const handleSend = () => {
     if (!newMessage.trim()) return;
-
     const newMsg: Message = {
       id: messages.length + 1,
       sender: 'student',
@@ -66,14 +65,17 @@ const ChatPage = () => {
       content: newMessage,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     };
-
     setMessages([...messages, newMsg]);
     setNewMessage('');
   };
-
   return (
     <div className="min-h-screen bg-background flex">
-      <Sidebar />
+      {/* Sidebar для великих екранів */}
+      <div className="hidden md:block">
+        <Sidebar />
+      </div>
+
+      {/* Контент */}
       <div className="flex-1 flex flex-col">
         <Header />
         <main className="flex-1">
@@ -89,48 +91,24 @@ const ChatPage = () => {
                       key={message.id}
                       className={`flex ${message.sender === 'student' ? 'justify-end' : 'justify-start'}`}
                     >
-                      <div
-                        className={`flex items-end max-w-xl gap-3 ${message.sender === 'student' ? 'flex-row-reverse' : ''
-                          }`}
-                      >
+                      <div className={`flex items-end max-w-xl gap-3 ${message.sender === 'student' ? 'flex-row-reverse' : ''}`}>
                         <Avatar className="h-8 w-8">
-                          <AvatarFallback
-                            className={`text-xs ${message.sender === 'student'
-                              ? 'bg-blue-100 text-blue-600'
-                              : 'bg-gray-100 text-gray-600'
-                              }`}
-                          >
+                          <AvatarFallback className={`text-xs ${message.sender === 'student' ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-600'}`}>
                             {message.sender === 'student' ? 'ОП' : 'ІІ'}
                           </AvatarFallback>
                         </Avatar>
-
-                        <div
-                          className={`flex flex-col ${message.sender === 'student' ? 'items-end' : 'items-start'
-                            }`}
-                        >
-                          <div
-                            className={`rounded-2xl px-4 py-3 shadow-md transition-all duration-300 ${message.sender === 'student'
-                              ? 'bg-blue-600 text-white rounded-br-none'
-                              : 'bg-white border border-gray-200 text-gray-900 rounded-bl-none'
-                              }`}
-                          >
+                        <div className={`flex flex-col ${message.sender === 'student' ? 'items-end' : 'items-start'}`}>
+                          <div className={`rounded-2xl px-4 py-3 shadow-md transition-all duration-300 ${message.sender === 'student' ? 'bg-blue-600 text-white rounded-br-none' : 'bg-white border border-gray-200 text-gray-900 rounded-bl-none'}`}>
                             <p className="text-sm leading-relaxed whitespace-pre-line">
                               {message.contentKey ? t(message.contentKey) : message.content}
                             </p>
-
                             {message.attachment && (
-                              <div
-                                className={`mt-3 p-3 rounded-xl flex items-center gap-2 text-sm font-medium ${message.sender === 'student'
-                                  ? 'bg-blue-700/50 text-white'
-                                  : 'bg-gray-100 text-gray-800'
-                                  }`}
-                              >
+                              <div className={`mt-3 p-3 rounded-xl flex items-center gap-2 text-sm font-medium ${message.sender === 'student' ? 'bg-blue-700/50 text-white' : 'bg-gray-100 text-gray-800'}`}>
                                 <FileText className="w-4 h-4" />
                                 <span>{message.attachment.name}</span>
                               </div>
                             )}
                           </div>
-
                           <span className="text-xs text-muted-foreground mt-2">
                             {message.timestamp}
                           </span>
@@ -140,7 +118,7 @@ const ChatPage = () => {
                   ))}
                 </ScrollArea>
 
-                {/* Input Area */}
+                {/* Input */}
                 <div className="border-t pt-4 space-y-2">
                   <Textarea
                     value={newMessage}
@@ -149,13 +127,11 @@ const ChatPage = () => {
                     className="min-h-[60px] resize-none"
                   />
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <label className="cursor-pointer flex items-center gap-1 text-sm text-muted-foreground">
-                        <Paperclip className="h-4 w-4" />
-                        <Input type="file" className="hidden" />
-                        {t('chat.attachFile')}
-                      </label>
-                    </div>
+                    <label className="cursor-pointer flex items-center gap-1 text-sm text-muted-foreground">
+                      <Paperclip className="h-4 w-4" />
+                      <Input type="file" className="hidden" />
+                      {t('chat.attachFile')}
+                    </label>
                     <Button onClick={handleSend} disabled={!newMessage.trim()}>
                       <Send className="h-4 w-4 mr-2" /> {t('chat.send')}
                     </Button>

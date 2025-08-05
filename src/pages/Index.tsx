@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { Menu } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -34,14 +35,13 @@ import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
 import { useTranslation } from 'react-i18next';
 
-
-
 const Dashboard = () => {
   const { t } = useTranslation();
   const [user, setUser] = useState<{ firstName?: string; lastName?: string } | null>(null);
   const [isFirstVisit, setIsFirstVisit] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
-    useEffect(() => {
+  useEffect(() => {
     const storedUser = localStorage.getItem("currentUser");
     if (storedUser) {
       setUser(JSON.parse(storedUser));
@@ -131,7 +131,39 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-background flex">
-      <Sidebar />
+      {/* Desktop Sidebar */}
+      <div className="hidden xl:block">
+        <Sidebar />
+      </div>
+
+      {/* Mobile Burger Menu Button */}
+      <div className="xl:hidden fixed top-4 left-4 z-50">
+        <Button variant="outline" size="icon" onClick={() => setSidebarOpen(true)}>
+          <Menu className="w-5 h-5" />
+        </Button>
+      </div>
+
+      {/* Mobile Sidebar + Overlay */}
+      {sidebarOpen && (
+        <div className="fixed inset-0 z-40 flex xl:hidden">
+          {/* Overlay */}
+          <div
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={() => setSidebarOpen(false)}
+          ></div>
+
+          {/* Sidebar Panel */}
+          <div className="relative w-64 bg-background border-r shadow-xl z-50">
+            <Sidebar />
+            <div className="absolute top-4 right-4">
+              <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(false)}>
+                ✕
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex-1 flex flex-col">
         <Header />
         <main className="flex-1">
