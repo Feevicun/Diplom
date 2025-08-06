@@ -387,13 +387,108 @@
     },
     "faq": {
       "title": "Frequently asked questions (FAQ)",
-      "description": "Answers to frequently asked questions about the structure, content, and protection of the work.",
+      "description": "Answers to frequently asked questions about the structure, content, and defense of the work.",
       "action": "View FAQ"
     },
     "defense": {
-      "title": "Tips for protection",
+      "title": "Tips for defense",
       "description": "How to effectively prepare for defense and present your work.",
-      "action": "Detailed"
+      "action": "Details"
+    },
+    "state-standards": {
+      "title": "State education standards",
+      "description": "DSTU, GOST and other standards for scientific formatting",
+      "action": "View standards"
+    },
+    "mon-regulations": {
+      "title": "Regulations of the Ministry of Education",
+      "description": "Official documents and requirements from the Ministry of Education",
+      "action": "Open documents"
+    },
+    "scientific-library": {
+      "title": "Scientific Library",
+      "description": "Access to university’s electronic catalog and databases",
+      "action": "Go to catalog"
+    },
+    "nbuv": {
+      "title": "NBUV (National Library)",
+      "description": "National Library of Ukraine - electronic resources",
+      "action": "Open NBUV"
+    },
+    "google-scholar": {
+      "title": "Google Scholar",
+      "description": "Search for scientific publications and citations",
+      "action": "Search publications"
+    },
+    "cyberleninka": {
+      "title": "CyberLeninka",
+      "description": "Free electronic library of scientific publications",
+      "action": "View articles"
+    },
+    "writing-guide": {
+      "title": "Writing guidelines",
+      "description": "General recommendations for writing coursework and theses",
+      "action": "Read guide"
+    },
+    "citation-styles": {
+      "title": "Citation styles",
+      "description": "DSTU, APA, Harvard – citation formatting rules",
+      "action": "Explore styles"
+    },
+    "research-methods": {
+      "title": "Research methods",
+      "description": "Theoretical and practical methods of scientific research",
+      "action": "Learn more"
+    },
+    "antiplagiat": {
+      "title": "Plagiarism check",
+      "description": "Tools for checking text uniqueness",
+      "action": "Check work"
+    },
+    "grammar-check": {
+      "title": "Grammar check",
+      "description": "Tools for spelling and style checking",
+      "action": "Check text"
+    },
+    "latex-templates": {
+      "title": "LaTeX templates",
+      "description": "Ready-made templates for scientific papers",
+      "action": "Download templates"
+    },
+    "mendeley": {
+      "title": "Mendeley",
+      "description": "Reference manager and scientific source organizer",
+      "action": "Use service"
+    },
+    "ukrstat": {
+      "title": "Ukrainian statistics",
+      "description": "Official statistical data of Ukraine",
+      "action": "View data"
+    },
+    "world-bank": {
+      "title": "World Bank",
+      "description": "International statistical data and research",
+      "action": "Open data"
+    },
+    "internship-guide": {
+      "title": "Internship guide",
+      "description": "Organization and participation in practical training",
+      "action": "Read guide"
+    },
+    "job-portals": {
+      "title": "Job portals",
+      "description": "Find internships and future job opportunities",
+      "action": "Search jobs"
+    },
+    "coursera-ukraine": {
+      "title": "Free courses",
+      "description": "Online courses to deepen knowledge in various fields",
+      "action": "View courses"
+    },
+    "ted-talks": {
+      "title": "TED in Ukrainian",
+      "description": "Educational video lectures by world experts",
+      "action": "Watch lectures"
     }
   }
 }
