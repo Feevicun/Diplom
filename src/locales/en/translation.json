@@ -256,7 +256,10 @@
     "suggestions": {
       "title": "Recommended topics",
       "description": "Based on your profile",
-      "relevance": "Conformity",
+      "inputdesc": "Enter your idea or area of interest below to get course or thesis topic recommendations.",
+      "inputPlaceholder": "Enter your idea or topic...",
+      "generate": "Generate topics",
+      "relevance": "Relevance",
       "choose": "Select a topic",
       "title1": "Optimization of data processing algorithms",
       "category1": "Computer science",
@@ -360,6 +363,7 @@
   },
   "resources": {
   "title": "Materials for coursework/thesis",
+  "searchPlaceholder": "Search resources...",
   "cards": {
     "templates": {
       "title": "Design samples",

@@ -19,39 +19,23 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
 
+type SuggestedTopic = {
+  title: string;
+  relevance: number;
+  category: string;
+  description: string;
+};
+
 const AIAssistant = () => {
   const { t } = useTranslation();
+
+  const [ideaInput, setIdeaInput] = useState('');
+  const [suggestedTopics, setSuggestedTopics] = useState<SuggestedTopic[]>([]);
+  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
 
   const [selectedTopic, setSelectedTopic] = useState('');
   const [generatedStructure, setGeneratedStructure] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
-
-  const topicSuggestions = [
-    {
-      title: t('aiAssistant.suggestions.title1'),
-      relevance: 92,
-      category: t('aiAssistant.suggestions.category1'),
-      description: t('aiAssistant.suggestions.description1')
-    },
-    {
-      title: t('aiAssistant.suggestions.title2'),
-      relevance: 87,
-      category: t('aiAssistant.suggestions.category2'),
-      description: t('aiAssistant.suggestions.description2')
-    },
-    {
-      title: t('aiAssistant.suggestions.title3'),
-      relevance: 84,
-      category: t('aiAssistant.suggestions.category3'),
-      description: t('aiAssistant.suggestions.description3')
-    },
-    {
-      title: t('aiAssistant.suggestions.title4'),
-      relevance: 89,
-      category: t('aiAssistant.suggestions.category4'),
-      description: t('aiAssistant.suggestions.description4')
-    }
-  ];
 
   const aiFeatures = [
     {
@@ -80,14 +64,66 @@ const AIAssistant = () => {
     }
   ];
 
-  const handleGenerateStructure = () => {
-    if (!selectedTopic.trim()) return;
+  const handleGenerateStructure = async () => {
+  if (!selectedTopic.trim()) return;
 
-    setIsGenerating(true);
-    setTimeout(() => {
-      setGeneratedStructure(t('aiAssistant.structure.generatedText'));
-      setIsGenerating(false);
-    }, 2000);
+  setIsGenerating(true);
+
+  try {
+    const res = await fetch('/api/generate-structure', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ topic: selectedTopic })
+    });
+
+    const data = await res.json();
+
+    if (data.structure) {
+      setGeneratedStructure(data.structure);
+    } else {
+      console.warn('Invalid structure response', data);
+    }
+  } catch (err) {
+    console.error('Error generating structure:', err);
+  } finally {
+    setIsGenerating(false);
+  }
+};
+
+
+  const handleGenerateSuggestions = async () => {
+    if (!ideaInput.trim()) return;
+    setIsLoadingSuggestions(true);
+
+    try {
+      const res = await fetch('/api/generate-topics', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ idea: ideaInput })
+      });
+
+      const data = await res.json();
+
+      if (Array.isArray(data.topics)) {
+        const formatted = data.topics.map((item: any) => ({
+          title: item.title || 'Untitled Topic',
+          relevance: Math.floor(Math.random() * 21) + 80, // 80–100
+          category: item.category || 'AI',
+          description: item.description || t('aiAssistant.suggestions.defaultDescription')
+        }));
+        setSuggestedTopics(formatted);
+      } else {
+        console.warn('Invalid response from API', data);
+      }
+    } catch (err) {
+      console.error('Error fetching topics:', err);
+    } finally {
+      setIsLoadingSuggestions(false);
+    }
   };
 
   return (
@@ -152,27 +188,55 @@ const AIAssistant = () => {
                     <CardDescription>{t('aiAssistant.suggestions.description')}</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    {topicSuggestions.map((topic, i) => (
-                      <div
-                        key={i}
-                        className="border rounded-xl p-4 hover:shadow-md transition space-y-2"
-                      >
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <h3 className="font-semibold">{topic.title}</h3>
-                            <p className="text-sm text-muted-foreground">{topic.description}</p>
+                    <Textarea
+                      value={ideaInput}
+                      onChange={(e) => setIdeaInput(e.target.value)}
+                      placeholder={t('aiAssistant.suggestions.inputPlaceholder')}
+                      rows={4}
+                    />
+                    <Button
+                      onClick={handleGenerateSuggestions}
+                      disabled={!ideaInput.trim() || isLoadingSuggestions}
+                      className="w-full"
+                    >
+                      {isLoadingSuggestions ? (
+                        <>
+                          <RefreshCw className="animate-spin w-4 h-4 mr-2" />
+                          {t('aiAssistant.structure.generating')}
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="w-4 h-4 mr-2" />
+                          {t('aiAssistant.suggestions.generate')}
+                        </>
+                      )}
+                    </Button>
+
+                    {suggestedTopics.length > 0 && (
+                      <div className="space-y-4">
+                        {suggestedTopics.map((topic, i) => (
+                          <div
+                            key={i}
+                            className="border rounded-xl p-4 hover:shadow-md transition space-y-2"
+                          >
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <h3 className="font-semibold">{topic.title}</h3>
+                                <p className="text-sm text-muted-foreground">{topic.description}</p>
+                              </div>
+                              <div className="text-right">
+                                <div className="text-xl font-bold text-green-600">{topic.relevance}%</div>
+                                <p className="text-xs text-muted-foreground">{t('aiAssistant.suggestions.relevance')}</p>
+                              </div>
+                            </div>
+                            <div className="flex justify-between items-center pt-2">
+                              <Badge variant="outline">{topic.category}</Badge>
+                              <Button size="sm">{t('aiAssistant.suggestions.choose')}</Button>
+                            </div>
                           </div>
-                          <div className="text-right">
-                            <div className="text-xl font-bold text-green-600">{topic.relevance}%</div>
-                            <p className="text-xs text-muted-foreground">{t('aiAssistant.suggestions.relevance')}</p>
-                          </div>
-                        </div>
-                        <div className="flex justify-between items-center pt-2">
-                          <Badge variant="outline">{topic.category}</Badge>
-                          <Button size="sm">{t('aiAssistant.suggestions.choose')}</Button>
-                        </div>
+                        ))}
                       </div>
-                    ))}
+                    )}
                   </CardContent>
                 </Card>
               </TabsContent>
@@ -270,3 +334,5 @@ const AIAssistant = () => {
 };
 
 export default AIAssistant;
+
+

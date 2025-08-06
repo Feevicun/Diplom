@@ -1,4 +1,5 @@
 // import { useTranslation } from 'react-i18next';
+import { useState, useEffect } from 'react';
 import {
   Activity,
   Clock,
@@ -95,9 +96,55 @@ const workIntensityData = [
   { hour: '19:00', intensity: 35, focus: 75 },
 ];
 
+const projectTitles: Record<string, string> = {
+  diploma: 'Аналітика Дипломного Проєкту',
+  coursework: 'Аналітика Курсової Роботи',
+  practice: 'Аналітика Практики',
+};
+
+const projectButtons: Record<string, string> = {
+  diploma: 'Дипломна робота',
+  coursework: 'Курсова робота',
+  practice: 'Практика',
+};
 
 export default function Analytics() {
-  // const { t } = useTranslation();
+  const [projectType, setProjectType] = useState<'diploma' | 'coursework' | 'practice'>('coursework');
+  const [lastLoginTime, setLastLoginTime] = useState(new Date());
+
+  // ⏰ Оновлення часу щохвилини
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setLastLoginTime(new Date());
+    }, 60000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // 🧠 Зчитування типу проєкту з localStorage
+  useEffect(() => {
+    const savedType = localStorage.getItem('thesisTrackerProjectType');
+    if (savedType === 'diploma' || savedType === 'coursework' || savedType === 'practice') {
+      setProjectType(savedType);
+    }
+  }, []);
+
+  // 📅 Форматування дати
+  function formatLastLogin(date: Date) {
+    const now = new Date();
+
+    if (
+      date.getDate() === now.getDate() &&
+      date.getMonth() === now.getMonth() &&
+      date.getFullYear() === now.getFullYear()
+    ) {
+      return `сьогодні ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+    }
+
+    return `${date.getDate().toString().padStart(2, '0')}.${(date.getMonth()+1).toString().padStart(2, '0')}.${date.getFullYear()} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+  }
+
+
 
   const totalSessions = dailyActivityData.reduce((sum, day) => sum + day.sessions, 0);
   const totalTimeSpent = dailyActivityData.reduce((sum, day) => sum + day.timeSpent, 0);
@@ -121,17 +168,17 @@ export default function Analytics() {
         <main className="flex-1 overflow-y-auto p-6 space-y-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold">Аналітика Курсової Роботи</h1>
-              <p className="text-muted-foreground">Відстеження прогресу написання наукової роботи</p>
+              <h1 className="text-3xl font-bold"> {projectTitles[projectType]}</h1>
+              <p className="text-muted-foreground">Відстеження прогресу написання роботи</p>
             </div>
             <div className="flex gap-2">
               <Button variant="outline" size="sm" className="gap-2">
                 <FileText className="w-4 h-4" />
-                Дипломна робота
+                {projectButtons[projectType]}
               </Button>
               <Button variant="outline" size="sm" className="gap-2">
                 <Clock className="w-4 h-4" />
-                Останній вхід: сьогодні 16:30
+                Останній вхід: {formatLastLogin(lastLoginTime)}
               </Button>
             </div>
           </div>

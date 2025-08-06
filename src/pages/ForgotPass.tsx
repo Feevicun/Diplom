@@ -17,6 +17,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+interface User {
+  email: string;
+  role: string;
+  // додайте інші поля, якщо потрібно
+}
+
 const ForgotPasswordPage = () => {
   const [email, setEmail] = useState("");
   const [role, setRole] = useState("student");
@@ -33,7 +39,7 @@ const ForgotPasswordPage = () => {
 
     try {
       const res = await fetch("../server/user.json");
-      const users = await res.json();
+      const users: User[] = await res.json();
 
       const matchedUser = users.find(
         (user) => user.email === email && user.role === role
