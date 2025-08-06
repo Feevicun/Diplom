@@ -26,6 +26,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { format, isSameDay } from 'date-fns';
+import { uk, enUS } from 'date-fns/locale'; // Імпорт локалей для date-fns
 
 type EventType = 'task' | 'meeting' | 'deadline';
 
@@ -37,7 +38,7 @@ interface Event {
 }
 
 const CalendarPage = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [events, setEvents] = useState<Event[]>([]);
   const [showModal, setShowModal] = useState(false);
@@ -45,6 +46,34 @@ const CalendarPage = () => {
   const [newType, setNewType] = useState<EventType>('task');
 
   const lastEventRef = useRef<HTMLDivElement | null>(null);
+
+  // Визначення поточної локалі на основі мови i18n
+  const currentLocale = i18n.language === 'ua' ? uk : enUS;
+  const calendarLocale = i18n.language === 'ua' ? 'uk-UA' : 'en-US';
+
+  // Функція для правильного відмінювання слова "подія" в українській мові
+  const getUkrainianEventWord = (count: number): string => {
+    const lastDigit = count % 10;
+    const lastTwoDigits = count % 100;
+    
+    if (lastDigit === 1 && lastTwoDigits !== 11) {
+      return 'подія';
+    } else if (lastDigit >= 2 && lastDigit <= 4 && !(lastTwoDigits >= 12 && lastTwoDigits <= 14)) {
+      return 'події';
+    } else {
+      return 'подій';
+    }
+  };
+
+  // Функція для правильного відображення кількості подій
+  const getEventCountText = (count: number): string => {
+    if (i18n.language === 'ua') {
+      return `${count} ${getUkrainianEventWord(count)}`;
+    } else {
+      // Для англійської мови
+      return count === 1 ? `${count} event` : `${count} events`;
+    }
+  };
 
   const handleAddEvent = () => {
     const newEvent: Event = {
@@ -152,7 +181,7 @@ const CalendarPage = () => {
                   <Calendar
                     onChange={handleDateChange}
                     value={selectedDate}
-                    locale="uk"
+                    locale={calendarLocale} // Динамічна локаль
                     className="react-calendar w-full sm:w-[450px] lg:w-[520px] rounded-xl border border-border p-2 bg-white dark:bg-muted shadow-sm text-sm"
                     tileClassName={({ date }) => {
                       const isToday = isSameDay(date, new Date());
@@ -166,7 +195,10 @@ const CalendarPage = () => {
                       ].join(' ');
                     }}
                     navigationLabel={({ date }) => (
-                      <span className="text-base font-semibold">{format(date, 'LLLL yyyy')}</span>
+                      // Використовуємо динамічну локаль для назви місяця
+                      <span className="text-base font-semibold">
+                        {format(date, 'LLLL yyyy', { locale: currentLocale })}
+                      </span>
                     )}
                     nextLabel={<span className="text-xl px-2">›</span>}
                     prevLabel={<span className="text-xl px-2">‹</span>}
@@ -180,13 +212,14 @@ const CalendarPage = () => {
                 <CardHeader>
                   <CardTitle>
                     {t('calendar.card.eventsTitle', {
-                      date: format(selectedDate, 'dd MMMM yyyy'),
+                      // Використовуємо динамічну локаль для форматування дати
+                      date: format(selectedDate, 'dd MMMM yyyy', { locale: currentLocale }),
                     })}
                   </CardTitle>
                   <CardDescription>
                     {filteredEvents.length === 0
                       ? t('calendar.card.noEvents')
-                      : t('calendar.card.eventCount', { count: filteredEvents.length })}
+                      : getEventCountText(filteredEvents.length)}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4 overflow-y-auto scroll-smooth flex-1">
