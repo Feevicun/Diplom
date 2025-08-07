@@ -106,5 +106,23 @@
     "department": "загальної фізики",
     "role": "student",
     "lastLogin": "2025-08-06T11:53:56.146Z"
+  },
+  {
+    "firstName": "Roma",
+    "lastName": "Gjjrjeo",
+    "email": "Gjjrjeo.Roma@lnu.edu.ua",
+    "password": "23rtgfre",
+    "faculty": "Фізичний факультет",
+    "department": "експериментальної фізики",
+    "role": "student"
+  },
+  {
+    "firstName": "fkgkrlo",
+    "lastName": "fkfmrkle",
+    "email": "fkgkrlo@lnu.edu.ua",
+    "password": "fmfkf,mele",
+    "faculty": "Факультет прикладної математики та інформатики",
+    "department": "інформаційних систем",
+    "role": "student"
   }
 ]

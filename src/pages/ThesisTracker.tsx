@@ -17,7 +17,6 @@ import {
   BookOpen, 
   GraduationCap, 
   Briefcase,
-  X,
   Eye,
   EyeOff,
   StickyNote,

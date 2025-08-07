@@ -1,0 +1,53 @@
+[
+  {
+    "id": 1754592038032,
+    "sender": "student",
+    "name": "Ви",
+    "content": "ffff",
+    "timestamp": "21:40"
+  },
+  {
+    "id": 1754592041716,
+    "sender": "student",
+    "name": "Ви",
+    "content": "dddddd",
+    "timestamp": "21:40"
+  },
+  {
+    "id": 1754592565147,
+    "sender": "student",
+    "name": "Vlad Girorkf",
+    "content": "fffff",
+    "timestamp": "21:49"
+  },
+  {
+    "id": 1754592617587,
+    "sender": "student",
+    "name": "Ви",
+    "content": "gggg",
+    "timestamp": "21:50"
+  },
+  {
+    "id": 1754592719089,
+    "sender": "student",
+    "name": "Roma Gjjrjeo",
+    "content": "ffffff",
+    "timestamp": "21:51"
+  },
+  {
+    "id": 1754593737370,
+    "sender": "student",
+    "name": "Roma Gjjrjeo",
+    "content": "fffewf",
+    "timestamp": "22:08",
+    "studentEmail": "Gjjrjeo.Roma@lnu.edu.ua"
+  },
+  {
+    "id": 1754593743954,
+    "sender": "student",
+    "name": "Roma Gjjrjeo",
+    "content": "ekfl,remkf\n",
+    "timestamp": "22:09",
+    "studentEmail": "Gjjrjeo.Roma@lnu.edu.ua"
+  }
+]

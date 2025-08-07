@@ -12,6 +12,7 @@ const app = express();
 const PORT = process.env.PORT || 4000;
 
 const dataFilePath = path.join(__dirname, "user.json");
+const messagesFilePath = path.join(__dirname, "messages.json");
 
 // Middleware
 app.use(cors({
@@ -233,6 +234,57 @@ Only output valid JSON array as described above. Do not include any explanation 
     return res.status(500).json({ message: "Failed to generate structure." });
   }
 });
+
+// GET /api/messages
+app.get("/api/messages", (req, res) => {
+  try {
+    const { userEmail } = req.query;
+
+    if (!userEmail) {
+      return res.status(400).json({ message: "userEmail is required" });
+    }
+
+    if (!fs.existsSync(messagesFilePath)) {
+      return res.json([]);
+    }
+
+    const messages = JSON.parse(fs.readFileSync(messagesFilePath, "utf-8"));
+    const userMessages = messages.filter((msg: any) => msg.studentEmail === userEmail);
+
+    res.json(userMessages);
+  } catch (err) {
+    console.error("Error reading messages:", err);
+    res.status(500).json({ message: "Error reading messages." });
+  }
+});
+
+
+// POST /api/messages
+app.post("/api/messages", (req, res) => {
+  try {
+    const newMessage = req.body;
+
+    if (!newMessage || !newMessage.content || !newMessage.sender || !newMessage.studentEmail) {
+      return res.status(400).json({ message: "Invalid message format." });
+    }
+
+    let messages: any[] = [];
+    if (fs.existsSync(messagesFilePath)) {
+      messages = JSON.parse(fs.readFileSync(messagesFilePath, "utf-8"));
+    }
+
+    newMessage.id = Date.now(); // простий ID
+    messages.push(newMessage);
+
+    fs.writeFileSync(messagesFilePath, JSON.stringify(messages, null, 2), "utf-8");
+
+    res.status(201).json({ message: "Message sent successfully", data: newMessage });
+  } catch (err) {
+    console.error("Error writing message:", err);
+    res.status(500).json({ message: "Error saving message." });
+  }
+});
+
 
 
 
