@@ -4,46 +4,262 @@ import { useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { MessageSquare, Calendar, Download, CheckCircle, Clock, FileText, AlertCircle, BookOpen, GraduationCap, Briefcase } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+import { 
+  MessageSquare, 
+  Calendar, 
+  Download, 
+  CheckCircle, 
+  Clock, 
+  FileText, 
+  AlertCircle, 
+  BookOpen, 
+  GraduationCap, 
+  Briefcase,
+  X,
+  Eye,
+  EyeOff,
+  StickyNote,
+  MessageCircle,
+  Trash2,
+  Save
+} from 'lucide-react';
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
 
-const chapterTemplates: Record<string, {
+interface TeacherComment {
+  id: string;
+  text: string;
+  date: string;
+  status: 'info' | 'warning' | 'error' | 'success';
+}
+
+interface ChapterData {
   id: number;
   key: string;
   progress: number;
   status: 'completed' | 'review' | 'inProgress' | 'pending';
-}[]> = {
+  studentNote: string;
+  uploadedFile?: {
+    name: string;
+    uploadDate: string;
+    size: string;
+  };
+  teacherComments: TeacherComment[];
+}
+
+const chapterTemplates: Record<string, ChapterData[]> = {
   diploma: [
-    { id: 1, key: 'intro', progress: 0, status: 'pending' },
-    { id: 2, key: 'theory', progress: 0, status: 'pending' },
-    { id: 3, key: 'design', progress: 0, status: 'pending' },
-    { id: 4, key: 'implementation', progress: 0, status: 'pending' },
-    { id: 5, key: 'conclusion', progress: 0, status: 'pending' },
-    { id: 6, key: 'appendix', progress: 0, status: 'pending' },
-    { id: 7, key: 'sources', progress: 0, status: 'pending' },
-    { id: 8, key: 'abstract', progress: 0, status: 'pending' },
-    { id: 9, key: 'cover', progress: 0, status: 'pending' },
-    { id: 10, key: 'content', progress: 0, status: 'pending' }
+    { 
+      id: 1, 
+      key: 'intro', 
+      progress: 0, 
+      status: 'pending', 
+      studentNote: '', 
+      teacherComments: [
+        { id: '1', text: 'Переконайтеся, що актуальність теми чітко обґрунтована', date: '2024-01-15', status: 'info' },
+        { id: '2', text: 'Додайте більше сучасних джерел (2020-2024)', date: '2024-01-16', status: 'warning' }
+      ]
+    },
+    { 
+      id: 2, 
+      key: 'theory', 
+      progress: 0, 
+      status: 'pending', 
+      studentNote: '', 
+      teacherComments: [
+        { id: '3', text: 'Гарна структура теоретичної частини!', date: '2024-01-10', status: 'success' }
+      ]
+    },
+    { 
+      id: 3, 
+      key: 'design', 
+      progress: 0, 
+      status: 'pending', 
+      studentNote: '', 
+      teacherComments: []
+    },
+    { 
+      id: 4, 
+      key: 'implementation', 
+      progress: 0, 
+      status: 'pending', 
+      studentNote: '', 
+      teacherComments: []
+    },
+    { 
+      id: 5, 
+      key: 'conclusion', 
+      progress: 0, 
+      status: 'pending', 
+      studentNote: '', 
+      teacherComments: []
+    },
+    { 
+      id: 6, 
+      key: 'appendix', 
+      progress: 0, 
+      status: 'pending', 
+      studentNote: '', 
+      teacherComments: []
+    },
+    { 
+      id: 7, 
+      key: 'sources', 
+      progress: 0, 
+      status: 'pending', 
+      studentNote: '', 
+      teacherComments: []
+    },
+    { 
+      id: 8, 
+      key: 'abstract', 
+      progress: 0, 
+      status: 'pending', 
+      studentNote: '', 
+      teacherComments: []
+    },
+    { 
+      id: 9, 
+      key: 'cover', 
+      progress: 0, 
+      status: 'pending', 
+      studentNote: '', 
+      teacherComments: []
+    },
+    { 
+      id: 10, 
+      key: 'content', 
+      progress: 0, 
+      status: 'pending', 
+      studentNote: '', 
+      teacherComments: []
+    }
   ],
   coursework: [
-    { id: 1, key: 'intro', progress: 0, status: 'pending' },
-    { id: 2, key: 'theory', progress: 0, status: 'pending' },
-    { id: 3, key: 'design', progress: 0, status: 'pending' },
-    { id: 4, key: 'implementation', progress: 0, status: 'pending' },
-    { id: 5, key: 'conclusion', progress: 0, status: 'pending' },
-    { id: 6, key: 'appendix', progress: 0, status: 'pending' },
-    { id: 7, key: 'sources', progress: 0, status: 'pending' },
-    { id: 8, key: 'abstract', progress: 0, status: 'pending' },
-    { id: 9, key: 'cover', progress: 0, status: 'pending' },
-    { id: 10, key: 'content', progress: 0, status: 'pending' }
+    { 
+      id: 1, 
+      key: 'intro', 
+      progress: 0, 
+      status: 'pending', 
+      studentNote: '', 
+      teacherComments: []
+    },
+    { 
+      id: 2, 
+      key: 'theory', 
+      progress: 0, 
+      status: 'pending', 
+      studentNote: '', 
+      teacherComments: []
+    },
+    { 
+      id: 3, 
+      key: 'design', 
+      progress: 0, 
+      status: 'pending', 
+      studentNote: '', 
+      teacherComments: []
+    },
+    { 
+      id: 4, 
+      key: 'implementation', 
+      progress: 0, 
+      status: 'pending', 
+      studentNote: '', 
+      teacherComments: []
+    },
+    { 
+      id: 5, 
+      key: 'conclusion', 
+      progress: 0, 
+      status: 'pending', 
+      studentNote: '', 
+      teacherComments: []
+    },
+    { 
+      id: 6, 
+      key: 'appendix', 
+      progress: 0, 
+      status: 'pending', 
+      studentNote: '', 
+      teacherComments: []
+    },
+    { 
+      id: 7, 
+      key: 'sources', 
+      progress: 0, 
+      status: 'pending', 
+      studentNote: '', 
+      teacherComments: []
+    },
+    { 
+      id: 8, 
+      key: 'abstract', 
+      progress: 0, 
+      status: 'pending', 
+      studentNote: '', 
+      teacherComments: []
+    },
+    { 
+      id: 9, 
+      key: 'cover', 
+      progress: 0, 
+      status: 'pending', 
+      studentNote: '', 
+      teacherComments: []
+    },
+    { 
+      id: 10, 
+      key: 'content', 
+      progress: 0, 
+      status: 'pending', 
+      studentNote: '', 
+      teacherComments: []
+    }
   ],
   practice: [
-    { id: 1, key: 'intro', progress: 0, status: 'pending' },
-    { id: 2, key: 'tasks', progress: 0, status: 'pending' },
-    { id: 3, key: 'diary', progress: 0, status: 'pending' },
-    { id: 4, key: 'conclusion', progress: 0, status: 'pending' },
-    { id: 5, key: 'report', progress: 0, status: 'pending' }
+    { 
+      id: 1, 
+      key: 'intro', 
+      progress: 0, 
+      status: 'pending', 
+      studentNote: '', 
+      teacherComments: []
+    },
+    { 
+      id: 2, 
+      key: 'tasks', 
+      progress: 0, 
+      status: 'pending', 
+      studentNote: '', 
+      teacherComments: []
+    },
+    { 
+      id: 3, 
+      key: 'diary', 
+      progress: 0, 
+      status: 'pending', 
+      studentNote: '', 
+      teacherComments: []
+    },
+    { 
+      id: 4, 
+      key: 'conclusion', 
+      progress: 0, 
+      status: 'pending', 
+      studentNote: '', 
+      teacherComments: []
+    },
+    { 
+      id: 5, 
+      key: 'report', 
+      progress: 0, 
+      status: 'pending', 
+      studentNote: '', 
+      teacherComments: []
+    }
   ]
 };
 
@@ -63,6 +279,19 @@ const getStatusIcon = (status: string) => {
       return <FileText className="w-4 h-4 text-[var(--accent)]" />;
     default:
       return <AlertCircle className="w-4 h-4 text-[var(--muted-foreground)]" />;
+  }
+};
+
+const getCommentBadgeStyle = (status: TeacherComment['status']) => {
+  switch (status) {
+    case 'success':
+      return 'bg-green-100 text-green-800 border-green-200';
+    case 'warning':
+      return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+    case 'error':
+      return 'bg-red-100 text-red-800 border-red-200';
+    default:
+      return 'bg-blue-100 text-blue-800 border-blue-200';
   }
 };
 
@@ -173,7 +402,6 @@ const WelcomeScreen = ({ onSelectProject }: { onSelectProject: (type: 'diploma' 
           </CardContent>
         </Card>
       </div>
-
     </div>
   );
 };
@@ -193,6 +421,11 @@ const ThesisTracker = () => {
   const STORAGE_PROJECT_TYPE = 'thesisTrackerProjectType';
   const STORAGE_CHAPTERS = 'thesisTrackerChapters';
 
+  // Стан для показу нотаток та коментарів
+  const [expandedNotes, setExpandedNotes] = useState<Record<number, boolean>>({});
+  const [expandedComments, setExpandedComments] = useState<Record<number, boolean>>({});
+  const [editingNotes, setEditingNotes] = useState<Record<number, boolean>>({});
+
   // Зчитуємо з localStorage при початковому рендері
   const [projectType, setProjectType] = useState<'diploma' | 'coursework' | 'practice' | null>(() => {
     if (urlType === 'coursework' || urlType === 'practice' || urlType === 'diploma') {
@@ -205,14 +438,19 @@ const ThesisTracker = () => {
     return null;
   });
 
-  const [chapters, setChapters] = useState<typeof chapterTemplates[keyof typeof chapterTemplates]>(() => {
+  const [chapters, setChapters] = useState<ChapterData[]>(() => {
     if (urlType === 'coursework' || urlType === 'practice' || urlType === 'diploma') {
       return [...chapterTemplates[urlType]];
     }
     const savedChapters = localStorage.getItem(STORAGE_CHAPTERS);
     if (savedChapters) {
       try {
-        return JSON.parse(savedChapters);
+        const parsedChapters = JSON.parse(savedChapters);
+        // Додаємо teacherComments якщо їх немає
+        return parsedChapters.map((ch: any) => ({
+          ...ch,
+          teacherComments: ch.teacherComments || []
+        }));
       } catch {
         return [];
       }
@@ -252,11 +490,38 @@ const ThesisTracker = () => {
     chapters.reduce((sum, ch) => sum + ch.progress, 0) / chapters.length
   ) : 0;
 
-  const handleFileUpload = (chapterId: number) => {
+  const handleFileUpload = (chapterId: number, file: File) => {
+    const fileSizeKB = Math.round(file.size / 1024);
+    const fileSizeStr = fileSizeKB > 1024 ? `${(fileSizeKB / 1024).toFixed(1)} MB` : `${fileSizeKB} KB`;
+    
     setChapters(prev =>
       prev.map(ch =>
         ch.id === chapterId
-          ? { ...ch, progress: 70, status: 'review' }
+          ? { 
+              ...ch, 
+              progress: 70, 
+              status: 'review',
+              uploadedFile: {
+                name: file.name,
+                uploadDate: new Date().toLocaleDateString('uk-UA'),
+                size: fileSizeStr
+              }
+            }
+          : ch
+      )
+    );
+  };
+
+  const handleDeleteFile = (chapterId: number) => {
+    setChapters(prev =>
+      prev.map(ch =>
+        ch.id === chapterId
+          ? { 
+              ...ch, 
+              progress: 0, 
+              status: 'pending',
+              uploadedFile: undefined
+            }
           : ch
       )
     );
@@ -270,6 +535,37 @@ const ThesisTracker = () => {
           : ch
       )
     );
+  };
+
+  const handleUpdateNote = (chapterId: number, newNote: string) => {
+    setChapters(prev =>
+      prev.map(ch =>
+        ch.id === chapterId
+          ? { ...ch, studentNote: newNote }
+          : ch
+      )
+    );
+  };
+
+  const toggleNoteExpansion = (chapterId: number) => {
+    setExpandedNotes(prev => ({
+      ...prev,
+      [chapterId]: !prev[chapterId]
+    }));
+  };
+
+  const toggleCommentExpansion = (chapterId: number) => {
+    setExpandedComments(prev => ({
+      ...prev,
+      [chapterId]: !prev[chapterId]
+    }));
+  };
+
+  const toggleNoteEditing = (chapterId: number) => {
+    setEditingNotes(prev => ({
+      ...prev,
+      [chapterId]: !prev[chapterId]
+    }));
   };
 
   return (
@@ -332,48 +628,87 @@ const ThesisTracker = () => {
                 </CardHeader>
                 <CardContent className="space-y-6">
                   {chapters.map((chapter) => (
-                    <div key={chapter.id} className="border-b border-[var(--border)] pb-4 last:border-none last:pb-0">
+                    <div key={chapter.id} className="border border-[var(--border)] rounded-lg p-4 space-y-4">
                       <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3 flex-1">
                           {getStatusIcon(chapter.status)}
-                          <div>
-                            <p className="font-medium text-[var(--foreground)]">
-                              {t(`thesis.chapters.${chapter.key}`)}
-                            </p>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <p className="font-medium text-[var(--foreground)]">
+                                {t(`thesis.chapters.${chapter.key}`)}
+                              </p>
+                              {(chapter.teacherComments?.length || 0) > 0 && (
+                                <Badge variant="outline" className="text-xs">
+                                  <MessageCircle className="w-3 h-3 mr-1" />
+                                  {chapter.teacherComments?.length || 0}
+                                </Badge>
+                              )}
+                            </div>
                             <p className="text-sm text-[var(--muted-foreground)]">
                               {t(`thesis.chapterDescriptions.${chapter.key}`)}
                             </p>
                           </div>
                         </div>
-                        <span className="text-sm text-[var(--muted-foreground)]">{chapter.progress}%</span>
+                        <span className="text-sm text-[var(--muted-foreground)] ml-4">{chapter.progress}%</span>
                       </div>
-                      <Progress value={chapter.progress} className="h-2 mt-2 bg-[var(--muted)]" />
-                      <div className="flex gap-2 mt-3">
-                        <div className="relative">
-                          <input
-                            type="file"
-                            id={`file-upload-${chapter.id}`}
-                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                            onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              if (file) {
-                                console.log('Завантажено файл:', file.name);
-                                handleFileUpload(chapter.id);
-                              }
-                            }}
-                          />
-                          <Button
-                            asChild
-                            size="sm"
-                            variant="outline"
-                            className="border-[var(--border)] text-[var(--foreground)] hover:bg-[var(--secondary)] hover:text-[var(--secondary-foreground)]"
-                          >
-                            <label htmlFor={`file-upload-${chapter.id}`} className="flex items-center cursor-pointer">
-                              <FileText className="w-4 h-4 mr-1" />
-                              {t('thesis.actions.file')}
-                            </label>
-                          </Button>
+
+                      <Progress value={chapter.progress} className="h-2 bg-[var(--muted)]" />
+
+                      {/* Завантажений файл */}
+                      {chapter.uploadedFile && (
+                        <div className="bg-[var(--muted)] p-3 rounded-lg">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <FileText className="w-4 h-4 text-[var(--muted-foreground)]" />
+                              <div>
+                                <p className="text-sm font-medium">{chapter.uploadedFile.name}</p>
+                                <p className="text-xs text-[var(--muted-foreground)]">
+                                  {chapter.uploadedFile.size} • {chapter.uploadedFile.uploadDate}
+                                </p>
+                              </div>
+                            </div>
+                            {chapter.status === 'review' && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleDeleteFile(chapter.id)}
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            )}
+                          </div>
                         </div>
+                      )}
+
+                      {/* Дії з файлами */}
+                      <div className="flex gap-2 flex-wrap">
+                        {!chapter.uploadedFile && (
+                          <div className="relative">
+                            <input
+                              type="file"
+                              id={`file-upload-${chapter.id}`}
+                              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  handleFileUpload(chapter.id, file);
+                                }
+                              }}
+                            />
+                            <Button
+                              asChild
+                              size="sm"
+                              variant="outline"
+                              className="border-[var(--border)] text-[var(--foreground)] hover:bg-[var(--secondary)]"
+                            >
+                              <label htmlFor={`file-upload-${chapter.id}`} className="flex items-center cursor-pointer">
+                                <FileText className="w-4 h-4 mr-1" />
+                                Завантажити файл
+                              </label>
+                            </Button>
+                          </div>
+                        )}
 
                         {chapter.status === 'review' && (
                           <Button
@@ -381,10 +716,110 @@ const ThesisTracker = () => {
                             className="bg-[var(--primary)] text-[var(--primary-foreground)] hover:bg-[var(--primary-foreground)] hover:text-[var(--primary)]"
                             onClick={() => handleSendForReview(chapter.id)}
                           >
-                            {t('thesis.actions.sendForReview')}
+                            Надіслати на перевірку
+                          </Button>
+                        )}
+
+                        {/* Кнопки для нотаток та коментарів */}
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => toggleNoteExpansion(chapter.id)}
+                          className="text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
+                        >
+                          <StickyNote className="w-4 h-4 mr-1" />
+                          Нотатки
+                          {expandedNotes[chapter.id] ? <EyeOff className="w-3 h-3 ml-1" /> : <Eye className="w-3 h-3 ml-1" />}
+                        </Button>
+
+                        {(chapter.teacherComments?.length || 0) > 0 && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => toggleCommentExpansion(chapter.id)}
+                            className="text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
+                          >
+                            <MessageCircle className="w-4 h-4 mr-1" />
+                            Коментарі ({chapter.teacherComments?.length || 0})
+                            {expandedComments[chapter.id] ? <EyeOff className="w-3 h-3 ml-1" /> : <Eye className="w-3 h-3 ml-1" />}
                           </Button>
                         )}
                       </div>
+
+                      {/* Розділ нотаток студента */}
+                      {expandedNotes[chapter.id] && (
+                        <div className="bg-[var(--muted)]/30 p-4 rounded-lg border border-[var(--border)]">
+                          <div className="flex items-center justify-between mb-2">
+                            <h4 className="font-medium text-sm">Мої нотатки</h4>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => toggleNoteEditing(chapter.id)}
+                              className="text-xs"
+                            >
+                              {editingNotes[chapter.id] ? 'Скасувати' : 'Редагувати'}
+                            </Button>
+                          </div>
+                          
+                          {editingNotes[chapter.id] ? (
+                            <div className="space-y-2">
+                              <Textarea
+                                value={chapter.studentNote}
+                                onChange={(e) => handleUpdateNote(chapter.id, e.target.value)}
+                                placeholder="Додайте свої нотатки до цього розділу..."
+                                className="min-h-[100px] bg-[var(--background)] border-[var(--border)]"
+                              />
+                              <Button
+                                size="sm"
+                                onClick={() => toggleNoteEditing(chapter.id)}
+                                className="bg-[var(--primary)] text-[var(--primary-foreground)]"
+                              >
+                                <Save className="w-3 h-3 mr-1" />
+                                Зберегти
+                              </Button>
+                            </div>
+                          ) : (
+                            <div className="text-sm text-[var(--muted-foreground)]">
+                              {chapter.studentNote ? (
+                                <div className="whitespace-pre-wrap bg-[var(--background)] p-3 rounded border border-[var(--border)]">
+                                  {chapter.studentNote}
+                                </div>
+                              ) : (
+                                <p className="italic text-center py-4">
+                                  Нотаток поки немає. Натисніть "Редагувати" щоб додати.
+                                </p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Розділ коментарів викладача */}
+                      {expandedComments[chapter.id] && (chapter.teacherComments?.length || 0) > 0 && (
+                        <div className="bg-blue-50/30 border border-blue-200/50 p-4 rounded-lg">
+                          <h4 className="font-medium text-sm mb-3 text-blue-900">Коментарі викладача</h4>
+                          <div className="space-y-3">
+                            {(chapter.teacherComments || []).map((comment) => (
+                              <div key={comment.id} className="bg-[var(--background)] p-3 rounded border border-[var(--border)]">
+                                <div className="flex items-start justify-between mb-2">
+                                  <Badge className={`text-xs ${getCommentBadgeStyle(comment.status)}`}>
+                                    {comment.status === 'success' && '✓ Схвалено'}
+                                    {comment.status === 'warning' && '⚠ Попередження'}
+                                    {comment.status === 'error' && '✗ Потребує доопрацювання'}
+                                    {comment.status === 'info' && 'ℹ Інформація'}
+                                  </Badge>
+                                  <span className="text-xs text-[var(--muted-foreground)]">
+                                    {comment.date}
+                                  </span>
+                                </div>
+                                <p className="text-sm text-[var(--foreground)]">
+                                  {comment.text}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </CardContent>

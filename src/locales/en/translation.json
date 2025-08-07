@@ -256,7 +256,7 @@
     },
     "suggestions": {
       "title": "Recommended topics",
-      "description": "Based on your profile",
+      "description": "Based on your idea",
       "inputdesc": "Enter your idea or area of interest below to get course or thesis topic recommendations.",
       "inputPlaceholder": "Enter your idea or topic...",
       "generate": "Generate topics",
