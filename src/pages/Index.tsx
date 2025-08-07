@@ -34,38 +34,57 @@ import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
 import { useTranslation } from 'react-i18next';
 
-// Додаємо шаблони розділів (можна винести у окремий файл)
-const chapterTemplates: Record<string, any[]> = {
+interface ChapterData {
+  id: number;
+  key: string;
+  progress: number;
+  status: 'completed' | 'review' | 'inProgress' | 'pending';
+  studentNote: string;
+  uploadedFile?: {
+    name: string;
+    uploadDate: string;
+    size: string;
+  };
+  teacherComments: Array<{
+    id: string;
+    text: string;
+    date: string;
+    status: 'info' | 'warning' | 'error' | 'success';
+  }>;
+}
+
+// Шаблони розділів (синхронізовані з ThesisTracker)
+const chapterTemplates: Record<string, Omit<ChapterData, 'teacherComments'>[]> = {
   diploma: [
-    { id: 1, key: 'intro' },
-    { id: 2, key: 'theory' },
-    { id: 3, key: 'design' },
-    { id: 4, key: 'implementation' },
-    { id: 5, key: 'conclusion' },
-    { id: 6, key: 'appendix' },
-    { id: 7, key: 'sources' },
-    { id: 8, key: 'abstract' },
-    { id: 9, key: 'cover' },
-    { id: 10, key: 'content' }
+    { id: 1, key: 'intro', progress: 0, status: 'pending', studentNote: '' },
+    { id: 2, key: 'theory', progress: 0, status: 'pending', studentNote: '' },
+    { id: 3, key: 'design', progress: 0, status: 'pending', studentNote: '' },
+    { id: 4, key: 'implementation', progress: 0, status: 'pending', studentNote: '' },
+    { id: 5, key: 'conclusion', progress: 0, status: 'pending', studentNote: '' },
+    { id: 6, key: 'appendix', progress: 0, status: 'pending', studentNote: '' },
+    { id: 7, key: 'sources', progress: 0, status: 'pending', studentNote: '' },
+    { id: 8, key: 'abstract', progress: 0, status: 'pending', studentNote: '' },
+    { id: 9, key: 'cover', progress: 0, status: 'pending', studentNote: '' },
+    { id: 10, key: 'content', progress: 0, status: 'pending', studentNote: '' }
   ],
   coursework: [
-    { id: 1, key: 'intro' },
-    { id: 2, key: 'theory' },
-    { id: 3, key: 'design' },
-    { id: 4, key: 'implementation' },
-    { id: 5, key: 'conclusion' },
-    { id: 6, key: 'appendix' },
-    { id: 7, key: 'sources' },
-    { id: 8, key: 'abstract' },
-    { id: 9, key: 'cover' },
-    { id: 10, key: 'content' }
+    { id: 1, key: 'intro', progress: 0, status: 'pending', studentNote: '' },
+    { id: 2, key: 'theory', progress: 0, status: 'pending', studentNote: '' },
+    { id: 3, key: 'design', progress: 0, status: 'pending', studentNote: '' },
+    { id: 4, key: 'implementation', progress: 0, status: 'pending', studentNote: '' },
+    { id: 5, key: 'conclusion', progress: 0, status: 'pending', studentNote: '' },
+    { id: 6, key: 'appendix', progress: 0, status: 'pending', studentNote: '' },
+    { id: 7, key: 'sources', progress: 0, status: 'pending', studentNote: '' },
+    { id: 8, key: 'abstract', progress: 0, status: 'pending', studentNote: '' },
+    { id: 9, key: 'cover', progress: 0, status: 'pending', studentNote: '' },
+    { id: 10, key: 'content', progress: 0, status: 'pending', studentNote: '' }
   ],
   practice: [
-    { id: 1, key: 'intro' },
-    { id: 2, key: 'tasks' },
-    { id: 3, key: 'diary' },
-    { id: 4, key: 'conclusion' },
-    { id: 5, key: 'report' }
+    { id: 1, key: 'intro', progress: 0, status: 'pending', studentNote: '' },
+    { id: 2, key: 'tasks', progress: 0, status: 'pending', studentNote: '' },
+    { id: 3, key: 'diary', progress: 0, status: 'pending', studentNote: '' },
+    { id: 4, key: 'conclusion', progress: 0, status: 'pending', studentNote: '' },
+    { id: 5, key: 'report', progress: 0, status: 'pending', studentNote: '' }
   ]
 };
 
@@ -75,9 +94,13 @@ const Dashboard = () => {
   const [isFirstVisit, setIsFirstVisit] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // Додаємо стани для відстеження проєкту
-  const [projectType, setProjectType] = useState<string>('diploma'); // за замовчуванням
-  const [uploadedChapters, setUploadedChapters] = useState<number>(0);
+  // Стани для відстеження проєкту (синхронізовані з ThesisTracker)
+  const [projectType, setProjectType] = useState<string | null>(null); 
+  const [chapters, setChapters] = useState<ChapterData[]>([]);
+
+  // Ключі localStorage (ті ж самі що у ThesisTracker)
+  const STORAGE_PROJECT_TYPE = 'thesisTrackerProjectType';
+  const STORAGE_CHAPTERS = 'thesisTrackerChapters';
 
   useEffect(() => {
     const storedUser = localStorage.getItem("currentUser");
@@ -91,40 +114,68 @@ const Dashboard = () => {
       localStorage.setItem("firstVisitDone", "true");
     }
 
-    // Читаємо тип проєкту з localStorage (якщо є)
-    const savedProjectType = localStorage.getItem('thesisTrackerProjectType');
-    if (savedProjectType && chapterTemplates[savedProjectType]) {
-      setProjectType(savedProjectType);
-    }
-
-    // Читаємо завантажені розділи з localStorage
-    const savedChapters = localStorage.getItem('thesisTrackerChapters');
-    if (savedChapters) {
-      try {
-        const chapters = JSON.parse(savedChapters);
-        // Підраховуємо кількість розділів з progress > 0 (завантажених)
-        const uploaded = chapters.filter((chapter: any) => chapter.progress > 0).length;
-        setUploadedChapters(uploaded);
-      } catch (error) {
-        console.error('Помилка при читанні збережених розділів:', error);
-      }
-    }
+    // Читаємо актуальні дані з ThesisTracker
+    loadProjectData();
   }, []);
+
+  const loadProjectData = () => {
+    // Читаємо тип проєкту з localStorage
+    const savedProjectType = localStorage.getItem(STORAGE_PROJECT_TYPE);
+
+if (savedProjectType && ['diploma', 'coursework', 'practice'].includes(savedProjectType)) {
+  setProjectType(savedProjectType);
+
+  const savedChapters = localStorage.getItem(STORAGE_CHAPTERS);
+  if (savedChapters) {
+    try {
+      const parsedChapters = JSON.parse(savedChapters);
+      const chaptersWithComments = parsedChapters.map((ch: any) => ({
+        ...ch,
+        teacherComments: ch.teacherComments || []
+      }));
+      setChapters(chaptersWithComments);
+    } catch (error) {
+      const defaultChapters = chapterTemplates[savedProjectType].map(template => ({
+        ...template,
+        teacherComments: []
+      }));
+      setChapters(defaultChapters);
+    }
+  } else {
+    const defaultChapters = chapterTemplates[savedProjectType].map(template => ({
+      ...template,
+      teacherComments: []
+    }));
+    setChapters(defaultChapters);
+  }
+} else {
+  setProjectType(null); // ← користувач ще не обрав тип проєкту
+}
+  };
 
   // Функція для отримання динамічних даних про розділи
   const getChaptersStats = () => {
-    const totalChapters = chapterTemplates[projectType]?.length || 0;
+    const totalChapters = chapters.length;
+    const completedChapters = chapters.filter(chapter => 
+      chapter.progress > 0 || chapter.uploadedFile
+    ).length;
+    
     return {
-      completed: uploadedChapters,
+      completed: completedChapters,
       total: totalChapters,
-      displayText: `${uploadedChapters}/${totalChapters}`
+      displayText: `${completedChapters}/${totalChapters}`
     };
   };
 
   // Функція для отримання динамічних даних про поточний проєкт
   const getCurrentWorkData = () => {
-    const totalChapters = chapterTemplates[projectType]?.length || 0;
-    const overallProgress = totalChapters > 0 ? Math.round((uploadedChapters / totalChapters) * 100) : 0;
+    const totalChapters = chapters.length;
+    const totalProgress = totalChapters > 0 
+      ? Math.round(chapters.reduce((sum, ch) => sum + ch.progress, 0) / totalChapters) 
+      : 0;
+    
+    const completedChapters = chapters.filter(ch => ch.status === 'completed').length;
+    const uploadedChapters = chapters.filter(ch => ch.progress > 0 || ch.uploadedFile).length;
     
     // Визначаємо назву проєкту на основі типу
     const projectTitles: Record<string, string> = {
@@ -133,13 +184,24 @@ const Dashboard = () => {
       practice: 'Звіт з практики'
     };
 
+    let status = 'Не розпочато';
+    if (completedChapters === totalChapters && totalChapters > 0) {
+      status = 'Завершено';
+    } else if (uploadedChapters > 0) {
+      status = 'В процесі';
+    }
+
     return {
-      title: projectTitles[projectType] || t('index.title'),
-      supervisor: t('index.supervisor'),
-      progress: overallProgress,
-      deadline: t('index.deadline'),
-      status: uploadedChapters === 0 ? 'Не розпочато' : uploadedChapters === totalChapters ? 'Завершено' : 'В процесі',
-    };
+  title: projectType ? projectTitles[projectType] : t('index.title'),
+  supervisor: t('index.supervisor'),
+  progress: totalProgress,
+  deadline: t('index.deadline'),
+  status,
+  completedChapters,
+  totalChapters,
+  uploadedChapters
+};
+
   };
 
   const currentWork = getCurrentWorkData();
@@ -157,15 +219,15 @@ const Dashboard = () => {
       label: t('index.stats.overallProgress'),
       value: `${currentWork.progress}%`,
       icon: Target,
-      change: currentWork.progress > 0 ? `+${uploadedChapters} розділів` : 'Розпочніть завантаження',
-      trend: currentWork.progress > 0 ? 'up' : 'neutral',
+      change: currentWork.uploadedChapters > 0 ? `+${currentWork.uploadedChapters} розділів` : 'Розпочніть завантаження',
+      trend: currentWork.uploadedChapters > 0 ? 'up' : 'neutral',
     },
     {
       label: t('index.stats.chaptersReady'),
-      value: chaptersStats.displayText, // Динамічне значення
+      value: chaptersStats.displayText,
       icon: BookOpen,
-      change: uploadedChapters > 0 ? t('index.stats.chaptersChange') : 'Почніть завантажувати розділи',
-      trend: uploadedChapters > 0 ? 'up' : 'neutral',
+      change: currentWork.uploadedChapters > 0 ? t('index.stats.chaptersChange') : 'Почніть завантажувати розділи',
+      trend: currentWork.uploadedChapters > 0 ? 'up' : 'neutral',
     },
     {
       label: t('index.stats.daysLeft'),
@@ -183,41 +245,13 @@ const Dashboard = () => {
     },
   ];
 
-  // Оновлюємо projectMilestones з урахуванням типу проєкту
+  // Функція для отримання мілстоунів проєкту на основі реальних даних
   const getProjectMilestones = () => {
-    const template = chapterTemplates[projectType] || chapterTemplates.diploma;
-    
-    // Читаємо збережені дані про розділи
-    const savedChapters = localStorage.getItem('thesisTrackerChapters');
-    let chaptersData = [];
-    
-    if (savedChapters) {
-      try {
-        chaptersData = JSON.parse(savedChapters);
-      } catch (error) {
-        console.error('Помилка при читанні збережених розділів:', error);
-      }
-    }
-
-    // Створюємо список мілстоунів на основі шаблону
-    return template.map((templateChapter) => {
-      const savedChapter = chaptersData.find((ch: any) => ch.id === templateChapter.id);
-      
-      let status = 'pending';
-      let progress = 0;
-      
-      if (savedChapter) {
-        progress = savedChapter.progress;
-        if (savedChapter.status === 'completed') status = 'completed';
-        else if (savedChapter.status === 'inProgress' || savedChapter.status === 'review') status = 'in-progress';
-      }
-      
-      return {
-        name: templateChapter.key,
-        status,
-        progress
-      };
-    });
+    return chapters.map((chapter) => ({
+      name: chapter.key,
+      status: chapter.status,
+      progress: chapter.progress
+    }));
   };
 
   const projectMilestones = getProjectMilestones();
@@ -283,7 +317,11 @@ const Dashboard = () => {
                   <div className="flex-1 max-w-3xl">
                     <div className="flex items-center gap-2 mb-4">
                       <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
-                      <span className="text-sm font-medium text-primary">{t('index.projectType')}</span>
+                      <span className="text-sm font-medium text-primary">
+                        {projectType === 'diploma' ? 'Дипломний проєкт' : 
+                         projectType === 'coursework' ? 'Курсова робота' : 
+                         'Звіт з практики'}
+                      </span>
                     </div>
                     <h1 className="text-2xl md:text-4xl font-bold mb-4 text-foreground">
                       {t('index.welcomeTitle', { name: user?.firstName || "Користувач" })}
@@ -342,77 +380,83 @@ const Dashboard = () => {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <div className="md:col-span-2">
-                  <Card className="hover:shadow-lg transition-shadow">
-                    <CardHeader className="pb-6">
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <div className="w-2 h-2 bg-primary rounded-full"></div>
-                            <span className="text-sm font-medium text-primary">
-                              {projectType === 'diploma' ? 'Дипломний проєкт' : projectType === 'coursework' ? 'Курсова робота' : 'Звіт з практики'}
-                            </span>
-                          </div>
-                          <CardTitle className="text-xl md:text-2xl font-bold mb-2">{t('index.projectProgress')}</CardTitle>
-                          <CardDescription className="text-base">{currentWork.title}</CardDescription>
-                        </div>
-                        <div className="flex items-center space-x-3 p-4 border rounded-xl bg-muted/50">
-                          <Avatar className="h-12 w-12">
-                            <AvatarFallback className="bg-primary text-primary-foreground font-bold">ІІ</AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="font-bold text-foreground">{t('index.supervisor')}</p>
-                            <p className="text-sm text-muted-foreground">{t('index.supervisorName')}</p>
-                          </div>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="max-h-85 overflow-y-auto space-y-6 pr-2">
-                        {projectMilestones.map((milestone, index) => {
-                          const milestoneLabel = t(`thesis.chapters.${milestone.name}`);
-                          return (
-                            <div key={index} className="flex items-center space-x-4">
-                              <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${milestone.status === 'completed'
-                                ? 'bg-primary text-primary-foreground'
-                                : milestone.status === 'in-progress'
-                                  ? 'bg-primary/20 text-primary'
-                                  : 'bg-muted text-muted-foreground'
-                                }`}>
-                                {milestone.status === 'completed' ? (
-                                  <CheckCircle className="w-5 h-5" />
-                                ) : milestone.status === 'in-progress' ? (
-                                  <Clock className="w-5 h-5" />
-                                ) : (
-                                  <div className="w-3 h-3 rounded-full bg-current" />
-                                )}
-                              </div>
-                              <div className="flex-1">
-                                <div className="flex items-center justify-between mb-2">
-                                  <span className="font-medium text-foreground">{milestoneLabel}</span>
-                                  <span className="text-sm text-muted-foreground">{milestone.progress}%</span>
-                                </div>
-                                <Progress value={milestone.progress} className="h-2" />
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                      <div className="flex flex-col sm:flex-row gap-3 mt-8 pt-6 border-t">
-                        <Button asChild className="flex-1">
-                          <Link to="/tracker">
-                            <FileText className="mr-2 h-4 w-4" /> {t('index.detailedView')}
-                          </Link>
-                        </Button>
-                        <Button variant="outline" asChild className="flex-1">
-                          <Link to="/chat">
-                            <MessageSquare className="mr-2 h-4 w-4" /> {t('index.chatWithSupervisor')}
-                          </Link>
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
+                {projectType && (
+  <div className="md:col-span-2">
+    <Card className="hover:shadow-lg transition-shadow">
+      <CardHeader className="pb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-2 h-2 bg-primary rounded-full"></div>
+              <span className="text-sm font-medium text-primary">
+                {projectType === 'diploma' ? 'Дипломний проєкт' :
+                 projectType === 'coursework' ? 'Курсова робота' :
+                 'Звіт з практики'}
+              </span>
+            </div>
+            <CardTitle className="text-xl md:text-2xl font-bold mb-2">{t('index.projectProgress')}</CardTitle>
+            <CardDescription className="text-base">{currentWork.title}</CardDescription>
+          </div>
+          <div className="flex items-center space-x-3 p-4 border rounded-xl bg-muted/50">
+            <Avatar className="h-12 w-12">
+              <AvatarFallback className="bg-primary text-primary-foreground font-bold">ІІ</AvatarFallback>
+            </Avatar>
+            <div>
+              <p className="font-bold text-foreground">{t('index.supervisor')}</p>
+              <p className="text-sm text-muted-foreground">{t('index.supervisorName')}</p>
+            </div>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="max-h-85 overflow-y-auto space-y-6 pr-2">
+          {projectMilestones.map((milestone, index) => {
+            const milestoneLabel = t(`thesis.chapters.${milestone.name}`);
+            return (
+              <div key={index} className="flex items-center space-x-4">
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                  milestone.status === 'completed'
+                    ? 'bg-primary text-primary-foreground'
+                    : milestone.status === 'inProgress' || milestone.status === 'review'
+                      ? 'bg-primary/20 text-primary'
+                      : 'bg-muted text-muted-foreground'
+                }`}>
+                  {milestone.status === 'completed' ? (
+                    <CheckCircle className="w-5 h-5" />
+                  ) : milestone.status === 'inProgress' || milestone.status === 'review' ? (
+                    <Clock className="w-5 h-5" />
+                  ) : (
+                    <div className="w-3 h-3 rounded-full bg-current" />
+                  )}
                 </div>
+                <div className="flex-1">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-medium text-foreground">{milestoneLabel}</span>
+                    <span className="text-sm text-muted-foreground">{milestone.progress}%</span>
+                  </div>
+                  <Progress value={milestone.progress} className="h-2" />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <div className="flex flex-col sm:flex-row gap-3 mt-8 pt-6 border-t">
+          <Button asChild className="flex-1">
+            <Link to={`/tracker?type=${projectType}`}>
+              <FileText className="mr-2 h-4 w-4" /> {t('index.detailedView')}
+            </Link>
+          </Button>
+          <Button variant="outline" asChild className="flex-1">
+            <Link to="/chat">
+              <MessageSquare className="mr-2 h-4 w-4" /> {t('index.chatWithSupervisor')}
+            </Link>
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  </div>
+)}
+
 
                 <div className="space-y-6">
                   <Card className="hover:shadow-lg transition-shadow">
