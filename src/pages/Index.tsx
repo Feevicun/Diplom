@@ -34,11 +34,50 @@ import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
 import { useTranslation } from 'react-i18next';
 
+// Додаємо шаблони розділів (можна винести у окремий файл)
+const chapterTemplates: Record<string, any[]> = {
+  diploma: [
+    { id: 1, key: 'intro' },
+    { id: 2, key: 'theory' },
+    { id: 3, key: 'design' },
+    { id: 4, key: 'implementation' },
+    { id: 5, key: 'conclusion' },
+    { id: 6, key: 'appendix' },
+    { id: 7, key: 'sources' },
+    { id: 8, key: 'abstract' },
+    { id: 9, key: 'cover' },
+    { id: 10, key: 'content' }
+  ],
+  coursework: [
+    { id: 1, key: 'intro' },
+    { id: 2, key: 'theory' },
+    { id: 3, key: 'design' },
+    { id: 4, key: 'implementation' },
+    { id: 5, key: 'conclusion' },
+    { id: 6, key: 'appendix' },
+    { id: 7, key: 'sources' },
+    { id: 8, key: 'abstract' },
+    { id: 9, key: 'cover' },
+    { id: 10, key: 'content' }
+  ],
+  practice: [
+    { id: 1, key: 'intro' },
+    { id: 2, key: 'tasks' },
+    { id: 3, key: 'diary' },
+    { id: 4, key: 'conclusion' },
+    { id: 5, key: 'report' }
+  ]
+};
+
 const Dashboard = () => {
   const { t } = useTranslation();
   const [user, setUser] = useState<{ firstName?: string; lastName?: string } | null>(null);
   const [isFirstVisit, setIsFirstVisit] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Додаємо стани для відстеження проєкту
+  const [projectType, setProjectType] = useState<string>('diploma'); // за замовчуванням
+  const [uploadedChapters, setUploadedChapters] = useState<number>(0);
 
   useEffect(() => {
     const storedUser = localStorage.getItem("currentUser");
@@ -51,15 +90,59 @@ const Dashboard = () => {
       setIsFirstVisit(true);
       localStorage.setItem("firstVisitDone", "true");
     }
+
+    // Читаємо тип проєкту з localStorage (якщо є)
+    const savedProjectType = localStorage.getItem('thesisTrackerProjectType');
+    if (savedProjectType && chapterTemplates[savedProjectType]) {
+      setProjectType(savedProjectType);
+    }
+
+    // Читаємо завантажені розділи з localStorage
+    const savedChapters = localStorage.getItem('thesisTrackerChapters');
+    if (savedChapters) {
+      try {
+        const chapters = JSON.parse(savedChapters);
+        // Підраховуємо кількість розділів з progress > 0 (завантажених)
+        const uploaded = chapters.filter((chapter: any) => chapter.progress > 0).length;
+        setUploadedChapters(uploaded);
+      } catch (error) {
+        console.error('Помилка при читанні збережених розділів:', error);
+      }
+    }
   }, []);
 
-  const currentWork = {
-    title: t('index.title'),
-    supervisor: t('index.supervisor'),
-    progress: 65,
-    deadline: t('index.deadline'),
-    status: t('index.status'),
+  // Функція для отримання динамічних даних про розділи
+  const getChaptersStats = () => {
+    const totalChapters = chapterTemplates[projectType]?.length || 0;
+    return {
+      completed: uploadedChapters,
+      total: totalChapters,
+      displayText: `${uploadedChapters}/${totalChapters}`
+    };
   };
+
+  // Функція для отримання динамічних даних про поточний проєкт
+  const getCurrentWorkData = () => {
+    const totalChapters = chapterTemplates[projectType]?.length || 0;
+    const overallProgress = totalChapters > 0 ? Math.round((uploadedChapters / totalChapters) * 100) : 0;
+    
+    // Визначаємо назву проєкту на основі типу
+    const projectTitles: Record<string, string> = {
+      diploma: 'Дипломний проєкт',
+      coursework: 'Курсова робота', 
+      practice: 'Звіт з практики'
+    };
+
+    return {
+      title: projectTitles[projectType] || t('index.title'),
+      supervisor: t('index.supervisor'),
+      progress: overallProgress,
+      deadline: t('index.deadline'),
+      status: uploadedChapters === 0 ? 'Не розпочато' : uploadedChapters === totalChapters ? 'Завершено' : 'В процесі',
+    };
+  };
+
+  const currentWork = getCurrentWorkData();
 
   const recentActivities = [
     { id: 1, type: 'comment', text: 'Новий коментар до розділу 2', time: '2 год тому', icon: MessageSquare },
@@ -67,20 +150,22 @@ const Dashboard = () => {
     { id: 3, type: 'approval', text: 'Розділ 1 затверджено', time: '3 дні тому', icon: CheckCircle },
   ];
 
+  // Оновлюємо quickStats з динамічними даними
+  const chaptersStats = getChaptersStats();
   const quickStats = [
     {
       label: t('index.stats.overallProgress'),
-      value: '65%',
+      value: `${currentWork.progress}%`,
       icon: Target,
-      change: t('index.stats.progressChange'),
-      trend: 'up',
+      change: currentWork.progress > 0 ? `+${uploadedChapters} розділів` : 'Розпочніть завантаження',
+      trend: currentWork.progress > 0 ? 'up' : 'neutral',
     },
     {
       label: t('index.stats.chaptersReady'),
-      value: '3/5',
+      value: chaptersStats.displayText, // Динамічне значення
       icon: BookOpen,
-      change: t('index.stats.chaptersChange'),
-      trend: 'up',
+      change: uploadedChapters > 0 ? t('index.stats.chaptersChange') : 'Почніть завантажувати розділи',
+      trend: uploadedChapters > 0 ? 'up' : 'neutral',
     },
     {
       label: t('index.stats.daysLeft'),
@@ -98,14 +183,44 @@ const Dashboard = () => {
     },
   ];
 
-  const projectMilestones = [
-    { name: 'intro', status: 'completed', progress: 100 },
-    { name: 'literature', status: 'completed', progress: 100 },
-    { name: 'methodology', status: 'completed', progress: 100 },
-    { name: 'implementation', status: 'in-progress', progress: 65 },
-    { name: 'testing', status: 'pending', progress: 0 },
-    { name: 'conclusion', status: 'pending', progress: 0 },
-  ];
+  // Оновлюємо projectMilestones з урахуванням типу проєкту
+  const getProjectMilestones = () => {
+    const template = chapterTemplates[projectType] || chapterTemplates.diploma;
+    
+    // Читаємо збережені дані про розділи
+    const savedChapters = localStorage.getItem('thesisTrackerChapters');
+    let chaptersData = [];
+    
+    if (savedChapters) {
+      try {
+        chaptersData = JSON.parse(savedChapters);
+      } catch (error) {
+        console.error('Помилка при читанні збережених розділів:', error);
+      }
+    }
+
+    // Створюємо список мілстоунів на основі шаблону
+    return template.map((templateChapter) => {
+      const savedChapter = chaptersData.find((ch: any) => ch.id === templateChapter.id);
+      
+      let status = 'pending';
+      let progress = 0;
+      
+      if (savedChapter) {
+        progress = savedChapter.progress;
+        if (savedChapter.status === 'completed') status = 'completed';
+        else if (savedChapter.status === 'inProgress' || savedChapter.status === 'review') status = 'in-progress';
+      }
+      
+      return {
+        name: templateChapter.key,
+        status,
+        progress
+      };
+    });
+  };
+
+  const projectMilestones = getProjectMilestones();
 
   const recommendations = [
     {
@@ -179,11 +294,17 @@ const Dashboard = () => {
                     <div className="flex flex-wrap items-center gap-3">
                       <Badge variant="outline" className="px-4 py-2 bg-background/50">
                         <Target className="w-4 h-4 mr-2" />
-                        {t('index.progressCompleted', { progress: currentWork.progress })}
+                        {currentWork.progress}% завершено
                       </Badge>
                       <Badge variant="outline" className="px-4 py-2 bg-background/50">
                         <Clock className="w-4 h-4 mr-2" />
                         {currentWork.deadline}
+                      </Badge>
+                      <Badge 
+                        variant={currentWork.status === 'Завершено' ? 'default' : currentWork.status === 'В процесі' ? 'secondary' : 'outline'} 
+                        className="px-4 py-2"
+                      >
+                        {currentWork.status}
                       </Badge>
                     </div>
                   </div>
@@ -208,6 +329,7 @@ const Dashboard = () => {
                           <div className="text-2xl font-bold text-foreground">{stat.value}</div>
                           {stat.trend === 'up' && <TrendingUp className="w-4 h-4 text-primary inline-block" />}
                           {stat.trend === 'down' && <Activity className="w-4 h-4 text-muted-foreground inline-block" />}
+                          {stat.trend === 'neutral' && <div className="w-4 h-4 inline-block" />}
                         </div>
                       </div>
                       <div>
@@ -227,7 +349,9 @@ const Dashboard = () => {
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-2">
                             <div className="w-2 h-2 bg-primary rounded-full"></div>
-                            <span className="text-sm font-medium text-primary">{t('index.projectType')}</span>
+                            <span className="text-sm font-medium text-primary">
+                              {projectType === 'diploma' ? 'Дипломний проєкт' : projectType === 'coursework' ? 'Курсова робота' : 'Звіт з практики'}
+                            </span>
                           </div>
                           <CardTitle className="text-xl md:text-2xl font-bold mb-2">{t('index.projectProgress')}</CardTitle>
                           <CardDescription className="text-base">{currentWork.title}</CardDescription>
@@ -244,9 +368,9 @@ const Dashboard = () => {
                       </div>
                     </CardHeader>
                     <CardContent>
-                      <div className="space-y-6">
+                      <div className="max-h-85 overflow-y-auto space-y-6 pr-2">
                         {projectMilestones.map((milestone, index) => {
-                          const milestoneLabel = t(`index.milestones.${milestone.name}`);
+                          const milestoneLabel = t(`thesis.chapters.${milestone.name}`);
                           return (
                             <div key={index} className="flex items-center space-x-4">
                               <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${milestone.status === 'completed'

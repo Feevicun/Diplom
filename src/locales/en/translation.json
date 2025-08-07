@@ -56,6 +56,7 @@
       "aiSuggestions": "AI Suggestions",
       "progressChange": "+5% this week",
       "chaptersChange": "+1 chapter",
+      "noChaptersYet": "Start uploading",
       "urgent": "Urgent!",
       "newTips": "New Tips"
     },
