@@ -29,6 +29,8 @@ import {
   Lightbulb,
   Trophy,
   Activity,
+  Plus,
+  Settings,
 } from 'lucide-react';
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
@@ -122,39 +124,47 @@ const Dashboard = () => {
     // Читаємо тип проєкту з localStorage
     const savedProjectType = localStorage.getItem(STORAGE_PROJECT_TYPE);
 
-if (savedProjectType && ['diploma', 'coursework', 'practice'].includes(savedProjectType)) {
-  setProjectType(savedProjectType);
+    if (savedProjectType && ['diploma', 'coursework', 'practice'].includes(savedProjectType)) {
+      setProjectType(savedProjectType);
 
-  const savedChapters = localStorage.getItem(STORAGE_CHAPTERS);
-  if (savedChapters) {
-    try {
-      const parsedChapters = JSON.parse(savedChapters);
-      const chaptersWithComments = parsedChapters.map((ch: any) => ({
-        ...ch,
-        teacherComments: ch.teacherComments || []
-      }));
-      setChapters(chaptersWithComments);
-    } catch (error) {
-      const defaultChapters = chapterTemplates[savedProjectType].map(template => ({
-        ...template,
-        teacherComments: []
-      }));
-      setChapters(defaultChapters);
+      const savedChapters = localStorage.getItem(STORAGE_CHAPTERS);
+      if (savedChapters) {
+        try {
+          const parsedChapters = JSON.parse(savedChapters);
+          const chaptersWithComments = parsedChapters.map((ch: any) => ({
+            ...ch,
+            teacherComments: ch.teacherComments || []
+          }));
+          setChapters(chaptersWithComments);
+        } catch (error) {
+          const defaultChapters = chapterTemplates[savedProjectType].map(template => ({
+            ...template,
+            teacherComments: []
+          }));
+          setChapters(defaultChapters);
+        }
+      } else {
+        const defaultChapters = chapterTemplates[savedProjectType].map(template => ({
+          ...template,
+          teacherComments: []
+        }));
+        setChapters(defaultChapters);
+      }
+    } else {
+      setProjectType(null); // ← користувач ще не обрав тип проєкту
     }
-  } else {
-    const defaultChapters = chapterTemplates[savedProjectType].map(template => ({
-      ...template,
-      teacherComments: []
-    }));
-    setChapters(defaultChapters);
-  }
-} else {
-  setProjectType(null); // ← користувач ще не обрав тип проєкту
-}
   };
 
   // Функція для отримання динамічних даних про розділи
   const getChaptersStats = () => {
+    if (!projectType || chapters.length === 0) {
+      return {
+        completed: 0,
+        total: 0,
+        displayText: '0/0'
+      };
+    }
+
     const totalChapters = chapters.length;
     const completedChapters = chapters.filter(chapter => 
       chapter.progress > 0 || chapter.uploadedFile
@@ -169,6 +179,19 @@ if (savedProjectType && ['diploma', 'coursework', 'practice'].includes(savedProj
 
   // Функція для отримання динамічних даних про поточний проєкт
   const getCurrentWorkData = () => {
+    if (!projectType || chapters.length === 0) {
+      return {
+        title: t('index.title'),
+        supervisor: t('index.supervisor'),
+        progress: 0,
+        deadline: t('index.deadline'),
+        status: 'Не обрано',
+        completedChapters: 0,
+        totalChapters: 0,
+        uploadedChapters: 0
+      };
+    }
+
     const totalChapters = chapters.length;
     const totalProgress = totalChapters > 0 
       ? Math.round(chapters.reduce((sum, ch) => sum + ch.progress, 0) / totalChapters) 
@@ -192,16 +215,15 @@ if (savedProjectType && ['diploma', 'coursework', 'practice'].includes(savedProj
     }
 
     return {
-  title: projectType ? projectTitles[projectType] : t('index.title'),
-  supervisor: t('index.supervisor'),
-  progress: totalProgress,
-  deadline: t('index.deadline'),
-  status,
-  completedChapters,
-  totalChapters,
-  uploadedChapters
-};
-
+      title: projectTitles[projectType],
+      supervisor: t('index.supervisor'),
+      progress: totalProgress,
+      deadline: t('index.deadline'),
+      status,
+      completedChapters,
+      totalChapters,
+      uploadedChapters
+    };
   };
 
   const currentWork = getCurrentWorkData();
@@ -219,14 +241,14 @@ if (savedProjectType && ['diploma', 'coursework', 'practice'].includes(savedProj
       label: t('index.stats.overallProgress'),
       value: `${currentWork.progress}%`,
       icon: Target,
-      change: currentWork.uploadedChapters > 0 ? `+${currentWork.uploadedChapters} розділів` : 'Розпочніть завантаження',
+      change: currentWork.uploadedChapters > 0 ? `+${currentWork.uploadedChapters} розділів` : projectType ? 'Розпочніть завантаження' : 'Оберіть проект',
       trend: currentWork.uploadedChapters > 0 ? 'up' : 'neutral',
     },
     {
       label: t('index.stats.chaptersReady'),
       value: chaptersStats.displayText,
       icon: BookOpen,
-      change: currentWork.uploadedChapters > 0 ? t('index.stats.chaptersChange') : 'Почніть завантажувати розділи',
+      change: currentWork.uploadedChapters > 0 ? t('index.stats.chaptersChange') : projectType ? 'Почніть завантажувати розділи' : 'Створіть проект',
       trend: currentWork.uploadedChapters > 0 ? 'up' : 'neutral',
     },
     {
@@ -247,6 +269,8 @@ if (savedProjectType && ['diploma', 'coursework', 'practice'].includes(savedProj
 
   // Функція для отримання мілстоунів проєкту на основі реальних даних
   const getProjectMilestones = () => {
+    if (!projectType || chapters.length === 0) return [];
+    
     return chapters.map((chapter) => ({
       name: chapter.key,
       status: chapter.status,
@@ -320,7 +344,8 @@ if (savedProjectType && ['diploma', 'coursework', 'practice'].includes(savedProj
                       <span className="text-sm font-medium text-primary">
                         {projectType === 'diploma' ? 'Дипломний проєкт' : 
                          projectType === 'coursework' ? 'Курсова робота' : 
-                         'Звіт з практики'}
+                         projectType === 'practice' ? 'Звіт з практики' :
+                         'Оберіть тип роботи'}
                       </span>
                     </div>
                     <h1 className="text-2xl md:text-4xl font-bold mb-4 text-foreground">
@@ -380,83 +405,115 @@ if (savedProjectType && ['diploma', 'coursework', 'practice'].includes(savedProj
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                {projectType && (
-  <div className="md:col-span-2">
-    <Card className="hover:shadow-lg transition-shadow">
-      <CardHeader className="pb-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-2 h-2 bg-primary rounded-full"></div>
-              <span className="text-sm font-medium text-primary">
-                {projectType === 'diploma' ? 'Дипломний проєкт' :
-                 projectType === 'coursework' ? 'Курсова робота' :
-                 'Звіт з практики'}
-              </span>
-            </div>
-            <CardTitle className="text-xl md:text-2xl font-bold mb-2">{t('index.projectProgress')}</CardTitle>
-            <CardDescription className="text-base">{currentWork.title}</CardDescription>
-          </div>
-          <div className="flex items-center space-x-3 p-4 border rounded-xl bg-muted/50">
-            <Avatar className="h-12 w-12">
-              <AvatarFallback className="bg-primary text-primary-foreground font-bold">ІІ</AvatarFallback>
-            </Avatar>
-            <div>
-              <p className="font-bold text-foreground">{t('index.supervisor')}</p>
-              <p className="text-sm text-muted-foreground">{t('index.supervisorName')}</p>
-            </div>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="max-h-85 overflow-y-auto space-y-6 pr-2">
-          {projectMilestones.map((milestone, index) => {
-            const milestoneLabel = t(`thesis.chapters.${milestone.name}`);
-            return (
-              <div key={index} className="flex items-center space-x-4">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                  milestone.status === 'completed'
-                    ? 'bg-primary text-primary-foreground'
-                    : milestone.status === 'inProgress' || milestone.status === 'review'
-                      ? 'bg-primary/20 text-primary'
-                      : 'bg-muted text-muted-foreground'
-                }`}>
-                  {milestone.status === 'completed' ? (
-                    <CheckCircle className="w-5 h-5" />
-                  ) : milestone.status === 'inProgress' || milestone.status === 'review' ? (
-                    <Clock className="w-5 h-5" />
-                  ) : (
-                    <div className="w-3 h-3 rounded-full bg-current" />
-                  )}
+                <div className="md:col-span-2">
+                  <Card className="hover:shadow-lg transition-shadow">
+                    <CardHeader className="pb-6">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className="w-2 h-2 bg-primary rounded-full"></div>
+                            <span className="text-sm font-medium text-primary">
+                              {projectType === 'diploma' ? 'Дипломний проєкт' :
+                               projectType === 'coursework' ? 'Курсова робота' :
+                               projectType === 'practice' ? 'Звіт з практики' :
+                               'Ваш проект'}
+                            </span>
+                          </div>
+                          <CardTitle className="text-xl md:text-2xl font-bold mb-2">{t('index.projectProgress')}</CardTitle>
+                          <CardDescription className="text-base">
+                            {projectType ? currentWork.title : 'Оберіть тип роботи для початку'}
+                          </CardDescription>
+                        </div>
+                        {projectType && (
+                          <div className="flex items-center space-x-3 p-4 border rounded-xl bg-muted/50">
+                            <Avatar className="h-12 w-12">
+                              <AvatarFallback className="bg-primary text-primary-foreground font-bold">ІІ</AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <p className="font-bold text-foreground">{t('index.supervisor')}</p>
+                              <p className="text-sm text-muted-foreground">{t('index.supervisorName')}</p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      {projectType && projectMilestones.length > 0 ? (
+                        <>
+                          <div className="max-h-85 overflow-y-auto space-y-6 pr-2">
+                            {projectMilestones.map((milestone, index) => {
+                              const milestoneLabel = t(`thesis.chapters.${milestone.name}`);
+                              return (
+                                <div key={index} className="flex items-center space-x-4">
+                                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                                    milestone.status === 'completed'
+                                      ? 'bg-primary text-primary-foreground'
+                                      : milestone.status === 'inProgress' || milestone.status === 'review'
+                                        ? 'bg-primary/20 text-primary'
+                                        : 'bg-muted text-muted-foreground'
+                                  }`}>
+                                    {milestone.status === 'completed' ? (
+                                      <CheckCircle className="w-5 h-5" />
+                                    ) : milestone.status === 'inProgress' || milestone.status === 'review' ? (
+                                      <Clock className="w-5 h-5" />
+                                    ) : (
+                                      <div className="w-3 h-3 rounded-full bg-current" />
+                                    )}
+                                  </div>
+                                  <div className="flex-1">
+                                    <div className="flex items-center justify-between mb-2">
+                                      <span className="font-medium text-foreground">{milestoneLabel}</span>
+                                      <span className="text-sm text-muted-foreground">{milestone.progress}%</span>
+                                    </div>
+                                    <Progress value={milestone.progress} className="h-2" />
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                          <div className="flex flex-col sm:flex-row gap-3 mt-8 pt-6 border-t">
+                            <Button asChild className="flex-1">
+                              <Link to={`/tracker?type=${projectType}`}>
+                                <FileText className="mr-2 h-4 w-4" /> {t('index.detailedView')}
+                              </Link>
+                            </Button>
+                            <Button variant="outline" asChild className="flex-1">
+                              <Link to="/chat">
+                                <MessageSquare className="mr-2 h-4 w-4" /> {t('index.chatWithSupervisor')}
+                              </Link>
+                            </Button>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="flex flex-col items-center justify-center py-12 text-center">
+                          <div className="w-20 h-20 bg-muted rounded-2xl flex items-center justify-center mb-6">
+                            <Plus className="w-10 h-10 text-muted-foreground" />
+                          </div>
+                          <h3 className="text-lg font-semibold text-foreground mb-2">
+                            Почніть свою роботу
+                          </h3>
+                          <p className="text-muted-foreground mb-6 max-w-md">
+                            Оберіть тип академічної роботи, щоб розпочати відстеження прогресу та отримувати допомогу від AI асистента.
+                          </p>
+                          <div className="flex flex-col sm:flex-row gap-3 w-full max-w-md">
+                            <Button asChild className="flex-1">
+                              <Link to="/tracker">
+                                <Settings className="mr-2 h-4 w-4" />
+                                Створити проект
+                              </Link>
+                            </Button>
+                            <Button variant="outline" asChild className="flex-1">
+                              <Link to="/ai-assistant">
+                                <Lightbulb className="mr-2 h-4 w-4" />
+                                AI допомога
+                              </Link>
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
                 </div>
-                <div className="flex-1">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-medium text-foreground">{milestoneLabel}</span>
-                    <span className="text-sm text-muted-foreground">{milestone.progress}%</span>
-                  </div>
-                  <Progress value={milestone.progress} className="h-2" />
-                </div>
-              </div>
-            );
-          })}
-        </div>
-        <div className="flex flex-col sm:flex-row gap-3 mt-8 pt-6 border-t">
-          <Button asChild className="flex-1">
-            <Link to={`/tracker?type=${projectType}`}>
-              <FileText className="mr-2 h-4 w-4" /> {t('index.detailedView')}
-            </Link>
-          </Button>
-          <Button variant="outline" asChild className="flex-1">
-            <Link to="/chat">
-              <MessageSquare className="mr-2 h-4 w-4" /> {t('index.chatWithSupervisor')}
-            </Link>
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
-  </div>
-)}
-
 
                 <div className="space-y-6">
                   <Card className="hover:shadow-lg transition-shadow">
@@ -514,8 +571,8 @@ if (savedProjectType && ['diploma', 'coursework', 'practice'].includes(savedProj
                           <div className="w-8 h-8 bg-primary/10 rounded-xl flex items-center justify-center mr-3">
                             <BarChart3 className="h-4 w-4 text-primary" />
                           </div>
-                            {t('index.analytics')}
-                          </Link>
+                          {t('index.analytics')}
+                        </Link>
                       </Button>
                     </CardContent>
                   </Card>
