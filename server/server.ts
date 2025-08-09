@@ -231,6 +231,36 @@ app.post("/api/logout", async (req: Request, res: Response) => {
 });
 
 
+// PUT /api/update-profile
+app.put("/api/update-profile", async (req: Request, res: Response) => {
+  try {
+    const { id, name, email, avatarUrl } = req.body;
+
+    if (!id) {
+      return res.status(400).json({ message: "User id is required" });
+    }
+
+    // Оновлення користувача
+    const result = await pool.query(
+      `UPDATE users
+       SET name = $1, email = $2, avatar_url = $3
+       WHERE id = $4
+       RETURNING id, name, email, role, avatar_url`,
+      [name, email, avatarUrl, id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.json({ message: "Profile updated successfully", user: result.rows[0] });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Database error" });
+  }
+});
+
+
 
 app.post("/api/events", authenticateToken, async (req: Request, res: Response) => {
   try {

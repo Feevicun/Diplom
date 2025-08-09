@@ -91,45 +91,54 @@ const ProfilePage = () => {
   }, []);
 
   const handleSave = async () => {
-    try {
-      console.log('Зберігаємо дані профілю...');
-      
-      const userData = { 
-        name: name.trim(),
-        email: email.trim(), 
-        role: role === "Студент" ? "student" : "teacher",
-        avatarUrl,
-      };
-      
-      console.log("Дані для збереження:", userData);
-      
-      // API запит для оновлення профілю
-      // const response = await fetch('/api/update-profile', {
-      //   method: 'PUT',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(userData),
-      //   credentials: 'include',
-      // });
-      
-      // Оновлюємо localStorage
-      const currentUser = localStorage.getItem('currentUser');
-      if (currentUser) {
-        const parsedUser = JSON.parse(currentUser);
-        const updatedUser = {
-          ...parsedUser,
-          ...userData
-        };
-        localStorage.setItem('currentUser', JSON.stringify(updatedUser));
-        console.log('Дані збережено в localStorage:', updatedUser);
-      }
-      
-      alert('Дані профілю збережено!');
-      
-    } catch (error) {
-      console.error('Помилка при збереженні профілю:', error);
-      alert('Помилка при збереженні даних');
+  try {
+    console.log('Зберігаємо дані профілю...');
+    
+    // Спершу дістаємо id користувача з localStorage
+    const currentUser = localStorage.getItem('currentUser');
+    if (!currentUser) {
+      alert('Користувача не знайдено');
+      return;
     }
-  };
+    const parsedUser = JSON.parse(currentUser);
+
+    const userData = { 
+      id: parsedUser.id,
+      name: name.trim(),
+      email: email.trim(), 
+      avatarUrl,
+    };
+    
+    console.log("Дані для збереження:", userData);
+    
+    const response = await fetch('/api/update-profile', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(userData),
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      alert(`Помилка при збереженні: ${errorData.message}`);
+      return;
+    }
+
+    const data = await response.json();
+
+    // Оновлюємо localStorage
+    localStorage.setItem('currentUser', JSON.stringify(data.user));
+    setName(data.user.name);
+    setEmail(data.user.email);
+    setAvatarUrl(data.user.avatar_url);
+
+    alert('Дані профілю збережено!');
+  } catch (error) {
+    console.error('Помилка при збереженні профілю:', error);
+    alert('Помилка при збереженні даних');
+  }
+};
+
 
   const handleLogout = async () => {
     try {
