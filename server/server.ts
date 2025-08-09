@@ -65,8 +65,12 @@ app.get("/api/users", (req: Request, res: Response) => {
 // POST /api/register
 app.post("/api/register", async (req: Request, res: Response) => {
   try {
-    const { firstName, lastName, email, password, role } = req.body;
+    const { firstName, lastName, email, password, role, facultyId, departmentId } = req.body;
     const name = `${firstName.trim()} ${lastName.trim()}`;
+
+    if (!facultyId || !departmentId) {
+      return res.status(400).json({ message: "Faculty and department must be selected" });
+    }
 
     const existingUser = await pool.query(
       "SELECT id FROM users WHERE email = $1",
@@ -78,9 +82,10 @@ app.post("/api/register", async (req: Request, res: Response) => {
     }
 
     const result = await pool.query(
-      `INSERT INTO users (name, email, password, role, registeredAt) 
-       VALUES ($1, $2, $3, $4, NOW()) RETURNING id, name, email, role, registeredAt`,
-      [name, email, password, role]
+      `INSERT INTO users (name, email, password, role, faculty_id, department_id, registeredAt) 
+       VALUES ($1, $2, $3, $4, $5, $6, NOW()) 
+       RETURNING id, name, email, role, faculty_id, department_id, registeredAt`,
+      [name, email, password, role, facultyId, departmentId]
     );
 
     res.status(201).json({ message: "User registered successfully", user: result.rows[0] });
@@ -89,6 +94,47 @@ app.post("/api/register", async (req: Request, res: Response) => {
     res.status(500).json({ message: "Database error" });
   }
 });
+
+
+
+// GET /api/faculties
+app.get("/api/faculties", async (req: Request, res: Response) => {
+  try {
+    const result = await pool.query(
+      "SELECT id, name FROM faculties ORDER BY id"
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Database error" });
+  }
+});
+
+// GET /api/faculties/:facultyId/departments
+app.get("/api/faculties/:facultyId/departments", async (req: Request, res: Response) => {
+  try {
+    const facultyId = Number(req.params.facultyId);
+
+    if (isNaN(facultyId)) {
+      return res.status(400).json({ message: "Invalid faculty ID" });
+    }
+
+    const result = await pool.query(
+      "SELECT id, name FROM departments WHERE faculty_id = $1 ORDER BY id",
+      [facultyId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "Departments not found" });
+    }
+
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Database error" });
+  }
+});
+
 
 
 // POST /api/login
@@ -225,6 +271,76 @@ app.get("/api/events", authenticateToken, async (req: Request, res: Response) =>
 });
 
 
+// Отримати всі розділи для користувача та проєкту
+app.get('/api/user-chapters', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const projectType = req.query.projectType as string;
+
+    if (!userId || !projectType) {
+      return res.status(400).json({ message: 'Missing userId or projectType' });
+    }
+
+    const result = await pool.query(
+      `SELECT * FROM user_chapters WHERE user_id = $1 AND project_type = $2 ORDER BY id`,
+      [userId, projectType]
+    );
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching user chapters:', error);
+    res.status(500).json({ message: 'Database error fetching user chapters' });
+  }
+});
+
+// Оновити або створити запис розділу (upsert)
+app.post('/api/user-chapters', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const {
+      projectType,
+      chapterKey,
+      progress,
+      status,
+      studentNote,
+      uploadedFileName,
+      uploadedFileDate,
+      uploadedFileSize,
+    } = req.body;
+
+    if (!userId || !projectType || !chapterKey) {
+      return res.status(400).json({ message: 'Missing required fields' });
+    }
+
+    // Використовуємо UPSERT (ON CONFLICT)
+    const result = await pool.query(
+      `
+      INSERT INTO user_chapters (
+        user_id, project_type, chapter_key, progress, status, student_note,
+        uploaded_file_name, uploaded_file_date, uploaded_file_size, updated_at
+      ) VALUES (
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, NOW()
+      )
+      ON CONFLICT (user_id, project_type, chapter_key)
+      DO UPDATE SET
+        progress = EXCLUDED.progress,
+        status = EXCLUDED.status,
+        student_note = EXCLUDED.student_note,
+        uploaded_file_name = EXCLUDED.uploaded_file_name,
+        uploaded_file_date = EXCLUDED.uploaded_file_date,
+        uploaded_file_size = EXCLUDED.uploaded_file_size,
+        updated_at = NOW()
+      RETURNING *;
+      `,
+      [userId, projectType, chapterKey, progress, status, studentNote, uploadedFileName, uploadedFileDate, uploadedFileSize]
+    );
+
+    res.status(200).json({ message: 'Chapter saved', chapter: result.rows[0] });
+  } catch (error) {
+    console.error('Error saving user chapter:', error);
+    res.status(500).json({ message: 'Database error saving user chapter' });
+  }
+});
 
 
 
