@@ -6,6 +6,8 @@ import cors from "cors";
 import pool from './db.js'; 
 import { fileURLToPath } from "url";
 import jwt from 'jsonwebtoken';
+import type { Message, JwtUserPayload } from './types';
+
 
 
 // __dirname для ES-модулів
@@ -33,13 +35,15 @@ app.use(express.json());
 // Middleware для аутентифікації через JWT
 function authenticateToken(req: Request, res: Response, next: NextFunction) {
   const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1]; // формат: "Bearer TOKEN"
+  const token = authHeader && authHeader.split(' ')[1];
 
   if (!token) return res.status(401).json({ message: "No token provided" });
 
-  jwt.verify(token, JWT_SECRET, (err: any, user: any) => {
+  jwt.verify(token, JWT_SECRET, (err, decoded) => {
     if (err) return res.status(403).json({ message: "Invalid token" });
-    req.user = user;
+
+    // Here we assert that decoded is JwtUserPayload
+    req.user = decoded as JwtUserPayload;
     next();
   });
 }
@@ -182,6 +186,46 @@ app.post("/api/logout", async (req: Request, res: Response) => {
 
 
 
+app.post("/api/events", authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const { title, date, type } = req.body;
+    const userEmail = req.user?.email;
+
+    if (!userEmail || !title || !date || !type) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+
+    const result = await pool.query(
+      `INSERT INTO events ("userEmail", title, date, type) VALUES ($1, $2, $3, $4) RETURNING *`,
+      [userEmail, title, date, type]
+    );
+
+    res.status(201).json({ message: "Event created successfully", event: result.rows[0] });
+  } catch (error) {
+    console.error("Error creating event:", error);
+    res.status(500).json({ message: "Database error creating event" });
+  }
+});
+
+app.get("/api/events", authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userEmail = req.user?.email;
+    if (!userEmail) return res.status(401).json({ message: "Unauthorized" });
+
+    const result = await pool.query(
+      `SELECT id, title, date, type FROM events WHERE "userEmail" = $1 ORDER BY date`,
+      [userEmail]
+    );
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error("Error fetching events:", error);
+    res.status(500).json({ message: "Database error fetching events" });
+  }
+});
+
+
+
 
 
 app.post("/api/generate-topics", async (req, res) => {
@@ -238,7 +282,7 @@ Output only JSON array of objects with one key "title", example:
     let topics;
     try {
       topics = JSON.parse(data.choices[0].message.content);
-    } catch (e) {
+    } catch {
       // Якщо не JSON — просто повернути текст
       topics = data.choices[0].message.content;
     }
@@ -321,21 +365,20 @@ Only output valid JSON array as described above. Do not include any explanation 
   }
 });
 
-// GET /api/messages
-app.get("/api/messages", (req, res) => {
+app.get("/api/messages", (req: Request, res: Response) => {
   try {
     const { userEmail } = req.query;
 
-    if (!userEmail) {
-      return res.status(400).json({ message: "userEmail is required" });
+    if (!userEmail || typeof userEmail !== "string") {
+      return res.status(400).json({ message: "userEmail is required and must be a string" });
     }
 
     if (!fs.existsSync(messagesFilePath)) {
       return res.json([]);
     }
 
-    const messages = JSON.parse(fs.readFileSync(messagesFilePath, "utf-8"));
-    const userMessages = messages.filter((msg: any) => msg.studentEmail === userEmail);
+    const messages: Message[] = JSON.parse(fs.readFileSync(messagesFilePath, "utf-8"));
+    const userMessages = messages.filter((msg: Message) => msg.studentEmail === userEmail);
 
     res.json(userMessages);
   } catch (err) {
@@ -343,7 +386,6 @@ app.get("/api/messages", (req, res) => {
     res.status(500).json({ message: "Error reading messages." });
   }
 });
-
 
 // POST /api/messages
 app.post("/api/messages", async (req, res) => {

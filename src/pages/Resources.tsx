@@ -1,5 +1,5 @@
 import {
-    FileText,
+  FileText,
   BookOpenCheck,
   FileSignature,
   BookMarked,
@@ -7,7 +7,6 @@ import {
   ShieldCheck,
   Bookmark,
   BookmarkMinus,
-  // Додати ці іконки:
   FileCheck,
   Scale,
   Library,
@@ -41,236 +40,272 @@ import { Input } from '@/components/ui/input';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
+import type { User, Resource } from '../types/types'; 
 
 const Resources = () => {
   const { t } = useTranslation();
+  const [user, setUser] = useState<User | null>(null);
 
-const allResources = [
-  {
-    id: 'templates',
-    icon: FileText,
-    title: t('resources.cards.templates.title'),
-    description: t('resources.cards.templates.description'),
-    action: t('resources.cards.templates.action'),
-    link: 'http://kiis.khmnu.edu.ua/wp-content/uploads/sites/31/metodychni-vkaziky-kr-ist.pdf'
-  },
-  {
-    id: 'examples',
-    icon: BookOpenCheck,
-    title: t('resources.cards.examples.title'),
-    description: t('resources.cards.examples.description'),
-    action: t('resources.cards.examples.action'),
-    link: 'https://kursovye-raboty.kiev.ua/priklad-zrazok-kursovoyi-roboti/?srsltid=AfmBOooJXsIdXE3DGYzBZCZym3rdjWU-dc9egVDltOBWTTgLJXcPPWJp'
-  },
-  {
-    id: 'guidelines',
-    icon: FileSignature,
-    title: t('resources.cards.guidelines.title'),
-    description: t('resources.cards.guidelines.description'),
-    action: t('resources.cards.guidelines.action'),
-    link: 'https://electronics.lnu.edu.ua/wp-content/uploads/OK_25_dypl_2023.pdf'
-  },
-  {
-    id: 'literature',
-    icon: BookMarked,
-    title: t('resources.cards.literature.title'),
-    description: t('resources.cards.literature.description'),
-    action: t('resources.cards.literature.action'),
-    link: 'https://zulu-help.com/yak-znajti-spisok-literaturi-dlya-kursovoyi-roboti/#header-23'
-  },
-  {
-    id: 'faq',
-    icon: FileSearch,
-    title: t('resources.cards.faq.title'),
-    description: t('resources.cards.faq.description'),
-    action: t('resources.cards.faq.action'),
-    link: 'https://www.youtube.com/watch?v=0OC5rmSBJLk'
-  },
-  {
-    id: 'defense',
-    icon: ShieldCheck,
-    title: t('resources.cards.defense.title'),
-    description: t('resources.cards.defense.description'),
-    action: t('resources.cards.defense.action'),
-    link: 'https://www.youtube.com/watch?v=HA8bWBnXXv0'
-  },
-  {
-    id: 'state-standards',
-    icon: FileCheck,
-    title: t('resources.cards.state-standards.title'),
-    description: t('resources.cards.state-standards.description'),
-    action: t('resources.cards.state-standards.action'),
-    link: 'https://nus.org.ua/articles/derzhavni-standarty-ukrayiny/'
-  },
-  {
-    id: 'mon-regulations',
-    icon: Scale,
-    title: t('resources.cards.mon-regulations.title'),
-    description: t('resources.cards.mon-regulations.description'),
-    action: t('resources.cards.mon-regulations.action'),
-    link: 'https://mon.gov.ua/ua/osvita/visha-osvita/licenzuvannya-ta-akreditaciya'
-  },
-  {
-    id: 'scientific-library',
-    icon: Library,
-    title: t('resources.cards.scientific-library.title'),
-    description: t('resources.cards.scientific-library.description'),
-    action: t('resources.cards.scientific-library.action'),
-    link: 'http://library.khmnu.edu.ua/'
-  },
-  {
-    id: 'nbuv',
-    icon: Globe,
-    title: t('resources.cards.nbuv.title'),
-    description: t('resources.cards.nbuv.description'),
-    action: t('resources.cards.nbuv.action'),
-    link: 'http://www.nbuv.gov.ua/'
-  },
-  {
-    id: 'google-scholar',
-    icon: Search,
-    title: t('resources.cards.google-scholar.title'),
-    description: t('resources.cards.google-scholar.description'),
-    action: t('resources.cards.google-scholar.action'),
-    link: 'https://scholar.google.com.ua/'
-  },
-  {
-    id: 'cyberleninka',
-    icon: BookOpen,
-    title: t('resources.cards.cyberleninka.title'),
-    description: t('resources.cards.cyberleninka.description'),
-    action: t('resources.cards.cyberleninka.action'),
-    link: 'https://cyberleninka.ru/'
-  },
-  {
-    id: 'writing-guide',
-    icon: PenTool,
-    title: t('resources.cards.writing-guide.title'),
-    description: t('resources.cards.writing-guide.description'),
-    action: t('resources.cards.writing-guide.action'),
-    link: 'https://vseosvita.ua/library/metodicni-rekomendacii-sodo-napisanna-kursovoi-roboti-151578.html'
-  },
-  {
-    id: 'citation-styles',
-    icon: Quote,
-    title: t('resources.cards.citation-styles.title'),
-    description: t('resources.cards.citation-styles.description'),
-    action: t('resources.cards.citation-styles.action'),
-    link: 'https://guides.library.oregonstate.edu/c.php?g=286121&p=1906617'
-  },
-  {
-    id: 'research-methods',
-    icon: Target,
-    title: t('resources.cards.research-methods.title'),
-    description: t('resources.cards.research-methods.description'),
-    action: t('resources.cards.research-methods.action'),
-    link: 'https://pidruchniki.com/1584072065557/psihologiya/metodi_doslidzhennya'
-  },
-  {
-    id: 'antiplagiat',
-    icon: ShieldAlert,
-    title: t('resources.cards.antiplagiat.title'),
-    description: t('resources.cards.antiplagiat.description'),
-    action: t('resources.cards.antiplagiat.action'),
-    link: 'https://www.antiplagiat.ru/'
-  },
-  {
-    id: 'grammar-check',
-    icon: CheckCircle,
-    title: t('resources.cards.grammar-check.title'),
-    description: t('resources.cards.grammar-check.description'),
-    action: t('resources.cards.grammar-check.action'),
-    link: 'https://languagetool.org/uk'
-  },
-  {
-    id: 'latex-templates',
-    icon: Code,
-    title: t('resources.cards.latex-templates.title'),
-    description: t('resources.cards.latex-templates.description'),
-    action: t('resources.cards.latex-templates.action'),
-    link: 'https://www.overleaf.com/latex/templates'
-  },
-  {
-    id: 'mendeley',
-    icon: Bookmark,
-    title: t('resources.cards.mendeley.title'),
-    description: t('resources.cards.mendeley.description'),
-    action: t('resources.cards.mendeley.action'),
-    link: 'https://www.mendeley.com/'
-  },
-  {
-    id: 'ukrstat',
-    icon: BarChart,
-    title: t('resources.cards.ukrstat.title'),
-    description: t('resources.cards.ukrstat.description'),
-    action: t('resources.cards.ukrstat.action'),
-    link: 'http://www.ukrstat.gov.ua/'
-  },
-  {
-    id: 'world-bank',
-    icon: TrendingUp,
-    title: t('resources.cards.world-bank.title'),
-    description: t('resources.cards.world-bank.description'),
-    action: t('resources.cards.world-bank.action'),
-    link: 'https://data.worldbank.org/'
-  },
-  {
-    id: 'internship-guide',
-    icon: Users,
-    title: t('resources.cards.internship-guide.title'),
-    description: t('resources.cards.internship-guide.description'),
-    action: t('resources.cards.internship-guide.action'),
-    link: 'https://www.osvita.ua/vnz/guide/search/practice/'
-  },
-  {
-    id: 'job-portals',
-    icon: Briefcase,
-    title: t('resources.cards.job-portals.title'),
-    description: t('resources.cards.job-portals.description'),
-    action: t('resources.cards.job-portals.action'),
-    link: 'https://www.work.ua/'
-  },
-  {
-    id: 'coursera-ukraine',
-    icon: GraduationCap,
-    title: t('resources.cards.coursera-ukraine.title'),
-    description: t('resources.cards.coursera-ukraine.description'),
-    action: t('resources.cards.coursera-ukraine.action'),
-    link: 'https://www.coursera.org/ukraine'
-  },
-  {
-    id: 'ted-talks',
-    icon: Play,
-    title: t('resources.cards.ted-talks.title'),
-    description: t('resources.cards.ted-talks.description'),
-    action: t('resources.cards.ted-talks.action'),
-    link: 'https://www.ted.com/talks?language=uk'
-  }
-];
-
-
-  const [search, setSearch] = useState('');
-  const [favorites, setFavorites] = useState<string[]>([]);
-  const [showOnlyFavorites, setShowOnlyFavorites] = useState(false);
-
-  useEffect(() => {
-    const saved = localStorage.getItem('favoriteResources');
-    if (saved) {
-      setFavorites(JSON.parse(saved));
+  const allResources: Resource[] = [
+    {
+      id: 'templates',
+      icon: FileText,
+      title: t('resources.cards.templates.title'),
+      description: t('resources.cards.templates.description'),
+      action: t('resources.cards.templates.action'),
+      link: 'http://kiis.khmnu.edu.ua/wp-content/uploads/sites/31/metodychni-vkaziky-kr-ist.pdf'
+    },
+    {
+      id: 'examples',
+      icon: BookOpenCheck,
+      title: t('resources.cards.examples.title'),
+      description: t('resources.cards.examples.description'),
+      action: t('resources.cards.examples.action'),
+      link: 'https://kursovye-raboty.kiev.ua/priklad-zrazok-kursovoyi-roboti/?srsltid=AfmBOooJXsIdXE3DGYzBZCZym3rdjWU-dc9egVDltOBWTTgLJXcPPWJp'
+    },
+    {
+      id: 'guidelines',
+      icon: FileSignature,
+      title: t('resources.cards.guidelines.title'),
+      description: t('resources.cards.guidelines.description'),
+      action: t('resources.cards.guidelines.action'),
+      link: 'https://electronics.lnu.edu.ua/wp-content/uploads/OK_25_dypl_2023.pdf'
+    },
+    {
+      id: 'literature',
+      icon: BookMarked,
+      title: t('resources.cards.literature.title'),
+      description: t('resources.cards.literature.description'),
+      action: t('resources.cards.literature.action'),
+      link: 'https://zulu-help.com/yak-znajti-spisok-literaturi-dlya-kursovoyi-roboti/#header-23'
+    },
+    {
+      id: 'faq',
+      icon: FileSearch,
+      title: t('resources.cards.faq.title'),
+      description: t('resources.cards.faq.description'),
+      action: t('resources.cards.faq.action'),
+      link: 'https://www.youtube.com/watch?v=0OC5rmSBJLk'
+    },
+    {
+      id: 'defense',
+      icon: ShieldCheck,
+      title: t('resources.cards.defense.title'),
+      description: t('resources.cards.defense.description'),
+      action: t('resources.cards.defense.action'),
+      link: 'https://www.youtube.com/watch?v=HA8bWBnXXv0'
+    },
+    {
+      id: 'state-standards',
+      icon: FileCheck,
+      title: t('resources.cards.state-standards.title'),
+      description: t('resources.cards.state-standards.description'),
+      action: t('resources.cards.state-standards.action'),
+      link: 'https://nus.org.ua/articles/derzhavni-standarty-ukrayiny/'
+    },
+    {
+      id: 'mon-regulations',
+      icon: Scale,
+      title: t('resources.cards.mon-regulations.title'),
+      description: t('resources.cards.mon-regulations.description'),
+      action: t('resources.cards.mon-regulations.action'),
+      link: 'https://mon.gov.ua/ua/osvita/visha-osvita/licenzuvannya-ta-akreditaciya'
+    },
+    {
+      id: 'scientific-library',
+      icon: Library,
+      title: t('resources.cards.scientific-library.title'),
+      description: t('resources.cards.scientific-library.description'),
+      action: t('resources.cards.scientific-library.action'),
+      link: 'http://library.khmnu.edu.ua/'
+    },
+    {
+      id: 'nbuv',
+      icon: Globe,
+      title: t('resources.cards.nbuv.title'),
+      description: t('resources.cards.nbuv.description'),
+      action: t('resources.cards.nbuv.action'),
+      link: 'http://www.nbuv.gov.ua/'
+    },
+    {
+      id: 'google-scholar',
+      icon: Search,
+      title: t('resources.cards.google-scholar.title'),
+      description: t('resources.cards.google-scholar.description'),
+      action: t('resources.cards.google-scholar.action'),
+      link: 'https://scholar.google.com.ua/'
+    },
+    {
+      id: 'cyberleninka',
+      icon: BookOpen,
+      title: t('resources.cards.cyberleninka.title'),
+      description: t('resources.cards.cyberleninka.description'),
+      action: t('resources.cards.cyberleninka.action'),
+      link: 'https://cyberleninka.ru/'
+    },
+    {
+      id: 'writing-guide',
+      icon: PenTool,
+      title: t('resources.cards.writing-guide.title'),
+      description: t('resources.cards.writing-guide.description'),
+      action: t('resources.cards.writing-guide.action'),
+      link: 'https://vseosvita.ua/library/metodicni-rekomendacii-sodo-napisanna-kursovoi-roboti-151578.html'
+    },
+    {
+      id: 'citation-styles',
+      icon: Quote,
+      title: t('resources.cards.citation-styles.title'),
+      description: t('resources.cards.citation-styles.description'),
+      action: t('resources.cards.citation-styles.action'),
+      link: 'https://guides.library.oregonstate.edu/c.php?g=286121&p=1906617'
+    },
+    {
+      id: 'research-methods',
+      icon: Target,
+      title: t('resources.cards.research-methods.title'),
+      description: t('resources.cards.research-methods.description'),
+      action: t('resources.cards.research-methods.action'),
+      link: 'https://pidruchniki.com/1584072065557/psihologiya/metodi_doslidzhennya'
+    },
+    {
+      id: 'antiplagiat',
+      icon: ShieldAlert,
+      title: t('resources.cards.antiplagiat.title'),
+      description: t('resources.cards.antiplagiat.description'),
+      action: t('resources.cards.antiplagiat.action'),
+      link: 'https://www.antiplagiat.ru/'
+    },
+    {
+      id: 'grammar-check',
+      icon: CheckCircle,
+      title: t('resources.cards.grammar-check.title'),
+      description: t('resources.cards.grammar-check.description'),
+      action: t('resources.cards.grammar-check.action'),
+      link: 'https://languagetool.org/uk'
+    },
+    {
+      id: 'latex-templates',
+      icon: Code,
+      title: t('resources.cards.latex-templates.title'),
+      description: t('resources.cards.latex-templates.description'),
+      action: t('resources.cards.latex-templates.action'),
+      link: 'https://www.overleaf.com/latex/templates'
+    },
+    {
+      id: 'mendeley',
+      icon: Bookmark,
+      title: t('resources.cards.mendeley.title'),
+      description: t('resources.cards.mendeley.description'),
+      action: t('resources.cards.mendeley.action'),
+      link: 'https://www.mendeley.com/'
+    },
+    {
+      id: 'ukrstat',
+      icon: BarChart,
+      title: t('resources.cards.ukrstat.title'),
+      description: t('resources.cards.ukrstat.description'),
+      action: t('resources.cards.ukrstat.action'),
+      link: 'http://www.ukrstat.gov.ua/'
+    },
+    {
+      id: 'world-bank',
+      icon: TrendingUp,
+      title: t('resources.cards.world-bank.title'),
+      description: t('resources.cards.world-bank.description'),
+      action: t('resources.cards.world-bank.action'),
+      link: 'https://data.worldbank.org/'
+    },
+    {
+      id: 'internship-guide',
+      icon: Users,
+      title: t('resources.cards.internship-guide.title'),
+      description: t('resources.cards.internship-guide.description'),
+      action: t('resources.cards.internship-guide.action'),
+      link: 'https://www.osvita.ua/vnz/guide/search/practice/'
+    },
+    {
+      id: 'job-portals',
+      icon: Briefcase,
+      title: t('resources.cards.job-portals.title'),
+      description: t('resources.cards.job-portals.description'),
+      action: t('resources.cards.job-portals.action'),
+      link: 'https://www.work.ua/'
+    },
+    {
+      id: 'coursera-ukraine',
+      icon: GraduationCap,
+      title: t('resources.cards.coursera-ukraine.title'),
+      description: t('resources.cards.coursera-ukraine.description'),
+      action: t('resources.cards.coursera-ukraine.action'),
+      link: 'https://www.coursera.org/ukraine'
+    },
+    {
+      id: 'ted-talks',
+      icon: Play,
+      title: t('resources.cards.ted-talks.title'),
+      description: t('resources.cards.ted-talks.description'),
+      action: t('resources.cards.ted-talks.action'),
+      link: 'https://www.ted.com/talks?language=uk'
     }
+  ];
+
+  const [search, setSearch] = useState<string>('');
+  const [favorites, setFavorites] = useState<string[]>([]);
+  const [showOnlyFavorites, setShowOnlyFavorites] = useState<boolean>(false);
+
+  // Отримання користувача при завантаженні компонента
+  useEffect(() => {
+    const fetchUser = (): void => {
+      const storedUser = localStorage.getItem('currentUser');
+      if (storedUser) {
+        try {
+          const parsedUser: User = JSON.parse(storedUser);
+          setUser(parsedUser);
+        } catch (error) {
+          console.error('Помилка парсингу користувача:', error);
+        }
+      }
+    };
+    
+    fetchUser();
   }, []);
 
+  // Завантаження улюблених ресурсів після отримання користувача
   useEffect(() => {
-    localStorage.setItem('favoriteResources', JSON.stringify(favorites));
-  }, [favorites]);
+    if (user?.id) {
+      const userFavoritesKey = `favoriteResources_${user.id}`;
+      const saved = localStorage.getItem(userFavoritesKey);
+      if (saved) {
+        try {
+          setFavorites(JSON.parse(saved));
+        } catch (error) {
+          console.error('Помилка завантаження улюблених ресурсів:', error);
+          setFavorites([]);
+        }
+      }
+    }
+  }, [user]);
 
-  const toggleFavorite = (id: string) => {
+  // Збереження улюблених ресурсів при зміні
+  useEffect(() => {
+    if (user?.id) {
+      const userFavoritesKey = `favoriteResources_${user.id}`;
+      localStorage.setItem(userFavoritesKey, JSON.stringify(favorites));
+    }
+  }, [favorites, user]);
+
+  const toggleFavorite = (id: string): void => {
+    if (!user?.id) {
+      console.warn('Користувач не авторизований');
+      return;
+    }
+    
     setFavorites(prev =>
       prev.includes(id) ? prev.filter(fav => fav !== id) : [...prev, id]
     );
   };
 
-  const filteredResources = allResources.filter(res => {
+  const filteredResources = allResources.filter((res: Resource) => {
     const matchesSearch =
       res.title.toLowerCase().includes(search.toLowerCase()) ||
       res.description.toLowerCase().includes(search.toLowerCase());
@@ -298,15 +333,17 @@ const allResources = [
             <Input
               placeholder={t('resources.searchPlaceholder')}
               value={search}
-              onChange={e => setSearch(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearch(e.target.value)}
               className="max-w-md"
             />
             <Button
               variant={showOnlyFavorites ? 'default' : 'outline'}
               onClick={() => setShowOnlyFavorites(prev => !prev)}
               className="sm:ml-auto"
+              disabled={!user?.id}
             >
               {showOnlyFavorites ? 'Показати всі' : 'Тільки обране'}
+              {!user?.id && ' (потрібна авторизація)'}
             </Button>
           </div>
 
@@ -328,8 +365,15 @@ const allResources = [
                   </div>
                   <button
                     onClick={() => toggleFavorite(id)}
-                    className="text-primary hover:opacity-80 mt-1 flex-shrink-0"
-                    title={favorites.includes(id) ? 'Видалити з обраного' : 'Додати в обране'}
+                    className={`text-primary hover:opacity-80 mt-1 flex-shrink-0 ${!user?.id ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    title={
+                      !user?.id 
+                        ? 'Увійдіть для збереження ресурсів'
+                        : favorites.includes(id) 
+                          ? 'Видалити з обраного' 
+                          : 'Додати в обране'
+                    }
+                    disabled={!user?.id}
                   >
                     {favorites.includes(id) ? (
                       <Bookmark size={18} fill="currentColor" />

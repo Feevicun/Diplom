@@ -19,13 +19,8 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-interface User {
-  firstName?: string;
-  lastName?: string;
-  name?: string;
-  role?: string;
-  email?: string;
-}
+// Імпортуємо типи
+import type { User, MenuItemType } from '../types/types';
 
 const Sidebar = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -34,65 +29,59 @@ const Sidebar = () => {
   const { t } = useTranslation();
 
   useEffect(() => {
+    async function fetchUser() {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          setUser(null);
+          return;
+        }
 
-  async function fetchUser() {
-  try {
-    const token = localStorage.getItem('token');  // дістаємо токен
-    if (!token) {
+        const res = await fetch('/api/current-user', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+          cache: 'no-store',
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          setUser(data.user);
+        } else {
+          setUser(null);
+        }
+      } catch (error) {
+        console.error('Помилка отримання користувача', error);
+        setUser(null);
+      }
+    }
+    fetchUser();
+  }, []);
+
+  const handleLogout = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (token && user?.email) {
+        await fetch('/api/logout', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({ email: user.email }),
+        });
+      }
+
+      localStorage.removeItem('token');
+      localStorage.removeItem('currentUser');
       setUser(null);
-      return;
+      navigate('/');
+    } catch (error) {
+      console.error('Помилка при виході:', error);
     }
+  };
 
-    const res = await fetch('/api/current-user', {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-      cache: 'no-store',
-    });
-
-    if (res.ok) {
-      const data = await res.json();
-      setUser(data.user);
-    } else {
-      setUser(null);
-    }
-  } catch (error) {
-    console.error('Помилка отримання користувача', error);
-    setUser(null);
-  }
-}
-fetchUser();
-}, []);
-
-
-
-const handleLogout = async () => {
-  try {
-    // Якщо хочеш, можеш зробити запит на бекенд для логування дії виходу (опціонально)
-    const token = localStorage.getItem('token');
-    if (token && user?.email) {
-      await fetch('/api/logout', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`, // додамо токен, якщо бекенд це перевіряє
-        },
-        body: JSON.stringify({ email: user.email }),
-      });
-    }
-
-    localStorage.removeItem('token');
-    localStorage.removeItem('currentUser');
-    setUser(null);
-    navigate('/');
-  } catch (error) {
-    console.error('Помилка при виході:', error);
-  }
-};
-
-
-  // Формуємо ім'я користувача з можливих полів
   const userName = user
     ? (() => {
         if (user.firstName && user.lastName) {
@@ -107,20 +96,20 @@ const handleLogout = async () => {
 
   const userRole = user?.role ?? '';
 
-  const mainMenuItems = [
+  const mainMenuItems: MenuItemType[] = [
     { title: t('sidebar.dashboard'), href: '/dashboard', icon: Home, badge: null },
     { title: t('sidebar.projects'), href: '/tracker', icon: FileText, badge: '2' },
     { title: t('sidebar.tasks'), href: '/chat', icon: MessageSquare, badge: '3' },
     { title: t('sidebar.calendar'), href: '/calendar', icon: Calendar, badge: null }
   ];
 
-  const toolsItems = [
+  const toolsItems: MenuItemType[] = [
     { title: t('sidebar.aiAssistant'), href: '/ai-assistant', icon: Zap, badge: 'BETA' },
     { title: t('sidebar.analytics'), href: '/analytics', icon: TrendingUp, badge: null },
     { title: t('sidebar.resources'), href: '/resources', icon: Book, badge: null }
   ];
 
-  const MenuItem = ({ item, isActive }: { item: any; isActive: boolean }) => {
+  const MenuItem = ({ item, isActive }: { item: MenuItemType; isActive: boolean }) => {
     const Icon = item.icon;
     return (
       <Link

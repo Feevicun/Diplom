@@ -438,24 +438,26 @@ const ThesisTracker = () => {
   });
 
   const [chapters, setChapters] = useState<ChapterData[]>(() => {
-    if (urlType === 'coursework' || urlType === 'practice' || urlType === 'diploma') {
-      return [...chapterTemplates[urlType]];
+  if (urlType === 'coursework' || urlType === 'practice' || urlType === 'diploma') {
+    return [...chapterTemplates[urlType]];
+  }
+
+  const savedChapters = localStorage.getItem(STORAGE_CHAPTERS);
+  if (savedChapters) {
+    try {
+      const parsedChapters: ChapterData[] = JSON.parse(savedChapters);
+      // Додаємо teacherComments якщо їх немає
+      return parsedChapters.map((ch: ChapterData) => ({
+        ...ch,
+        teacherComments: ch.teacherComments || []
+      }));
+    } catch {
+      return [];
     }
-    const savedChapters = localStorage.getItem(STORAGE_CHAPTERS);
-    if (savedChapters) {
-      try {
-        const parsedChapters = JSON.parse(savedChapters);
-        // Додаємо teacherComments якщо їх немає
-        return parsedChapters.map((ch: any) => ({
-          ...ch,
-          teacherComments: ch.teacherComments || []
-        }));
-      } catch {
-        return [];
-      }
-    }
-    return [];
-  });
+  }
+  return [];
+});
+
 
   // Синхронізуємо локальний стан з URL при зміні urlType
   useEffect(() => {

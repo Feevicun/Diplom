@@ -1,0 +1,226 @@
+import type { LucideIcon } from 'lucide-react';
+
+// types/AIAssistant
+export interface IconProps {
+  className?: string;
+  size?: number;
+  color?: string;
+  strokeWidth?: number;
+}
+
+export type IconComponent = React.FC<IconProps>;
+
+export interface SuggestedTopic {
+  title: string;
+  relevance: number;
+  category: string;
+  description: string;
+}
+
+export interface AIFeature {
+  icon: IconComponent;
+  title: string;
+  description: string;
+  status: 'active' | 'coming-soon';
+}
+
+export interface TopicAPIResponse {
+  topics: Array<{
+    title?: string;
+    category?: string;
+    description?: string;
+  }>;
+}
+
+export interface StructureAPIResponse {
+  structure?: string;
+  error?: string;
+}
+
+export interface GenerateTopicsRequest {
+  idea: string;
+}
+
+export interface GenerateStructureRequest {
+  topic: string;
+}
+
+// types/Resource
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  role?: 'student' | 'teacher' | 'admin';
+  avatar?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  firstName?: string;
+  lastName?: string;
+}
+
+export interface Resource {
+  id: string;
+  icon: IconComponent;
+  title: string;
+  description: string;
+  action: string;
+  link: string;
+  category?: string;
+  tags?: string[];
+}
+
+export interface ResourcesState {
+  search: string;
+  favorites: string[];
+  showOnlyFavorites: boolean;
+}
+
+// Типізація для react-i18next
+export type TFunction = (
+  key: string, 
+  options?: Record<string, unknown>
+) => string;
+
+export interface TranslationOptions {
+  [key: string]: string | number | boolean | null | undefined;
+}
+
+export type TranslationFunction = (
+  key: string, 
+  options?: TranslationOptions
+) => string;
+
+export interface ResourceCardProps {
+  resource: Resource;
+  isFavorite: boolean;
+  onToggleFavorite: (id: string) => void;
+  isUserLoggedIn: boolean;
+}
+
+export interface ApiError {
+  message: string;
+  status: number;
+  code?: string;
+}
+
+export interface LoadingState {
+  isLoading: boolean;
+  error: string | null;
+}
+
+export type EventHandler<T = HTMLElement> = (event: React.SyntheticEvent<T>) => void;
+
+export interface FormData {
+  [key: string]: string | number | boolean | File | null;
+}
+
+
+// types/dashboard.ts
+export interface ChapterData {
+  id: number;
+  key: string;
+  progress: number;
+  status: 'completed' | 'review' | 'inProgress' | 'pending';
+  studentNote: string;
+  uploadedFile?: {
+    name: string;
+    uploadDate: string;
+    size: string;
+  };
+  teacherComments: Array<{
+    id: string;
+    text: string;
+    date: string;
+    status: 'info' | 'warning' | 'error' | 'success';
+  }>;
+}
+
+export interface ChapterTemplate {
+  id: number;
+  key: string;
+  progress: number;
+  status: 'completed' | 'review' | 'inProgress' | 'pending';
+  studentNote: string;
+}
+
+export type ProjectType = 'diploma' | 'coursework' | 'practice';
+
+export interface UserType {
+  name: string;
+  firstName?: string;
+  lastName?: string;
+  email: string;
+  role: string;
+}
+
+export interface QuickStat {
+  label: string;
+  value: string;
+  icon: LucideIcon;
+  change: string;
+  trend: 'up' | 'down' | 'neutral';
+}
+
+export interface ProjectMilestone {
+  name: string;
+  status: 'completed' | 'review' | 'inProgress' | 'pending';
+  progress: number;
+}
+
+export interface RecentActivity {
+  id: number;
+  type: 'comment' | 'deadline' | 'approval';
+  text: string;
+  time: string;
+  icon: LucideIcon;
+}
+
+export interface AIRecommendation {
+  title: string;
+  description: string;
+  icon: LucideIcon;
+  priority: 'Високий' | 'Середній' | 'Низький';
+}
+
+export interface CurrentWorkData {
+  title: string;
+  supervisor: string;
+  progress: number;
+  deadline: string;
+  status: string;
+  completedChapters: number;
+  totalChapters: number;
+  uploadedChapters: number;
+}
+
+export interface ChaptersStats {
+  completed: number;
+  total: number;
+  displayText: string;
+}
+
+// Константи для localStorage ключів
+export interface StorageKeys {
+  PROJECT_TYPE: string;
+  CHAPTERS: string;
+}
+
+// Тип для шаблонів розділів
+export type ChapterTemplatesRecord = Record<ProjectType, ChapterTemplate[]>;
+
+
+//types/forgotpass
+export interface ResetPasswordData {
+  email: string;
+  role: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
+//types/sidebar
+export interface MenuItemType {
+  title: string;
+  href: string;
+  icon: LucideIcon;
+  badge?: string | null;
+}

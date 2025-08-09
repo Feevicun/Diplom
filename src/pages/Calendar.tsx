@@ -26,7 +26,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { format, isSameDay } from 'date-fns';
-import { uk, enUS } from 'date-fns/locale'; // Імпорт локалей для date-fns
+import { uk, enUS } from 'date-fns/locale';
 
 type EventType = 'task' | 'meeting' | 'deadline';
 
@@ -37,6 +37,13 @@ interface Event {
   type: EventType;
 }
 
+interface CurrentUser {
+  firstName: string;
+  lastName: string;
+  email: string;
+  role: string;
+}
+
 const CalendarPage = () => {
   const { t, i18n } = useTranslation();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -44,14 +51,119 @@ const CalendarPage = () => {
   const [showModal, setShowModal] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newType, setNewType] = useState<EventType>('task');
-
+  const [user, setUser] = useState<CurrentUser | null>(null);
   const lastEventRef = useRef<HTMLDivElement | null>(null);
 
-  // Визначення поточної локалі на основі мови i18n
+  // Локаль
   const currentLocale = i18n.language === 'ua' ? uk : enUS;
   const calendarLocale = i18n.language === 'ua' ? 'uk-UA' : 'en-US';
 
-  // Функція для правильного відмінювання слова "подія" в українській мові
+  // Отримання JWT токена з localStorage
+  const token = localStorage.getItem('token');
+
+  // Функція для завантаження інформації про користувача
+  const fetchCurrentUser = async () => {
+    if (!token) return;
+    try {
+      const res = await fetch('/api/current-user', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setUser(data.user);
+      } else {
+        setUser(null);
+      }
+    } catch (err) {
+      console.error('Error fetching current user:', err);
+      setUser(null);
+    }
+  };
+
+  // Функція для завантаження подій користувача
+  const fetchEvents = async (email: string) => {
+    if (!token) return;
+    try {
+      const res = await fetch(`/api/events?userEmail=${encodeURIComponent(email)}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (res.ok) {
+        const data: Event[] = await res.json();
+        setEvents(data);
+      } else {
+        console.error('Failed to fetch events');
+      }
+    } catch (err) {
+      console.error('Error fetching events:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchCurrentUser();
+  }, []);
+
+  useEffect(() => {
+    if (user?.email) {
+      fetchEvents(user.email);
+    }
+  }, [user]);
+
+  const handleAddEvent = async () => {
+  if (!user?.email || !token) return;
+
+  const newEvent = {
+    title: newTitle || t('calendar.mockEvents.newEvent'),
+    date: selectedDate.toISOString(),
+    type: newType,
+    // userEmail видалено звідси, бо бекенд бере з токена
+  };
+
+  try {
+    const res = await fetch('/api/events', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(newEvent),
+    });
+
+    if (res.ok) {
+      const { event } = await res.json();
+      setEvents((prev) => [...prev, event]);
+      setNewTitle('');
+      setNewType('task');
+      setShowModal(false);
+    } else {
+      console.error('Failed to create event');
+    }
+  } catch (err) {
+    console.error('Error creating event:', err);
+  }
+};
+
+
+  const filteredEvents = events.filter(event =>
+    isSameDay(new Date(event.date), selectedDate)
+  );
+
+  useEffect(() => {
+    if (filteredEvents.length >= 1 && lastEventRef.current) {
+      lastEventRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }, [filteredEvents.length]);
+
+  const handleDateChange: CalendarProps['onChange'] = (value) => {
+    if (value instanceof Date) {
+      setSelectedDate(value);
+    }
+  };
+
+  // Функції для відмінювання (залишив без змін)
   const getUkrainianEventWord = (count: number): string => {
     const lastDigit = count % 10;
     const lastTwoDigits = count % 100;
@@ -65,43 +177,11 @@ const CalendarPage = () => {
     }
   };
 
-  // Функція для правильного відображення кількості подій
   const getEventCountText = (count: number): string => {
     if (i18n.language === 'ua') {
       return `${count} ${getUkrainianEventWord(count)}`;
     } else {
-      // Для англійської мови
       return count === 1 ? `${count} event` : `${count} events`;
-    }
-  };
-
-  const handleAddEvent = () => {
-    const newEvent: Event = {
-      id: Date.now().toString(),
-      title: newTitle || t('calendar.mockEvents.newEvent'),
-      date: selectedDate.toISOString(),
-      type: newType,
-    };
-    setEvents([...events, newEvent]);
-    setNewTitle('');
-    setNewType('task');
-    setShowModal(false);
-  };
-
-  const filteredEvents = events.filter(event =>
-    isSameDay(new Date(event.date), selectedDate)
-  );
-
-  useEffect(() => {
-    if (filteredEvents.length >= 1 && lastEventRef.current) {
-      lastEventRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }
-  }, [filteredEvents.length]);
-
-  // Правильний тип для onChange календаря
-  const handleDateChange: CalendarProps['onChange'] = (value) => {
-    if (value instanceof Date) {
-      setSelectedDate(value);
     }
   };
 
@@ -181,7 +261,7 @@ const CalendarPage = () => {
                   <Calendar
                     onChange={handleDateChange}
                     value={selectedDate}
-                    locale={calendarLocale} // Динамічна локаль
+                    locale={calendarLocale}
                     className="react-calendar w-full sm:w-[450px] lg:w-[520px] rounded-xl border border-border p-2 bg-white dark:bg-muted shadow-sm text-sm"
                     tileClassName={({ date }) => {
                       const isToday = isSameDay(date, new Date());
@@ -195,7 +275,6 @@ const CalendarPage = () => {
                       ].join(' ');
                     }}
                     navigationLabel={({ date }) => (
-                      // Використовуємо динамічну локаль для назви місяця
                       <span className="text-base font-semibold">
                         {format(date, 'LLLL yyyy', { locale: currentLocale })}
                       </span>
@@ -212,7 +291,6 @@ const CalendarPage = () => {
                 <CardHeader>
                   <CardTitle>
                     {t('calendar.card.eventsTitle', {
-                      // Використовуємо динамічну локаль для форматування дати
                       date: format(selectedDate, 'dd MMMM yyyy', { locale: currentLocale }),
                     })}
                   </CardTitle>

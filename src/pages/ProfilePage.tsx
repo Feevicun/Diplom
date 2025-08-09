@@ -26,20 +26,58 @@ const ProfilePage = () => {
   useEffect(() => {
     async function fetchUser() {
       try {
+        console.log('Завантажуємо дані користувача для профілю...');
+        
+        const storedUser = localStorage.getItem('currentUser');
+        if (storedUser) {
+          try {
+            const parsedUser = JSON.parse(storedUser);
+            console.log('Знайшли користувача в localStorage:', parsedUser);
+            
+            // Встановлюємо дані з localStorage
+            setName(parsedUser.name || '');
+            setEmail(parsedUser.email || '');
+            setRole(parsedUser.role === 'student' ? 'Студент' : 'Викладач');
+            
+            if (parsedUser.avatarUrl) {
+              setAvatarUrl(parsedUser.avatarUrl);
+            }
+            
+            return;
+          } catch (error) {
+            console.log('Помилка парсингу localStorage:', error);
+          }
+        }
+
         const res = await fetch('/api/current-user', {
           method: 'GET',
           credentials: 'include',
         });
+        
+        console.log('Отримали відповідь з API:', res.status, res.ok);
+        
         if (res.ok) {
           const data = await res.json();
           const user = data.user;
+          console.log('Дані користувача з API:', user);
+          
           if (user) {
-            setName(`${user.firstName} ${user.lastName}`.trim());
-            setEmail(user.email);
+            setName(user.name || '');
+            setEmail(user.email || '');
             setRole(user.role === 'student' ? 'Студент' : 'Викладач');
+            
             if (user.avatarUrl) {
               setAvatarUrl(user.avatarUrl);
             }
+            
+            const userForStorage = {
+              id: user.id,
+              name: user.name,
+              email: user.email,
+              role: user.role,
+              avatarUrl: user.avatarUrl || null
+            };
+            localStorage.setItem('currentUser', JSON.stringify(userForStorage));
           }
         } else {
           console.warn('Не вдалось отримати користувача:', res.status);
@@ -52,21 +90,52 @@ const ProfilePage = () => {
     fetchUser();
   }, []);
 
-  const handleSave = () => {
-    const userData = { 
-      firstName: name.split(" ")[0] || "", 
-      lastName: name.split(" ")[1] || "", 
-      email, 
-      role: role === "Студент" ? "student" : "teacher",
-      avatarUrl,
-    };
-    console.log("Збережено (поки що тільки в консолі):", userData);
-    // Якщо потрібно, тут можна зробити запит для оновлення профілю на сервері
+  const handleSave = async () => {
+    try {
+      console.log('Зберігаємо дані профілю...');
+      
+      const userData = { 
+        name: name.trim(),
+        email: email.trim(), 
+        role: role === "Студент" ? "student" : "teacher",
+        avatarUrl,
+      };
+      
+      console.log("Дані для збереження:", userData);
+      
+      // API запит для оновлення профілю
+      // const response = await fetch('/api/update-profile', {
+      //   method: 'PUT',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify(userData),
+      //   credentials: 'include',
+      // });
+      
+      // Оновлюємо localStorage
+      const currentUser = localStorage.getItem('currentUser');
+      if (currentUser) {
+        const parsedUser = JSON.parse(currentUser);
+        const updatedUser = {
+          ...parsedUser,
+          ...userData
+        };
+        localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+        console.log('Дані збережено в localStorage:', updatedUser);
+      }
+      
+      alert('Дані профілю збережено!');
+      
+    } catch (error) {
+      console.error('Помилка при збереженні профілю:', error);
+      alert('Помилка при збереженні даних');
+    }
   };
 
   const handleLogout = async () => {
     try {
-      // Відправка запиту на logout
+      console.log('Виходимо з системи...');
+      
+      // запит на logout
       await fetch('/api/logout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -76,10 +145,18 @@ const ProfilePage = () => {
         credentials: 'include',
       });
 
+      // Очищаємо localStorage
+      localStorage.removeItem('currentUser');
+      localStorage.removeItem('firstVisitDone');
+      console.log('localStorage очищено');
+
       // Перенаправлення на головну сторінку
       navigate("/");
     } catch (error) {
       console.error("Помилка при виході:", error);
+      localStorage.removeItem('currentUser');
+      localStorage.removeItem('firstVisitDone');
+      navigate("/");
     }
   };
 
@@ -116,7 +193,7 @@ const ProfilePage = () => {
                         .split(" ")
                         .map((n) => n[0])
                         .join("")
-                        .toUpperCase()}
+                        .toUpperCase() || "U"}
                     </AvatarFallback>
                   )}
                 </Avatar>
@@ -166,7 +243,12 @@ const ProfilePage = () => {
                   value={role}
                   onChange={(e) => setRole(e.target.value)}
                   placeholder={t("profile.rolePlaceholder")}
+                  readOnly
+                  className="bg-muted"
                 />
+                <p className="text-xs text-muted-foreground">
+                  Роль не можна змінювати самостійно
+                </p>
               </div>
 
               <div className="space-y-2">

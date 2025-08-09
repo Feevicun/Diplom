@@ -19,25 +19,26 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
 
-type SuggestedTopic = {
-  title: string;
-  relevance: number;
-  category: string;
-  description: string;
-};
+// Імпорт типів
+import type { 
+  SuggestedTopic, 
+  AIFeature, 
+  TopicAPIResponse, 
+  StructureAPIResponse 
+} from '../types/types';
 
 const AIAssistant = () => {
   const { t } = useTranslation();
 
-  const [ideaInput, setIdeaInput] = useState('');
+  const [ideaInput, setIdeaInput] = useState<string>('');
   const [suggestedTopics, setSuggestedTopics] = useState<SuggestedTopic[]>([]);
-  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
+  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState<boolean>(false);
 
-  const [selectedTopic, setSelectedTopic] = useState('');
-  const [generatedStructure, setGeneratedStructure] = useState('');
-  const [isGenerating, setIsGenerating] = useState(false);
+  const [selectedTopic, setSelectedTopic] = useState<string>('');
+  const [generatedStructure, setGeneratedStructure] = useState<string>('');
+  const [isGenerating, setIsGenerating] = useState<boolean>(false);
 
-  const aiFeatures = [
+  const aiFeatures: AIFeature[] = [
     {
       icon: FileText,
       title: t('aiAssistant.features.structure.title'),
@@ -64,36 +65,35 @@ const AIAssistant = () => {
     }
   ];
 
-  const handleGenerateStructure = async () => {
-  if (!selectedTopic.trim()) return;
+  const handleGenerateStructure = async (): Promise<void> => {
+    if (!selectedTopic.trim()) return;
 
-  setIsGenerating(true);
+    setIsGenerating(true);
 
-  try {
-    const res = await fetch('/api/generate-structure', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ topic: selectedTopic })
-    });
+    try {
+      const res = await fetch('/api/generate-structure', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ topic: selectedTopic })
+      });
 
-    const data = await res.json();
+      const data: StructureAPIResponse = await res.json();
 
-    if (data.structure) {
-      setGeneratedStructure(data.structure);
-    } else {
-      console.warn('Invalid structure response', data);
+      if (data.structure) {
+        setGeneratedStructure(data.structure);
+      } else {
+        console.warn('Invalid structure response', data);
+      }
+    } catch (err) {
+      console.error('Error generating structure:', err);
+    } finally {
+      setIsGenerating(false);
     }
-  } catch (err) {
-    console.error('Error generating structure:', err);
-  } finally {
-    setIsGenerating(false);
-  }
-};
+  };
 
-
-  const handleGenerateSuggestions = async () => {
+  const handleGenerateSuggestions = async (): Promise<void> => {
     if (!ideaInput.trim()) return;
     setIsLoadingSuggestions(true);
 
@@ -106,12 +106,12 @@ const AIAssistant = () => {
         body: JSON.stringify({ idea: ideaInput })
       });
 
-      const data = await res.json();
+      const data: TopicAPIResponse = await res.json();
 
       if (Array.isArray(data.topics)) {
-        const formatted = data.topics.map((item: any) => ({
+        const formatted: SuggestedTopic[] = data.topics.map((item) => ({
           title: item.title || 'Untitled Topic',
-          relevance: Math.floor(Math.random() * 21) + 80, // 80–100
+          relevance: Math.floor(Math.random() * 21) + 80,
           category: item.category || 'AI',
           description: item.description || t('aiAssistant.suggestions.defaultDescription')
         }));
@@ -123,6 +123,17 @@ const AIAssistant = () => {
       console.error('Error fetching topics:', err);
     } finally {
       setIsLoadingSuggestions(false);
+    }
+  };
+
+  const copyToClipboard = async (): Promise<void> => {
+    if (generatedStructure) {
+      try {
+        await navigator.clipboard.writeText(generatedStructure);
+        // Тут можна додати toast повідомлення про успішне копіювання
+      } catch (err) {
+        console.error('Failed to copy text:', err);
+      }
     }
   };
 
@@ -231,7 +242,12 @@ const AIAssistant = () => {
                             </div>
                             <div className="flex justify-between items-center pt-2">
                               <Badge variant="outline">{topic.category}</Badge>
-                              <Button size="sm">{t('aiAssistant.suggestions.choose')}</Button>
+                              <Button 
+                                size="sm"
+                                onClick={() => setSelectedTopic(topic.title)}
+                              >
+                                {t('aiAssistant.suggestions.choose')}
+                              </Button>
                             </div>
                           </div>
                         ))}
@@ -279,7 +295,7 @@ const AIAssistant = () => {
                       <Card className="bg-muted/20">
                         <CardHeader className="flex justify-between items-center">
                           <CardTitle className="text-base">{t('aiAssistant.structure.resultTitle')}</CardTitle>
-                          <Button variant="outline" size="sm">
+                          <Button variant="outline" size="sm" onClick={copyToClipboard}>
                             <Copy className="w-4 h-4 mr-1" />
                             {t('aiAssistant.structure.copy')}
                           </Button>
@@ -334,5 +350,3 @@ const AIAssistant = () => {
 };
 
 export default AIAssistant;
-
-

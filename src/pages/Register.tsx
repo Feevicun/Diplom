@@ -257,7 +257,6 @@ const handleSubmit = async () => {
     }
 
     // Реєстрація пройшла успішно
-    // Тепер робимо логін, щоб отримати токен
     const loginRes = await fetch("http://localhost:4000/api/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },

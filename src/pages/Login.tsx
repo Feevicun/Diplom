@@ -58,10 +58,6 @@ const LoginPage = () => {
     alert("Помилка мережі. Спробуйте пізніше.");
   }
 };
-
-
-
-
     return (
         <div className="min-h-screen bg-[#0e0f11] flex items-center justify-center px-4 py-12 relative overflow-hidden">
             {/* Blur background effects */}

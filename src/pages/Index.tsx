@@ -35,25 +35,7 @@ import {
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
 import { useTranslation } from 'react-i18next';
-
-interface ChapterData {
-  id: number;
-  key: string;
-  progress: number;
-  status: 'completed' | 'review' | 'inProgress' | 'pending';
-  studentNote: string;
-  uploadedFile?: {
-    name: string;
-    uploadDate: string;
-    size: string;
-  };
-  teacherComments: Array<{
-    id: string;
-    text: string;
-    date: string;
-    status: 'info' | 'warning' | 'error' | 'success';
-  }>;
-}
+import type { ChapterData } from '../types/types'; 
 
 // Шаблони розділів (синхронізовані з ThesisTracker)
 const chapterTemplates: Record<string, Omit<ChapterData, 'teacherComments'>[]> = {
@@ -190,30 +172,24 @@ useEffect(() => {
 
 
 
-  const loadProjectData = () => {
-    // Читаємо тип проєкту з localStorage
-    const savedProjectType = localStorage.getItem(STORAGE_PROJECT_TYPE);
+const loadProjectData = () => {
+  const savedProjectType = localStorage.getItem(STORAGE_PROJECT_TYPE);
 
-    if (savedProjectType && ['diploma', 'coursework', 'practice'].includes(savedProjectType)) {
-      setProjectType(savedProjectType);
+  if (savedProjectType && ['diploma', 'coursework', 'practice'].includes(savedProjectType)) {
+    setProjectType(savedProjectType);
 
-      const savedChapters = localStorage.getItem(STORAGE_CHAPTERS);
-      if (savedChapters) {
-        try {
-          const parsedChapters = JSON.parse(savedChapters);
-          const chaptersWithComments = parsedChapters.map((ch: any) => ({
-            ...ch,
-            teacherComments: ch.teacherComments || []
-          }));
-          setChapters(chaptersWithComments);
-        } catch (error) {
-          const defaultChapters = chapterTemplates[savedProjectType].map(template => ({
-            ...template,
-            teacherComments: []
-          }));
-          setChapters(defaultChapters);
-        }
-      } else {
+    const savedChapters = localStorage.getItem(STORAGE_CHAPTERS);
+    if (savedChapters) {
+      try {
+        const parsedChapters = JSON.parse(savedChapters) as ChapterData[];  // Явний тип масиву
+
+        const chaptersWithComments = parsedChapters.map((ch: ChapterData) => ({
+          ...ch,
+          teacherComments: ch.teacherComments || []
+        }));
+
+        setChapters(chaptersWithComments);
+      } catch {
         const defaultChapters = chapterTemplates[savedProjectType].map(template => ({
           ...template,
           teacherComments: []
@@ -221,9 +197,17 @@ useEffect(() => {
         setChapters(defaultChapters);
       }
     } else {
-      setProjectType(null); 
+      const defaultChapters = chapterTemplates[savedProjectType].map(template => ({
+        ...template,
+        teacherComments: []
+      }));
+      setChapters(defaultChapters);
     }
-  };
+  } else {
+    setProjectType(null);
+  }
+};
+
 
   // Функція для отримання динамічних даних про розділи
   const getChaptersStats = () => {

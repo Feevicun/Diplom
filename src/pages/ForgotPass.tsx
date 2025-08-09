@@ -1,27 +1,11 @@
 import { useState } from "react";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { GlassButton } from "@/components/GlassButton";
 import { KeyRound } from "lucide-react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-
-interface User {
-  email: string;
-  role: string;
-  // додайте інші поля, якщо потрібно
-}
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import type { User } from "../types/types"; 
 
 const ForgotPasswordPage = () => {
   const [email, setEmail] = useState("");
@@ -29,7 +13,6 @@ const ForgotPasswordPage = () => {
   const [userFound, setUserFound] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-
   const [error, setError] = useState("");
 
   const handleReset = async () => {
@@ -53,7 +36,7 @@ const ForgotPasswordPage = () => {
 
       setUserFound(true);
       setError("");
-    } catch (err) {
+    } catch {
       setError("Помилка при завантаженні даних.");
     }
   };
@@ -71,7 +54,6 @@ const ForgotPasswordPage = () => {
 
     alert(`Пароль для ${email} успішно змінено! (тільки у пам'яті браузера)`);
 
-    // Тут можна симулювати оновлення паролю в localStorage
     setEmail("");
     setNewPassword("");
     setConfirmPassword("");
