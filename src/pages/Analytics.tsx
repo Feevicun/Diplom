@@ -1,5 +1,5 @@
 // import { useTranslation } from 'react-i18next';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   Activity,
   Clock,
@@ -41,59 +41,224 @@ import {
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
 
+// Type definitions
+interface ChapterProgress {
+  id: number;
+  chapter: string;
+  progress: number;
+  pages: number;
+  status: 'approved' | 'revision' | 'draft' | 'not_started';
+  lastEdit: string | null;
+  uploadedFile: boolean;
+  sentForReview: boolean;
+}
+
+interface DailyActivity {
+  date: string;
+  sessions: number;
+  timeSpent: number;
+  filesUploaded: number;
+  saves: number;
+}
+
+interface SupervisorFeedback {
+  chapter: string;
+  comment: string;
+  date: string;
+  type: 'approved' | 'revision';
+  status: 'completed' | 'in_progress';
+}
+
+interface Deadline {
+  milestone: string;
+  deadline: string;
+  status: 'completed' | 'in_progress' | 'pending';
+  submitted?: string;
+}
+
+interface WorkIntensity {
+  hour: string;
+  intensity: number;
+}
+
+interface FileActivity {
+  type: string;
+  count: number;
+  color: string;
+}
+
 // Дані для курсової/дипломної роботи
-const dailyActivityData = [
-  { date: '01.02', sessions: 3, timeSpent: 4.5, filesUploaded: 2, saves: 12 },
-  { date: '02.02', sessions: 2, timeSpent: 3.2, filesUploaded: 1, saves: 8 },
-  { date: '03.02', sessions: 4, timeSpent: 6.8, filesUploaded: 3, saves: 18 },
-  { date: '04.02', sessions: 1, timeSpent: 2.1, filesUploaded: 0, saves: 5 },
-  { date: '05.02', sessions: 5, timeSpent: 8.3, filesUploaded: 4, saves: 25 },
-  { date: '06.02', sessions: 3, timeSpent: 5.2, filesUploaded: 2, saves: 15 },
-  { date: '07.02', sessions: 2, timeSpent: 3.7, filesUploaded: 1, saves: 9 },
+const dailyActivityData: DailyActivity[] = [
+  { date: '01.02', sessions: 3, timeSpent: 4.2, filesUploaded: 2, saves: 15 },
+  { date: '02.02', sessions: 2, timeSpent: 3.1, filesUploaded: 1, saves: 12 },
+  { date: '03.02', sessions: 4, timeSpent: 5.8, filesUploaded: 0, saves: 22 },
+  { date: '04.02', sessions: 1, timeSpent: 2.3, filesUploaded: 3, saves: 8 },
+  { date: '05.02', sessions: 5, timeSpent: 8.3, filesUploaded: 1, saves: 28 },
+  { date: '06.02', sessions: 3, timeSpent: 4.7, filesUploaded: 2, saves: 18 },
+  { date: '07.02', sessions: 2, timeSpent: 3.5, filesUploaded: 1, saves: 14 }
 ];
 
-const chaptersProgress = [
-  { chapter: 'Вступ', progress: 100, pages: 3, lastEdit: '2024-02-07', status: 'approved' },
-  { chapter: 'Розділ 1', progress: 85, pages: 12, lastEdit: '2024-02-06', status: 'revision' },
-  { chapter: 'Розділ 2', progress: 60, pages: 8, lastEdit: '2024-02-05', status: 'draft' },
-  { chapter: 'Розділ 3', progress: 30, pages: 4, lastEdit: '2024-02-03', status: 'draft' },
-  { chapter: 'Висновки', progress: 10, pages: 1, lastEdit: '2024-02-01', status: 'draft' },
-  { chapter: 'Додатки', progress: 0, pages: 0, lastEdit: null, status: 'not_started' },
+// 🔗 Функція для отримання даних з ThesisTracker
+const getThesisTrackerData = (): ChapterProgress[] => {
+  try {
+    const savedChapters = localStorage.getItem('thesisTrackerChapters');
+    if (savedChapters) {
+      const parsedChapters = JSON.parse(savedChapters);
+      return parsedChapters.map((ch: any) => ({
+        id: ch.id,
+        chapter: getChapterName(ch.key),
+        progress: ch.progress || 0,
+        pages: Math.round((ch.progress || 0) / 4), // Приблизний розрахунок сторінок
+        status: mapThesisTrackerStatus(ch.status),
+        lastEdit: ch.uploadedFile ? ch.uploadedFile.uploadDate : null,
+        uploadedFile: !!ch.uploadedFile,
+        sentForReview: ch.status === 'inProgress' || ch.status === 'completed'
+      }));
+    }
+  } catch (error) {
+    console.error('Помилка при читанні даних ThesisTracker:', error);
+  }
+  
+  // Дефолтні дані якщо немає збережених
+  return [
+    { 
+      id: 1,
+      chapter: 'Вступ', 
+      progress: 95, 
+      pages: 8, 
+      status: 'approved', 
+      lastEdit: '05.02',
+      uploadedFile: true,
+      sentForReview: true
+    },
+    { 
+      id: 2,
+      chapter: 'Розділ 1. Теоретичні основи', 
+      progress: 80, 
+      pages: 25, 
+      status: 'revision', 
+      lastEdit: '06.02',
+      uploadedFile: true,
+      sentForReview: false
+    },
+    { 
+      id: 3,
+      chapter: 'Розділ 2. Практична частина', 
+      progress: 60, 
+      pages: 18, 
+      status: 'draft', 
+      lastEdit: '07.02',
+      uploadedFile: true,
+      sentForReview: false
+    },
+    { 
+      id: 4,
+      chapter: 'Розділ 3. Експериментальна частина', 
+      progress: 30, 
+      pages: 12, 
+      status: 'not_started', 
+      lastEdit: null,
+      uploadedFile: false,
+      sentForReview: false
+    },
+    { 
+      id: 5,
+      chapter: 'Висновки', 
+      progress: 0, 
+      pages: 0, 
+      status: 'not_started', 
+      lastEdit: null,
+      uploadedFile: false,
+      sentForReview: false
+    }
+  ];
+};
+
+// Мапінг статусів з ThesisTracker
+const mapThesisTrackerStatus = (status: string): 'approved' | 'revision' | 'draft' | 'not_started' => {
+  switch (status) {
+    case 'completed': return 'approved';
+    case 'inProgress': return 'revision';
+    case 'review': return 'draft';
+    case 'pending': return 'not_started';
+    default: return 'not_started';
+  }
+};
+
+// Отримання назв розділів
+const getChapterName = (key: string): string => {
+  const chapterNames: Record<string, string> = {
+    intro: 'Вступ',
+    theory: 'Теоретичні основи',
+    design: 'Проектна частина',
+    implementation: 'Практична реалізація',
+    conclusion: 'Висновки',
+    appendix: 'Додатки',
+    sources: 'Список джерел',
+    abstract: 'Анотація',
+    cover: 'Титульна сторінка',
+    content: 'Зміст',
+    tasks: 'Завдання практики',
+    diary: 'Щоденник практики',
+    report: 'Звіт про практику'
+  };
+  return chapterNames[key] || `Розділ ${key}`;
+};
+
+const supervisorFeedback: SupervisorFeedback[] = [
+  {
+    chapter: 'Вступ',
+    comment: 'Добре структурований розділ, але варто додати більше актуальних джерел',
+    date: '04.02',
+    type: 'approved',
+    status: 'completed'
+  },
+  {
+    chapter: 'Розділ 1',
+    comment: 'Необхідно переглянути методологію дослідження та додати порівняльний аналіз',
+    date: '06.02',
+    type: 'revision',
+    status: 'in_progress'
+  }
 ];
 
-const supervisorFeedback = [
-  { date: '2024-02-06', chapter: 'Розділ 1', type: 'revision', comment: 'Потрібно доопрацювати аналіз літератури та додати 3-4 джерела', status: 'pending' },
-  { date: '2024-02-04', chapter: 'Вступ', type: 'approved', comment: 'Вступ написано якісно, актуальність розкрита повністю', status: 'completed' },
-  { date: '2024-02-01', chapter: 'Розділ 2', type: 'revision', comment: 'Методологія потребує більш детального опису. Додайте схему дослідження', status: 'in_progress' },
-  { date: '2024-01-28', chapter: 'План роботи', type: 'approved', comment: 'План затверджено. Можна приступати до написання', status: 'completed' },
+const deadlineData: Deadline[] = [
+  {
+    milestone: 'Подача теми роботи',
+    deadline: '15.01',
+    status: 'completed',
+    submitted: '12.01'
+  },
+  {
+    milestone: 'Перший розділ',
+    deadline: '15.02',
+    status: 'in_progress'
+  },
+  {
+    milestone: 'Повний текст роботи',
+    deadline: '15.04',
+    status: 'pending'
+  },
+  {
+    milestone: 'Захист роботи',
+    deadline: '25.05',
+    status: 'pending'
+  }
 ];
 
-const fileActivityData = [
-  { type: 'Завантаження файлів', count: 23, color: '#6366f1' },
-  { type: 'Збереження документу', count: 156, color: '#10b981' },
-  { type: 'Експорт в PDF', count: 8, color: '#f59e0b' },
-  { type: 'Резервні копії', count: 12, color: '#8b5cf6' },
-];
-
-const deadlineData = [
-  { milestone: 'План роботи', deadline: '2024-01-30', submitted: '2024-01-28', status: 'completed', delay: 0 },
-  { milestone: 'Вступ + Розділ 1', deadline: '2024-02-15', submitted: null, status: 'in_progress', delay: 0 },
-  { milestone: 'Розділ 2-3', deadline: '2024-03-15', submitted: null, status: 'upcoming', delay: 0 },
-  { milestone: 'Повна робота', deadline: '2024-04-01', submitted: null, status: 'upcoming', delay: 0 },
-  { milestone: 'Захист', deadline: '2024-04-20', submitted: null, status: 'upcoming', delay: 0 },
-];
-
-const workIntensityData = [
-  { hour: '09:00', intensity: 20, focus: 60 },
-  { hour: '10:00', intensity: 35, focus: 75 },
-  { hour: '11:00', intensity: 45, focus: 85 },
-  { hour: '12:00', intensity: 30, focus: 70 },
-  { hour: '14:00', intensity: 40, focus: 80 },
-  { hour: '15:00', intensity: 55, focus: 90 },
-  { hour: '16:00', intensity: 60, focus: 95 },
-  { hour: '17:00', intensity: 45, focus: 85 },
-  { hour: '18:00', intensity: 25, focus: 65 },
-  { hour: '19:00', intensity: 35, focus: 75 },
+const workIntensityData: WorkIntensity[] = [
+  { hour: '9:00', intensity: 12 },
+  { hour: '10:00', intensity: 18 },
+  { hour: '11:00', intensity: 25 },
+  { hour: '12:00', intensity: 15 },
+  { hour: '13:00', intensity: 8 },
+  { hour: '14:00', intensity: 22 },
+  { hour: '15:00', intensity: 35 },
+  { hour: '16:00', intensity: 42 },
+  { hour: '17:00', intensity: 38 },
+  { hour: '18:00', intensity: 28 },
+  { hour: '19:00', intensity: 20 },
+  { hour: '20:00', intensity: 15 }
 ];
 
 const projectTitles: Record<string, string> = {
@@ -121,13 +286,55 @@ export default function Analytics() {
     return () => clearInterval(interval);
   }, []);
 
-  // 🧠 Зчитування типу проєкту з localStorage
+  // 🧠 Зчитування типу проєкту з localStorage і оновлення даних
   useEffect(() => {
     const savedType = localStorage.getItem('thesisTrackerProjectType');
     if (savedType === 'diploma' || savedType === 'coursework' || savedType === 'practice') {
       setProjectType(savedType);
     }
+    
+    // Оновлюємо дані при зміні localStorage
+    const handleStorageChange = () => {
+      setLastLoginTime(new Date()); // Оновлюємо час для перерендеру компонента
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
+
+  // 📊 Динамічні дані з ThesisTracker
+  const chaptersProgressData = useMemo(() => getThesisTrackerData(), [lastLoginTime]);
+
+  // 📊 Динамічні дані файлової активності на основі розділів
+  const fileActivityData: FileActivity[] = useMemo(() => {
+    const uploadedFiles = chaptersProgressData.filter((ch: ChapterProgress) => ch.uploadedFile).length;
+    const drafts = chaptersProgressData.filter((ch: ChapterProgress) => ch.uploadedFile && !ch.sentForReview).length;
+    const sentForReview = chaptersProgressData.filter((ch: ChapterProgress) => ch.uploadedFile && ch.sentForReview).length;
+    const notStarted = chaptersProgressData.filter((ch: ChapterProgress) => !ch.uploadedFile).length;
+
+    return [
+      {
+        type: 'Завантажені файли',
+        count: uploadedFiles,
+        color: '#10b981'
+      },
+      {
+        type: 'Чернетки',
+        count: drafts,
+        color: '#f59e0b'
+      },
+      {
+        type: 'На перевірці',
+        count: sentForReview,
+        color: '#6366f1'
+      },
+      {
+        type: 'Не розпочано',
+        count: notStarted,
+        color: '#6b7280'
+      }
+    ].filter(item => item.count > 0); // Показуємо тільки непорожні категорії
+  }, [chaptersProgressData]);
 
   // 📅 Форматування дати
   function formatLastLogin(date: Date) {
@@ -144,19 +351,28 @@ export default function Analytics() {
     return `${date.getDate().toString().padStart(2, '0')}.${(date.getMonth()+1).toString().padStart(2, '0')}.${date.getFullYear()} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
   }
 
-
-
   const totalSessions = dailyActivityData.reduce((sum, day) => sum + day.sessions, 0);
   const totalTimeSpent = dailyActivityData.reduce((sum, day) => sum + day.timeSpent, 0);
-  const totalFilesUploaded = dailyActivityData.reduce((sum, day) => sum + day.filesUploaded, 0);
+  const totalFilesUploaded = chaptersProgressData.filter((ch: ChapterProgress) => ch.uploadedFile).length;
   const totalSaves = dailyActivityData.reduce((sum, day) => sum + day.saves, 0);
   const averageSessionTime = totalTimeSpent / totalSessions;
   
-  const totalPages = chaptersProgress.reduce((sum, ch) => sum + ch.pages, 0);
-  const overallProgress = chaptersProgress.reduce((sum, ch) => sum + ch.progress, 0) / chaptersProgress.length;
+  const totalPages = chaptersProgressData.reduce((sum: number, ch: ChapterProgress) => sum + ch.pages, 0);
+  const overallProgress = chaptersProgressData.reduce((sum: number, ch: ChapterProgress) => sum + ch.progress, 0) / chaptersProgressData.length;
+
+  // Функції для обробки файлів (заглушки для демонстрації)
+  const handleFileUpload = (chapterId: number, file: File) => {
+    console.log(`Uploading file for chapter ${chapterId}:`, file.name);
+    // Тут буде логіка завантаження файлу
+  };
+
+  const handleSendForReview = (chapterId: number) => {
+    console.log(`Sending chapter ${chapterId} for review`);
+    // Тут буде логіка відправки на перевірку
+  };
 
   return (
-       <div className="min-h-screen bg-[var(--background)] flex text-[var(--foreground)]">
+    <div className="min-h-screen bg-[var(--background)] flex text-[var(--foreground)]">
       <div className="hidden md:block sticky top-0 h-screen bg-[var(--sidebar)] border-r border-[var(--sidebar-border)]">
         <Sidebar />
       </div>
@@ -263,7 +479,7 @@ export default function Analytics() {
                 <CardDescription>Статус написання кожного розділу роботи</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {chaptersProgress.map((chapter, index) => (
+                {chaptersProgressData.map((chapter: ChapterProgress, index: number) => (
                   <div key={index} className="space-y-2">
                     <div className="flex justify-between items-center">
                       <div className="flex items-center gap-2">
@@ -277,12 +493,57 @@ export default function Analytics() {
                            chapter.status === 'revision' ? 'На доопрацювання' :
                            chapter.status === 'draft' ? 'Чернетка' : 'Не розпочато'}
                         </Badge>
+                        {chapter.uploadedFile && !chapter.sentForReview && (
+                          <Badge variant="outline" className="text-orange-600 border-orange-300">
+                            Чернетка
+                          </Badge>
+                        )}
                       </div>
                       <div className="text-sm text-muted-foreground">
                         {chapter.pages} стор. • {chapter.lastEdit || 'Не редаговано'}
                       </div>
                     </div>
                     <Progress value={chapter.progress} className="h-2" />
+                    
+                    {/* Дії з файлами */}
+                    <div className="flex gap-2 flex-wrap">
+                      {!chapter.uploadedFile && (
+                        <div className="relative">
+                          <input
+                            type="file"
+                            id={`file-upload-${chapter.id}`}
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                handleFileUpload(chapter.id, file);
+                              }
+                            }}
+                          />
+                          <Button
+                            asChild
+                            size="sm"
+                            variant="outline"
+                            className="border-[var(--border)] text-[var(--foreground)] hover:bg-[var(--secondary)]"
+                          >
+                            <label htmlFor={`file-upload-${chapter.id}`} className="flex items-center cursor-pointer">
+                              <FileText className="w-4 h-4 mr-1" />
+                              Завантажити файл
+                            </label>
+                          </Button>
+                        </div>
+                      )}
+
+                      {chapter.uploadedFile && !chapter.sentForReview && (
+                        <Button
+                          size="sm"
+                          className="bg-[var(--primary)] text-[var(--primary-foreground)] hover:bg-[var(--primary-foreground)] hover:text-[var(--primary)]"
+                          onClick={() => handleSendForReview(chapter.id)}
+                        >
+                          Надіслати на перевірку
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 ))}
               </CardContent>
@@ -386,7 +647,7 @@ export default function Analytics() {
             <Card>
               <CardHeader>
                 <CardTitle>Файлова активність</CardTitle>
-                <CardDescription>Розподіл операцій з файлами та документами</CardDescription>
+                <CardDescription>Розподіл статусу файлів та документів</CardDescription>
               </CardHeader>
               <CardContent className="h-[300px]">
                 <ResponsiveContainer width="100%" height="100%">
@@ -398,7 +659,7 @@ export default function Analytics() {
                       cx="50%"
                       cy="50%"
                       outerRadius={100}
-                      label={({count}) => `${count}`}
+                      label={({ count, type }) => `${type}: ${count}`}
                     >
                       {fileActivityData.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.color} />
@@ -407,6 +668,11 @@ export default function Analytics() {
                     <Tooltip />
                   </RePieChart>
                 </ResponsiveContainer>
+                {fileActivityData.length === 0 && (
+                  <div className="flex items-center justify-center h-full text-muted-foreground">
+                    Немає даних про файли
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -451,6 +717,12 @@ export default function Analytics() {
                 <div className="flex justify-between items-center">
                   <span className="text-sm">Середня сесія</span>
                   <Badge variant="outline">{averageSessionTime.toFixed(1)} години</Badge>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm">Чернеток</span>
+                  <Badge variant="outline" className="text-orange-600">
+                    {chaptersProgressData.filter((ch: ChapterProgress) => ch.uploadedFile && !ch.sentForReview).length}
+                  </Badge>
                 </div>
               </CardContent>
             </Card>

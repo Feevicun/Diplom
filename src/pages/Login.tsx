@@ -19,37 +19,47 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 
-    const LoginPage = () => {
+const LoginPage = () => {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [role, setRole] = useState("student");
 
     const handleLogin = async () => {
-        try {
-            const response = await fetch("http://localhost:4000/api/login", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email, password, role }),
-        });
+  try {
+    const response = await fetch("http://localhost:4000/api/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password, role }),
+    });
 
     const data = await response.json();
 
-        if (!response.ok) {
-            alert(`Помилка: ${data.message}`);
-            return;
-        }
-
-        // Переадресація залежно від ролі
-        if (role === "student") {
-        window.location.href = "/dashboard";
-        } else {
-         window.location.href = "/analytics";
-        }
-    } catch (error) {
-        console.error("Network error:", error);
-        alert("Помилка мережі. Спробуйте пізніше.");
+    if (!response.ok) {
+      alert(`Помилка: ${data.message}`);
+      return;
     }
+
+    console.log("User from server:", data.user);
+    console.log("Token:", data.token);
+
+    // Зберігаємо токен у localStorage (або сесійному сховищі)
+    localStorage.setItem("token", data.token);
+
+    // За бажанням можна зберегти й юзера
+    localStorage.setItem("currentUser", JSON.stringify(data.user));
+
+    if (role === "student") {
+      window.location.href = "/dashboard";
+    } else {
+      window.location.href = "/analytics";
+    }
+  } catch (error) {
+    console.error("Network error:", error);
+    alert("Помилка мережі. Спробуйте пізніше.");
+  }
 };
+
+
 
 
     return (

@@ -250,29 +250,50 @@ const handleSubmit = async () => {
       body: JSON.stringify(formData),
     });
 
-    if (res.ok) {
-      const data = await res.json();
-     
-      // Збереження користувача у localStorage
-      localStorage.setItem("currentUser", JSON.stringify(data.user));
-      
-      if (data.user.role === "student") {
-        navigate("/dashboard");
-      } else if (data.user.role === "teacher") {
-        navigate("/analytics");
-      } else {
-        navigate("/"); // fallback
-      }
-
-    } else {
+    if (!res.ok) {
       const data = await res.json();
       alert(`Помилка: ${data.message}`);
+      return;
+    }
+
+    // Реєстрація пройшла успішно
+    // Тепер робимо логін, щоб отримати токен
+    const loginRes = await fetch("http://localhost:4000/api/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email,
+        password,
+        role,
+      }),
+    });
+
+    const loginData = await loginRes.json();
+
+    if (!loginRes.ok) {
+      alert(`Помилка логіну після реєстрації: ${loginData.message}`);
+      return;
+    }
+
+    // Зберігаємо токен і юзера
+    localStorage.setItem("token", loginData.token);
+    localStorage.setItem("currentUser", JSON.stringify(loginData.user));
+
+    // Переходимо на потрібну сторінку
+    if (loginData.user.role === "student") {
+      navigate("/dashboard");
+    } else if (loginData.user.role === "teacher") {
+      navigate("/analytics");
+    } else {
+      navigate("/");
     }
   } catch (error) {
     console.error("Помилка мережі:", error);
     alert("Помилка мережі. Спробуйте пізніше.");
   }
 };
+
+
 
 
   return (

@@ -41,15 +41,29 @@ const Header = () => {
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('currentUser');
-    if (storedUser) {
-      const user = JSON.parse(storedUser);
-      setFirstName(user.firstName || '');
+  const storedUser = localStorage.getItem('currentUser');
+  if (storedUser) {
+    const user = JSON.parse(storedUser);
+    if (user.firstName) {
+      setFirstName(user.firstName);
+    } else if (user.name) {
+      // Розбиваємо повне ім'я на firstName і lastName
+      const [firstName] = user.name.split(' ');
+      setFirstName(firstName || '');
+      // За потреби можна зберегти в localStorage оновлений об'єкт з firstName
+      localStorage.setItem(
+        'currentUser',
+        JSON.stringify({ ...user, firstName })
+      );
+    } else {
+      setFirstName('');
     }
+  }
+  
+  const storedStatus = localStorage.getItem('userStatus');
+  setIsOnline(storedStatus === null ? true : storedStatus === 'online');
+}, []);
 
-    const storedStatus = localStorage.getItem('userStatus');
-    setIsOnline(storedStatus === null ? true : storedStatus === 'online');
-  }, []);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {

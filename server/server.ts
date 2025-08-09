@@ -1,8 +1,12 @@
 import express from "express";
+import type { Request, Response, NextFunction } from "express";
 import fs from "fs";
 import path from "path";
 import cors from "cors";
+import pool from './db.js'; 
 import { fileURLToPath } from "url";
+import jwt from 'jsonwebtoken';
+
 
 // __dirname для ES-модулів
 const __filename = fileURLToPath(import.meta.url);
@@ -14,6 +18,9 @@ const PORT = process.env.PORT || 4000;
 const dataFilePath = path.join(__dirname, "user.json");
 const messagesFilePath = path.join(__dirname, "messages.json");
 
+// JWT секрет (поки що тут, пізніше краще винести в env)
+const JWT_SECRET = "super_secret_key_change_this";
+
 // Middleware
 app.use(cors({
   origin: "*"
@@ -23,11 +30,24 @@ app.use(express.json());
 
 // ============ API ROUTES ============
 
+// Middleware для аутентифікації через JWT
+function authenticateToken(req: Request, res: Response, next: NextFunction) {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1]; // формат: "Bearer TOKEN"
+
+  if (!token) return res.status(401).json({ message: "No token provided" });
+
+  jwt.verify(token, JWT_SECRET, (err: any, user: any) => {
+    if (err) return res.status(403).json({ message: "Invalid token" });
+    req.user = user;
+    next();
+  });
+}
+
 // Отримати всіх користувачів
-app.get("/api/users", (req, res) => {
+app.get("/api/users", (req: Request, res: Response) => {
   try {
     if (!fs.existsSync(dataFilePath)) {
-      // Пустий масив, якщо файл не існує 
       return res.json([]);
     }
     const data = JSON.parse(fs.readFileSync(dataFilePath, "utf-8"));
@@ -37,65 +57,131 @@ app.get("/api/users", (req, res) => {
   }
 });
 
+
 // POST /api/register
-app.post("/api/register", (req, res) => {
+app.post("/api/register", async (req: Request, res: Response) => {
   try {
-    const newUser = req.body;
+    const { firstName, lastName, email, password, role } = req.body;
+    const name = `${firstName.trim()} ${lastName.trim()}`;
 
-    // Завантаження існуючих користувачів
-    let data: any[] = [];
-    if (fs.existsSync(dataFilePath)) {
-      data = JSON.parse(fs.readFileSync(dataFilePath, "utf-8"));
-    }
+    const existingUser = await pool.query(
+      "SELECT id FROM users WHERE email = $1",
+      [email]
+    );
 
-    // Перевірка дубліката email
-    if (data.find(u => u.email === newUser.email)) {
+    if (existingUser.rows.length > 0) {
       return res.status(400).json({ message: "User with this email already exists" });
     }
 
-    data.push(newUser); // Додаємо користувача
-    fs.writeFileSync(dataFilePath, JSON.stringify(data, null, 2), "utf-8");
+    const result = await pool.query(
+      `INSERT INTO users (name, email, password, role, registeredAt) 
+       VALUES ($1, $2, $3, $4, NOW()) RETURNING id, name, email, role, registeredAt`,
+      [name, email, password, role]
+    );
 
-    // Повертаємо дані користувача 
-    res.status(201).json({ message: "User registered successfully", user: newUser });
-  } catch {
-    res.status(500).json({ message: "Error writing data" });
+    res.status(201).json({ message: "User registered successfully", user: result.rows[0] });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Database error" });
   }
 });
 
 
 // POST /api/login
-app.post("/api/login", (req, res) => {
+app.post("/api/login", async (req: Request, res: Response) => {
   try {
     const { email, password, role } = req.body;
 
-    if (!email || !password || !role) {
-      return res.status(400).json({ message: "Missing login data" });
-    }
-
-    if (!fs.existsSync(dataFilePath)) {
-      return res.status(400).json({ message: "No users registered" });
-    }
-
-    const data = JSON.parse(fs.readFileSync(dataFilePath, "utf-8"));
-
-    const user = data.find(
-      (u: any) => u.email === email && u.password === password && u.role === role
+    const result = await pool.query(
+      `SELECT id, name, email, role FROM users 
+       WHERE email = $1 AND password = $2 AND role = $3`,
+      [email.trim(), password.trim(), role]
     );
 
-    if (!user) {
+    if (result.rows.length === 0) {
       return res.status(401).json({ message: "Invalid email, password or role" });
     }
 
-    // Якщо все добре — повертаємо користувача без паролю
-    const { password: _, ...userWithoutPassword } = user;
+    const user = result.rows[0];
 
-    res.json({ message: "Login successful", user: userWithoutPassword });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Server error" });
+    // Генеруємо JWT токен
+    const token = jwt.sign(
+      { userId: user.id, email: user.email, role: user.role },
+      JWT_SECRET,
+      { expiresIn: '8h' }
+    );
+
+    await pool.query("UPDATE users SET lastLoginAt = NOW() WHERE email = $1", [email.trim()]);
+
+    res.json({ message: "Login successful", user, token });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Database error" });
   }
 });
+
+
+
+// GET /api/current-user 
+app.get('/api/current-user', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const result = await pool.query(
+      'SELECT name, email, role FROM users WHERE id = $1',
+      [userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const [firstName, ...lastNameParts] = result.rows[0].name.split(' ');
+    const lastName = lastNameParts.join(' ');
+    res.json({
+      user: {
+        firstName,
+        lastName,
+        email: result.rows[0].email,
+        role: result.rows[0].role,
+      },
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Database error' });
+  }
+});
+
+
+
+
+// POST /api/logout
+app.post("/api/logout", async (req: Request, res: Response) => {
+  try {
+    const { email } = req.body;
+
+    const result = await pool.query(
+      "UPDATE users SET lastLogoutAt = NOW() WHERE email = $1 RETURNING email, lastLogoutAt",
+      [email]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.json({ message: "Logout successful", ...result.rows[0] });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Database error" });
+  }
+});
+
+
+
 
 
 app.post("/api/generate-topics", async (req, res) => {
@@ -260,28 +346,20 @@ app.get("/api/messages", (req, res) => {
 
 
 // POST /api/messages
-app.post("/api/messages", (req, res) => {
+app.post("/api/messages", async (req, res) => {
   try {
-    const newMessage = req.body;
+    const { studentEmail, sender, content } = req.body;
 
-    if (!newMessage || !newMessage.content || !newMessage.sender || !newMessage.studentEmail) {
-      return res.status(400).json({ message: "Invalid message format." });
-    }
+    const result = await pool.query(
+      `INSERT INTO messages (studentEmail, sender, content) 
+       VALUES ($1, $2, $3) RETURNING *`,
+      [studentEmail, sender, content]
+    );
 
-    let messages: any[] = [];
-    if (fs.existsSync(messagesFilePath)) {
-      messages = JSON.parse(fs.readFileSync(messagesFilePath, "utf-8"));
-    }
-
-    newMessage.id = Date.now(); // простий ID
-    messages.push(newMessage);
-
-    fs.writeFileSync(messagesFilePath, JSON.stringify(messages, null, 2), "utf-8");
-
-    res.status(201).json({ message: "Message sent successfully", data: newMessage });
+    res.status(201).json({ message: "Message sent successfully", data: result.rows[0] });
   } catch (err) {
-    console.error("Error writing message:", err);
-    res.status(500).json({ message: "Error saving message." });
+    console.error(err);
+    res.status(500).json({ message: "Database error" });
   }
 });
 

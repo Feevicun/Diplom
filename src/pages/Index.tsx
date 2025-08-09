@@ -90,9 +90,19 @@ const chapterTemplates: Record<string, Omit<ChapterData, 'teacherComments'>[]> =
   ]
 };
 
+type UserType = {
+  name: string;
+  firstName?: string;
+  lastName?: string;
+  email: string;
+  role: string;
+};
+
+
+
 const Dashboard = () => {
   const { t } = useTranslation();
-  const [user, setUser] = useState<{ firstName?: string; lastName?: string } | null>(null);
+  const [user, setUser] = useState<UserType | null>(null);
   const [isFirstVisit, setIsFirstVisit] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -100,25 +110,85 @@ const Dashboard = () => {
   const [projectType, setProjectType] = useState<string | null>(null); 
   const [chapters, setChapters] = useState<ChapterData[]>([]);
 
-  // Ключі localStorage (ті ж самі що у ThesisTracker)
   const STORAGE_PROJECT_TYPE = 'thesisTrackerProjectType';
   const STORAGE_CHAPTERS = 'thesisTrackerChapters';
 
-  useEffect(() => {
-    const storedUser = localStorage.getItem("currentUser");
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
+useEffect(() => {
+  async function fetchUser() {
+    try {
+      console.log('Починаємо fetch користувача...');
+      
+      const storedUser = localStorage.getItem('currentUser');
+      if (storedUser) {
+        try {
+          const parsedUser = JSON.parse(storedUser);
+          console.log('Знайшли користувача в localStorage:', parsedUser);
+          
+          // Переконуємось що є firstName
+          const userWithFirstName = {
+            ...parsedUser,
+            firstName: parsedUser.firstName || parsedUser.name?.split(' ')[0] || '',
+            name: parsedUser.name || ''
+          };
+          
+          setUser(userWithFirstName);
+          console.log('Встановили користувача з localStorage:', userWithFirstName);
+          return; // Якщо є дані в localStorage, не робимо API запит
+        } catch (error) {
+          console.log('Помилка парсингу localStorage:', error);
+        }
+      }
+      
+      // Якщо немає в localStorage, робимо API запит
+      const res = await fetch('/api/current-user', {
+        method: 'GET',
+        credentials: 'include',
+        cache: 'no-store',
+      });
 
-    const firstVisitFlag = localStorage.getItem("firstVisitDone");
-    if (!firstVisitFlag) {
-      setIsFirstVisit(true);
-      localStorage.setItem("firstVisitDone", "true");
-    }
+      console.log('Отримали відповідь з API:', res.status, res.ok);
 
-    // Читаємо актуальні дані з ThesisTracker
-    loadProjectData();
-  }, []);
+      if (!res.ok) {
+        console.log('API Response not ok:', res.status, res.statusText);
+        setUser(null);
+        return;
+      }
+
+      const data = await res.json();
+      console.log('Отримані дані з API:', data);
+
+      if (data && data.user) {
+        const userWithFullName = {
+          ...data.user,
+          name: data.user.firstName + (data.user.lastName ? ' ' + data.user.lastName : ''),
+        };
+        
+        console.log('Встановлюємо користувача з API:', userWithFullName);
+        setUser(userWithFullName);
+        
+        
+        localStorage.setItem('currentUser', JSON.stringify(userWithFullName));
+      } else {
+        console.log('Дані користувача відсутні в API відповіді');
+        setUser(null);
+      }
+    } catch (error) {
+      console.error('Помилка при отриманні користувача:', error);
+      setUser(null);
+    }
+  }
+
+  fetchUser();
+  loadProjectData();
+
+  const firstVisitFlag = localStorage.getItem("firstVisitDone");
+  if (!firstVisitFlag) {
+    setIsFirstVisit(true);
+    localStorage.setItem("firstVisitDone", "true");
+  }
+}, []);
+
+
 
   const loadProjectData = () => {
     // Читаємо тип проєкту з localStorage
@@ -151,7 +221,7 @@ const Dashboard = () => {
         setChapters(defaultChapters);
       }
     } else {
-      setProjectType(null); // ← користувач ще не обрав тип проєкту
+      setProjectType(null); 
     }
   };
 
@@ -348,9 +418,9 @@ const Dashboard = () => {
                          'Оберіть тип роботи'}
                       </span>
                     </div>
-                    <h1 className="text-2xl md:text-4xl font-bold mb-4 text-foreground">
-                      {t('index.welcomeTitle', { name: user?.firstName || "Користувач" })}
-                    </h1>
+                      <h1 className="text-2xl md:text-4xl font-bold mb-4 text-foreground">
+                        {t('index.welcomeTitle', { name: user?.firstName || "Користувач"})}
+                      </h1>
                     <p className="text-lg md:text-xl text-muted-foreground mb-6">
                       {isFirstVisit ? t('index.encouragementFirstTime') : t('index.encouragement')}
                     </p>

@@ -10,10 +10,11 @@ import Header from "@/components/Header";
 import Sidebar from "@/components/Sidebar";
 
 import { useTranslation } from "react-i18next";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 const ProfilePage = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -23,16 +24,32 @@ const ProfilePage = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const storedUser = localStorage.getItem("currentUser");
-    if (storedUser) {
-      const user = JSON.parse(storedUser);
-      setName(`${user.firstName} ${user.lastName}`);
-      setEmail(user.email);
-      setRole(user.role === "student" ? "Студент" : "Викладач");
-      if(user.avatarUrl) {
-        setAvatarUrl(user.avatarUrl);
+    async function fetchUser() {
+      try {
+        const res = await fetch('/api/current-user', {
+          method: 'GET',
+          credentials: 'include',
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const user = data.user;
+          if (user) {
+            setName(`${user.firstName} ${user.lastName}`.trim());
+            setEmail(user.email);
+            setRole(user.role === 'student' ? 'Студент' : 'Викладач');
+            if (user.avatarUrl) {
+              setAvatarUrl(user.avatarUrl);
+            }
+          }
+        } else {
+          console.warn('Не вдалось отримати користувача:', res.status);
+        }
+      } catch (err) {
+        console.error('Помилка при завантаженні користувача:', err);
       }
     }
+
+    fetchUser();
   }, []);
 
   const handleSave = () => {
@@ -43,12 +60,27 @@ const ProfilePage = () => {
       role: role === "Студент" ? "student" : "teacher",
       avatarUrl,
     };
-    localStorage.setItem("currentUser", JSON.stringify(userData));
-    console.log("Збережено:", userData);
+    console.log("Збережено (поки що тільки в консолі):", userData);
+    // Якщо потрібно, тут можна зробити запит для оновлення профілю на сервері
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem("currentUser");
+  const handleLogout = async () => {
+    try {
+      // Відправка запиту на logout
+      await fetch('/api/logout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          logoutTime: new Date().toISOString(),
+        }),
+        credentials: 'include',
+      });
+
+      // Перенаправлення на головну сторінку
+      navigate("/");
+    } catch (error) {
+      console.error("Помилка при виході:", error);
+    }
   };
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -142,11 +174,13 @@ const ProfilePage = () => {
                   {t("profile.save")}
                 </Button>
 
-                <Link to="/" onClick={handleLogout}>
-                  <Button variant="outline" className="w-full">
-                    {t("sidebar.logout")}
-                  </Button>
-                </Link>
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={handleLogout}
+                >
+                  {t("sidebar.logout")}
+                </Button>
               </div>
             </CardContent>
           </Card>

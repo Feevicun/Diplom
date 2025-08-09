@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -15,95 +15,129 @@ import {
   LogOut,
   ChevronRight,
   Search,
-  Book 
+  Book
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+interface User {
+  firstName?: string;
+  lastName?: string;
+  name?: string;
+  role?: string;
+  email?: string;
+}
+
 const Sidebar = () => {
-
-  const [userName, setUserName] = useState<string>("Користувач");
-  const [userRole, setUserRole] = useState<string>("");
-
-  useEffect(() => {
-    const storedUser = localStorage.getItem("currentUser");
-    if (storedUser) {
-      const user = JSON.parse(storedUser);
-      setUserName(`${user.firstName} ${user.lastName}`);
-      setUserRole(user.role || "");
-    }
-  }, []);
-
-
+  const [user, setUser] = useState<User | null>(null);
+  const navigate = useNavigate();
   const location = useLocation();
   const { t } = useTranslation();
 
-  const mainMenuItems = [
-    {
-      title: t('sidebar.dashboard'),
-      href: '/dashboard',
-      icon: Home,
-      badge: null
-    },
-    {
-      title: t('sidebar.projects'),
-      href: '/tracker',
-      icon: FileText,
-      badge: '2'
-    },
-    {
-      title: t('sidebar.tasks'),
-      href: '/chat',
-      icon: MessageSquare,
-      badge: '3'
-    },
-    {
-      title: t('sidebar.calendar'),
-      href: '/calendar',
-      icon: Calendar,
-      badge: null
+  useEffect(() => {
+
+  async function fetchUser() {
+  try {
+    const token = localStorage.getItem('token');  // дістаємо токен
+    if (!token) {
+      setUser(null);
+      return;
     }
+
+    const res = await fetch('/api/current-user', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      cache: 'no-store',
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      setUser(data.user);
+    } else {
+      setUser(null);
+    }
+  } catch (error) {
+    console.error('Помилка отримання користувача', error);
+    setUser(null);
+  }
+}
+fetchUser();
+}, []);
+
+
+
+const handleLogout = async () => {
+  try {
+    // Якщо хочеш, можеш зробити запит на бекенд для логування дії виходу (опціонально)
+    const token = localStorage.getItem('token');
+    if (token && user?.email) {
+      await fetch('/api/logout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`, // додамо токен, якщо бекенд це перевіряє
+        },
+        body: JSON.stringify({ email: user.email }),
+      });
+    }
+
+    localStorage.removeItem('token');
+    localStorage.removeItem('currentUser');
+    setUser(null);
+    navigate('/');
+  } catch (error) {
+    console.error('Помилка при виході:', error);
+  }
+};
+
+
+  // Формуємо ім'я користувача з можливих полів
+  const userName = user
+    ? (() => {
+        if (user.firstName && user.lastName) {
+          return `${user.firstName} ${user.lastName}`;
+        }
+        if (user.name) {
+          return user.name;
+        }
+        return 'Користувач';
+      })()
+    : 'Користувач';
+
+  const userRole = user?.role ?? '';
+
+  const mainMenuItems = [
+    { title: t('sidebar.dashboard'), href: '/dashboard', icon: Home, badge: null },
+    { title: t('sidebar.projects'), href: '/tracker', icon: FileText, badge: '2' },
+    { title: t('sidebar.tasks'), href: '/chat', icon: MessageSquare, badge: '3' },
+    { title: t('sidebar.calendar'), href: '/calendar', icon: Calendar, badge: null }
   ];
 
   const toolsItems = [
-    {
-      title: t('sidebar.aiAssistant'),
-      href: '/ai-assistant',
-      icon: Zap,
-      badge: 'BETA'
-    },
-    {
-      title: t('sidebar.analytics'),
-      href: '/analytics',
-      icon: TrendingUp,
-      badge: null
-    },
-    {
-      title: t('sidebar.resources'),
-      href: '/resources',
-      icon: Book,
-      badge: null
-    }
+    { title: t('sidebar.aiAssistant'), href: '/ai-assistant', icon: Zap, badge: 'BETA' },
+    { title: t('sidebar.analytics'), href: '/analytics', icon: TrendingUp, badge: null },
+    { title: t('sidebar.resources'), href: '/resources', icon: Book, badge: null }
   ];
 
   const MenuItem = ({ item, isActive }: { item: any; isActive: boolean }) => {
     const Icon = item.icon;
-
     return (
       <Link
         to={item.href}
         className={cn(
-          "group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200",
-          "hover:bg-accent/50 hover:text-accent-foreground",
+          'group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200',
+          'hover:bg-accent/50 hover:text-accent-foreground',
           isActive
-            ? "bg-primary text-primary-foreground shadow-sm"
-            : "text-muted-foreground"
+            ? 'bg-primary text-primary-foreground shadow-sm'
+            : 'text-muted-foreground'
         )}
       >
         <Icon className="h-4 w-4" />
         <span className="flex-1">{item.title}</span>
         {item.badge && (
           <Badge
-            variant={item.badge === 'BETA' ? "default" : "secondary"}
+            variant={item.badge === 'BETA' ? 'default' : 'secondary'}
             className="h-5 px-2 text-xs"
           >
             {item.badge}
@@ -168,32 +202,39 @@ const Sidebar = () => {
 
       {/* Profile Section */}
       <div className="p-4 border-t">
-        <Link
-          to="/profile"
+        <div
+          onClick={handleLogout}
           className="flex items-center gap-3 p-3 rounded-xl bg-muted/50 hover:bg-muted transition-colors cursor-pointer"
         >
           <Avatar className="h-8 w-8">
             <AvatarFallback className="bg-primary text-primary-foreground text-sm">
-              {userName ? userName .split(" ") .filter(Boolean) .map((n) => n[0].toUpperCase()) .join(""): "К"}
+              {userName
+                ? userName
+                    .split(' ')
+                    .filter(Boolean)
+                    .map((n) => n[0].toUpperCase())
+                    .join('')
+                : 'К'}
             </AvatarFallback>
-
           </Avatar>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-foreground truncate">{userName}</p>
             <p className="text-xs text-muted-foreground truncate">
-              {userRole === "student"
-                ? "Студент"
-                : userRole === "teacher"
-                ? "Викладач"
-                : ""}
+              {userRole === 'student'
+                ? 'Студент'
+                : userRole === 'teacher'
+                ? 'Викладач'
+                : ''}
             </p>
           </div>
-          <Link to="/">
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
-              <LogOut className="h-4 w-4" />
-            </Button>
-          </Link>
-        </Link>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-muted-foreground"
+          >
+            <LogOut className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
     </div>
   );
