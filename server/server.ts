@@ -301,77 +301,323 @@ app.get("/api/events", authenticateToken, async (req: Request, res: Response) =>
 });
 
 
-// Отримати всі розділи для користувача та проєкту
-app.get('/api/user-chapters', authenticateToken, async (req: Request, res: Response) => {
+
+
+
+// GET /api/user-project - отримати активний тип проекту користувача
+app.get("/api/user-project", authenticateToken, async (req: Request, res: Response) => {
   try {
     const userId = req.user?.userId;
-    const projectType = req.query.projectType as string;
 
-    if (!userId || !projectType) {
-      return res.status(400).json({ message: 'Missing userId or projectType' });
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
     }
 
     const result = await pool.query(
-      `SELECT * FROM user_chapters WHERE user_id = $1 AND project_type = $2 ORDER BY id`,
+      'SELECT active_project_type FROM users WHERE id = $1',
+      [userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.json({ 
+      projectType: result.rows[0].active_project_type 
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Database error' });
+  }
+});
+
+// POST /api/user-project - встановити активний тип проекту
+app.post("/api/user-project", authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const { projectType } = req.body;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    if (!projectType || !['diploma', 'coursework', 'practice'].includes(projectType)) {
+      return res.status(400).json({ message: "Valid project type is required" });
+    }
+
+    // Оновлюємо активний тип проекту
+    await pool.query(
+      'UPDATE users SET active_project_type = $1 WHERE id = $2',
+      [projectType, userId]
+    );
+
+    // Перевіряємо чи існують глави для цього типу проекту
+    const existingChapters = await pool.query(
+      'SELECT * FROM user_chapters WHERE user_id = $1 AND project_type = $2',
       [userId, projectType]
     );
 
-    res.json(result.rows);
-  } catch (error) {
-    console.error('Error fetching user chapters:', error);
-    res.status(500).json({ message: 'Database error fetching user chapters' });
-  }
-});
+    // Якщо глав немає, створюємо їх з шаблону
+    if (existingChapters.rows.length === 0) {
+      const chapterKeys = {
+        diploma: ['intro', 'theory', 'design', 'implementation', 'conclusion', 'appendix', 'sources', 'abstract', 'cover', 'content'],
+        coursework: ['intro', 'theory', 'design', 'implementation', 'conclusion', 'appendix', 'sources', 'abstract', 'cover', 'content'],
+        practice: ['intro', 'tasks', 'diary', 'conclusion', 'report']
+      };
 
-// Оновити або створити запис розділу (upsert)
-app.post('/api/user-chapters', authenticateToken, async (req: Request, res: Response) => {
-  try {
-    const userId = req.user?.userId;
-    const {
-      projectType,
-      chapterKey,
-      progress,
-      status,
-      studentNote,
-      uploadedFileName,
-      uploadedFileDate,
-      uploadedFileSize,
-    } = req.body;
-
-    if (!userId || !projectType || !chapterKey) {
-      return res.status(400).json({ message: 'Missing required fields' });
+      const keys = chapterKeys[projectType as keyof typeof chapterKeys];
+      
+      for (const key of keys) {
+        await pool.query(
+          `INSERT INTO user_chapters (user_id, project_type, chapter_key, progress, status, student_note) 
+           VALUES ($1, $2, $3, 0, 'pending', '') 
+           ON CONFLICT (user_id, project_type, chapter_key) DO NOTHING`,
+          [userId, projectType, key]
+        );
+      }
     }
 
-    // Використовуємо UPSERT (ON CONFLICT)
-    const result = await pool.query(
-      `
-      INSERT INTO user_chapters (
-        user_id, project_type, chapter_key, progress, status, student_note,
-        uploaded_file_name, uploaded_file_date, uploaded_file_size, updated_at
-      ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, NOW()
-      )
-      ON CONFLICT (user_id, project_type, chapter_key)
-      DO UPDATE SET
-        progress = EXCLUDED.progress,
-        status = EXCLUDED.status,
-        student_note = EXCLUDED.student_note,
-        uploaded_file_name = EXCLUDED.uploaded_file_name,
-        uploaded_file_date = EXCLUDED.uploaded_file_date,
-        uploaded_file_size = EXCLUDED.uploaded_file_size,
-        updated_at = NOW()
-      RETURNING *;
-      `,
-      [userId, projectType, chapterKey, progress, status, studentNote, uploadedFileName, uploadedFileDate, uploadedFileSize]
-    );
-
-    res.status(200).json({ message: 'Chapter saved', chapter: result.rows[0] });
-  } catch (error) {
-    console.error('Error saving user chapter:', error);
-    res.status(500).json({ message: 'Database error saving user chapter' });
+    res.json({ 
+      message: "Project type updated successfully",
+      projectType 
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Database error' });
   }
 });
 
+// GET /api/user-chapters - отримати глави користувача для активного проекту
+app.get("/api/user-chapters", authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const { projectType } = req.query;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    if (!projectType) {
+      return res.status(400).json({ message: "Project type is required" });
+    }
+
+    const result = await pool.query(
+      `SELECT 
+        ROW_NUMBER() OVER (ORDER BY 
+          CASE chapter_key 
+            WHEN 'intro' THEN 1
+            WHEN 'theory' THEN 2  
+            WHEN 'design' THEN 3
+            WHEN 'implementation' THEN 4
+            WHEN 'tasks' THEN 2
+            WHEN 'diary' THEN 3
+            WHEN 'conclusion' THEN 5
+            WHEN 'report' THEN 6
+            WHEN 'appendix' THEN 7
+            WHEN 'sources' THEN 8
+            WHEN 'abstract' THEN 9
+            WHEN 'cover' THEN 10
+            WHEN 'content' THEN 11
+            ELSE 99 
+          END
+        ) as id,
+        chapter_key as key,
+        progress,
+        status,
+        student_note,
+        uploaded_file_name,
+        uploaded_file_date,
+        uploaded_file_size
+       FROM user_chapters 
+       WHERE user_id = $1 AND project_type = $2
+       ORDER BY 
+         CASE chapter_key 
+           WHEN 'intro' THEN 1
+           WHEN 'theory' THEN 2  
+           WHEN 'design' THEN 3
+           WHEN 'implementation' THEN 4
+           WHEN 'tasks' THEN 2
+           WHEN 'diary' THEN 3
+           WHEN 'conclusion' THEN 5
+           WHEN 'report' THEN 6
+           WHEN 'appendix' THEN 7
+           WHEN 'sources' THEN 8
+           WHEN 'abstract' THEN 9
+           WHEN 'cover' THEN 10
+           WHEN 'content' THEN 11
+           ELSE 99 
+         END`,
+      [userId, projectType]
+    );
+
+    // Форматуємо дані для фронтенду
+    const chapters = result.rows.map(row => ({
+      id: row.id,
+      key: row.key,
+      progress: row.progress,
+      status: row.status,
+      studentNote: row.student_note || '',
+      uploadedFile: row.uploaded_file_name ? {
+        name: row.uploaded_file_name,
+        uploadDate: row.uploaded_file_date ? new Date(row.uploaded_file_date).toLocaleDateString('uk-UA') : '',
+        size: row.uploaded_file_size || ''
+      } : undefined,
+      teacherComments: [] // Поки що порожній масив, можна розширити пізніше
+    }));
+
+    res.json(chapters);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Database error' });
+  }
+});
+
+// PUT /api/user-chapters/:chapterKey - оновити главу
+app.put("/api/user-chapters/:chapterKey", authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const { chapterKey } = req.params;
+    const { projectType, progress, status, studentNote, uploadedFile } = req.body;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    let query = `UPDATE user_chapters SET updated_at = NOW()`;
+    const values = [userId, projectType, chapterKey];
+    let paramIndex = 4;
+
+    if (progress !== undefined) {
+      query += `, progress = $${paramIndex}`;
+      values.push(progress);
+      paramIndex++;
+    }
+
+    if (status !== undefined) {
+      query += `, status = $${paramIndex}`;
+      values.push(status);
+      paramIndex++;
+    }
+
+    if (studentNote !== undefined) {
+      query += `, student_note = $${paramIndex}`;
+      values.push(studentNote);
+      paramIndex++;
+    }
+
+    if (uploadedFile) {
+      query += `, uploaded_file_name = $${paramIndex}, uploaded_file_date = $${paramIndex + 1}, uploaded_file_size = $${paramIndex + 2}`;
+      values.push(uploadedFile.name, new Date(), uploadedFile.size);
+      paramIndex += 3;
+    }
+
+    query += ` WHERE user_id = $1 AND project_type = $2 AND chapter_key = $3`;
+
+    await pool.query(query, values);
+
+    res.json({ message: "Chapter updated successfully" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Database error' });
+  }
+});
+
+// DELETE /api/user-chapters/:chapterKey/file - видалити файл глави
+app.delete("/api/user-chapters/:chapterKey/file", authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const { chapterKey } = req.params;
+    const { projectType } = req.query;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    await pool.query(
+      `UPDATE user_chapters 
+       SET uploaded_file_name = NULL, uploaded_file_date = NULL, uploaded_file_size = NULL, 
+           progress = 0, status = 'pending', updated_at = NOW()
+       WHERE user_id = $1 AND project_type = $2 AND chapter_key = $3`,
+      [userId, projectType, chapterKey]
+    );
+
+    res.json({ message: "File deleted successfully" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Database error' });
+  }
+});
+
+// GET /api/teacher-comments - отримати коментарі викладача для глави
+app.get("/api/teacher-comments", authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const { projectType, chapterKey } = req.query;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const result = await pool.query(
+      `SELECT tc.id, tc.text, tc.status, tc.created_at as date,
+              u.name as teacher_name
+       FROM teacher_comments tc
+       LEFT JOIN users u ON tc.teacher_id = u.id
+       WHERE tc.user_id = $1 AND tc.project_type = $2 AND tc.chapter_key = $3
+       ORDER BY tc.created_at DESC`,
+      [userId, projectType, chapterKey]
+    );
+
+    const comments = result.rows.map(row => ({
+      id: row.id.toString(),
+      text: row.text,
+      status: row.status,
+      date: new Date(row.date).toLocaleDateString('uk-UA'),
+      teacherName: row.teacher_name
+    }));
+
+    res.json(comments);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Database error' });
+  }
+});
+
+// POST /api/teacher-comments - додати коментар викладача (тільки для викладачів)
+app.post("/api/teacher-comments", authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const teacherId = req.user?.userId;
+    const { studentUserId, projectType, chapterKey, text, status } = req.body;
+
+    if (!teacherId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    // Перевіряємо, чи користувач є викладачем
+    const teacherCheck = await pool.query(
+      'SELECT role FROM users WHERE id = $1',
+      [teacherId]
+    );
+
+    if (teacherCheck.rows.length === 0 || teacherCheck.rows[0].role !== 'teacher') {
+      return res.status(403).json({ message: "Only teachers can add comments" });
+    }
+
+    const result = await pool.query(
+      `INSERT INTO teacher_comments (user_id, project_type, chapter_key, teacher_id, text, status)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+      [studentUserId, projectType, chapterKey, teacherId, text, status || 'info']
+    );
+
+    res.status(201).json({ 
+      message: "Comment added successfully", 
+      comment: result.rows[0] 
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Database error' });
+  }
+});
 
 
 app.post("/api/generate-topics", async (req, res) => {

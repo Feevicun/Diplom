@@ -22,7 +22,8 @@ import {
   StickyNote,
   MessageCircle,
   Trash2,
-  Save
+  Save,
+  Loader2
 } from 'lucide-react';
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
@@ -47,220 +48,6 @@ interface ChapterData {
   };
   teacherComments: TeacherComment[];
 }
-
-const chapterTemplates: Record<string, ChapterData[]> = {
-  diploma: [
-    { 
-      id: 1, 
-      key: 'intro', 
-      progress: 0, 
-      status: 'pending', 
-      studentNote: '', 
-      teacherComments: [
-        { id: '1', text: 'Переконайтеся, що актуальність теми чітко обґрунтована', date: '2024-01-15', status: 'info' },
-        { id: '2', text: 'Додайте більше сучасних джерел (2020-2024)', date: '2024-01-16', status: 'warning' }
-      ]
-    },
-    { 
-      id: 2, 
-      key: 'theory', 
-      progress: 0, 
-      status: 'pending', 
-      studentNote: '', 
-      teacherComments: [
-        { id: '3', text: 'Гарна структура теоретичної частини!', date: '2024-01-10', status: 'success' }
-      ]
-    },
-    { 
-      id: 3, 
-      key: 'design', 
-      progress: 0, 
-      status: 'pending', 
-      studentNote: '', 
-      teacherComments: []
-    },
-    { 
-      id: 4, 
-      key: 'implementation', 
-      progress: 0, 
-      status: 'pending', 
-      studentNote: '', 
-      teacherComments: []
-    },
-    { 
-      id: 5, 
-      key: 'conclusion', 
-      progress: 0, 
-      status: 'pending', 
-      studentNote: '', 
-      teacherComments: []
-    },
-    { 
-      id: 6, 
-      key: 'appendix', 
-      progress: 0, 
-      status: 'pending', 
-      studentNote: '', 
-      teacherComments: []
-    },
-    { 
-      id: 7, 
-      key: 'sources', 
-      progress: 0, 
-      status: 'pending', 
-      studentNote: '', 
-      teacherComments: []
-    },
-    { 
-      id: 8, 
-      key: 'abstract', 
-      progress: 0, 
-      status: 'pending', 
-      studentNote: '', 
-      teacherComments: []
-    },
-    { 
-      id: 9, 
-      key: 'cover', 
-      progress: 0, 
-      status: 'pending', 
-      studentNote: '', 
-      teacherComments: []
-    },
-    { 
-      id: 10, 
-      key: 'content', 
-      progress: 0, 
-      status: 'pending', 
-      studentNote: '', 
-      teacherComments: []
-    }
-  ],
-  coursework: [
-    { 
-      id: 1, 
-      key: 'intro', 
-      progress: 0, 
-      status: 'pending', 
-      studentNote: '', 
-      teacherComments: []
-    },
-    { 
-      id: 2, 
-      key: 'theory', 
-      progress: 0, 
-      status: 'pending', 
-      studentNote: '', 
-      teacherComments: []
-    },
-    { 
-      id: 3, 
-      key: 'design', 
-      progress: 0, 
-      status: 'pending', 
-      studentNote: '', 
-      teacherComments: []
-    },
-    { 
-      id: 4, 
-      key: 'implementation', 
-      progress: 0, 
-      status: 'pending', 
-      studentNote: '', 
-      teacherComments: []
-    },
-    { 
-      id: 5, 
-      key: 'conclusion', 
-      progress: 0, 
-      status: 'pending', 
-      studentNote: '', 
-      teacherComments: []
-    },
-    { 
-      id: 6, 
-      key: 'appendix', 
-      progress: 0, 
-      status: 'pending', 
-      studentNote: '', 
-      teacherComments: []
-    },
-    { 
-      id: 7, 
-      key: 'sources', 
-      progress: 0, 
-      status: 'pending', 
-      studentNote: '', 
-      teacherComments: []
-    },
-    { 
-      id: 8, 
-      key: 'abstract', 
-      progress: 0, 
-      status: 'pending', 
-      studentNote: '', 
-      teacherComments: []
-    },
-    { 
-      id: 9, 
-      key: 'cover', 
-      progress: 0, 
-      status: 'pending', 
-      studentNote: '', 
-      teacherComments: []
-    },
-    { 
-      id: 10, 
-      key: 'content', 
-      progress: 0, 
-      status: 'pending', 
-      studentNote: '', 
-      teacherComments: []
-    }
-  ],
-  practice: [
-    { 
-      id: 1, 
-      key: 'intro', 
-      progress: 0, 
-      status: 'pending', 
-      studentNote: '', 
-      teacherComments: []
-    },
-    { 
-      id: 2, 
-      key: 'tasks', 
-      progress: 0, 
-      status: 'pending', 
-      studentNote: '', 
-      teacherComments: []
-    },
-    { 
-      id: 3, 
-      key: 'diary', 
-      progress: 0, 
-      status: 'pending', 
-      studentNote: '', 
-      teacherComments: []
-    },
-    { 
-      id: 4, 
-      key: 'conclusion', 
-      progress: 0, 
-      status: 'pending', 
-      studentNote: '', 
-      teacherComments: []
-    },
-    { 
-      id: 5, 
-      key: 'report', 
-      progress: 0, 
-      status: 'pending', 
-      studentNote: '', 
-      teacherComments: []
-    }
-  ]
-};
 
 const projectTitles: Record<string, string> = {
   diploma: 'Дипломний проєкт',
@@ -294,8 +81,35 @@ const getCommentBadgeStyle = (status: TeacherComment['status']) => {
   }
 };
 
+// API функції
+const apiRequest = async (url: string, options: any = {}) => {
+  const token = localStorage.getItem('token');
+  const defaultHeaders = {
+    'Content-Type': 'application/json',
+    ...(token && { 'Authorization': `Bearer ${token}` })
+  };
+
+  const response = await fetch(`/api${url}`, {
+    ...options,
+    headers: {
+      ...defaultHeaders,
+      ...options.headers,
+    },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || `API Error: ${response.status}`);
+  }
+
+  return response.json();
+};
+
 // Компонент початкового екрану
-const WelcomeScreen = ({ onSelectProject }: { onSelectProject: (type: 'diploma' | 'coursework' | 'practice') => void }) => {
+const WelcomeScreen = ({ onSelectProject, loading }: { 
+  onSelectProject: (type: 'diploma' | 'coursework' | 'practice') => void;
+  loading: boolean;
+}) => {
   const { t } = useTranslation();
 
   const projectOptions = [
@@ -340,7 +154,7 @@ const WelcomeScreen = ({ onSelectProject }: { onSelectProject: (type: 'diploma' 
             <Card 
               key={option.type}
               className="bg-[var(--card)] text-[var(--card-foreground)] hover:shadow-lg transition-all duration-300 cursor-pointer border-2 hover:border-[var(--primary)]"
-              onClick={() => onSelectProject(option.type)}
+              onClick={() => !loading && onSelectProject(option.type)}
             >
               <CardHeader className="text-center pb-4">
                 <div className={`w-16 h-16 ${option.color} rounded-full flex items-center justify-center mx-auto mb-4 border border-[var(--border)]`}>
@@ -354,9 +168,17 @@ const WelcomeScreen = ({ onSelectProject }: { onSelectProject: (type: 'diploma' 
                 </CardDescription>
                 <Button 
                   className="w-full bg-[var(--primary)] text-[var(--primary-foreground)] hover:bg-[var(--primary-foreground)] hover:text-[var(--primary)]"
-                  onClick={() => onSelectProject(option.type)}
+                  onClick={() => !loading && onSelectProject(option.type)}
+                  disabled={loading}
                 >
-                  {t('welcome.startButton')}
+                  {loading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      {t('common.loading')}
+                    </>
+                  ) : (
+                    t('welcome.startButton')
+                  )}
                 </Button>
               </CardContent>
             </Card>
@@ -364,6 +186,7 @@ const WelcomeScreen = ({ onSelectProject }: { onSelectProject: (type: 'diploma' 
         })}
       </div>
 
+      {/* Решта коду для екрану допомоги залишається той же */}
       <div className="mt-12 flex justify-center">
         <Card className="w-full max-w-5xl bg-[var(--muted)]/50 border-dashed border-2 border-[var(--border)]">
           <CardContent className="py-10">
@@ -416,136 +239,188 @@ const ThesisTracker = () => {
 
   const urlType = getQueryParam('type');
 
-  // Ключі для localStorage
-  const STORAGE_PROJECT_TYPE = 'thesisTrackerProjectType';
-  const STORAGE_CHAPTERS = 'thesisTrackerChapters';
-
-  // Стан для показу нотаток та коментарів
+  // Стан компоненту
+  const [projectType, setProjectType] = useState<'diploma' | 'coursework' | 'practice' | null>(null);
+  const [chapters, setChapters] = useState<ChapterData[]>([]);
+  const [loading, setLoading] = useState(true);
   const [expandedNotes, setExpandedNotes] = useState<Record<number, boolean>>({});
   const [expandedComments, setExpandedComments] = useState<Record<number, boolean>>({});
   const [editingNotes, setEditingNotes] = useState<Record<number, boolean>>({});
 
-  // Зчитуємо з localStorage при початковому рендері
-  const [projectType, setProjectType] = useState<'diploma' | 'coursework' | 'practice' | null>(() => {
-    if (urlType === 'coursework' || urlType === 'practice' || urlType === 'diploma') {
-      return urlType;
-    }
-    const savedType = localStorage.getItem(STORAGE_PROJECT_TYPE);
-    if (savedType === 'coursework' || savedType === 'practice' || savedType === 'diploma') {
-      return savedType;
-    }
-    return null;
-  });
-
-  const [chapters, setChapters] = useState<ChapterData[]>(() => {
-  if (urlType === 'coursework' || urlType === 'practice' || urlType === 'diploma') {
-    return [...chapterTemplates[urlType]];
-  }
-
-  const savedChapters = localStorage.getItem(STORAGE_CHAPTERS);
-  if (savedChapters) {
-    try {
-      const parsedChapters: ChapterData[] = JSON.parse(savedChapters);
-      // Додаємо teacherComments якщо їх немає
-      return parsedChapters.map((ch: ChapterData) => ({
-        ...ch,
-        teacherComments: ch.teacherComments || []
-      }));
-    } catch {
-      return [];
-    }
-  }
-  return [];
-});
-
-
-  // Синхронізуємо локальний стан з URL при зміні urlType
+  // Завантаження даних при ініціалізації
   useEffect(() => {
-    if (urlType === 'coursework' || urlType === 'practice' || urlType === 'diploma') {
-      setProjectType(urlType);
-      setChapters([...chapterTemplates[urlType]]);
-    }
+    const initializeData = async () => {
+      try {
+        setLoading(true);
+
+        // Якщо є URL параметр, встановлюємо тип проекту
+        if (urlType && ['diploma', 'coursework', 'practice'].includes(urlType)) {
+          await apiRequest('/user-project', {
+            method: 'POST',
+            body: JSON.stringify({ projectType: urlType })
+          });
+          await loadProjectData(urlType as any);
+          return;
+        }
+
+        // Інакше завантажуємо активний тип проекту користувача
+        const response = await apiRequest('/user-project');
+        if (response.projectType) {
+          await loadProjectData(response.projectType);
+        }
+      } catch (error) {
+        console.error('Error initializing data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    initializeData();
   }, [urlType]);
 
-  // Зберігаємо projectType в localStorage при зміні
-  useEffect(() => {
-    if (projectType) {
-      localStorage.setItem(STORAGE_PROJECT_TYPE, projectType);
+  const loadProjectData = async (type: 'diploma' | 'coursework' | 'practice') => {
+    try {
+      setProjectType(type);
+      
+      // Завантажуємо глави для цього типу проекту
+      const chaptersResponse = await apiRequest(`/user-chapters?projectType=${type}`);
+      
+      // Завантажуємо коментарі для кожної глави
+      const chaptersWithComments = await Promise.all(
+        chaptersResponse.map(async (chapter: ChapterData) => {
+          try {
+            const comments = await apiRequest(`/teacher-comments?projectType=${type}&chapterKey=${chapter.key}`);
+            return { ...chapter, teacherComments: comments };
+          } catch (error) {
+            console.warn(`Error loading comments for chapter ${chapter.key}:`, error);
+            return { ...chapter, teacherComments: [] };
+          }
+        })
+      );
+      
+      setChapters(chaptersWithComments);
+      
+      // Оновлюємо URL без перезавантаження
+      window.history.replaceState({}, '', `/tracker?type=${type}`);
+    } catch (error) {
+      console.error('Error loading project data:', error);
     }
-  }, [projectType]);
-
-  // Зберігаємо chapters в localStorage при зміні
-  useEffect(() => {
-    if (chapters.length > 0) {
-      localStorage.setItem(STORAGE_CHAPTERS, JSON.stringify(chapters));
-    }
-  }, [chapters]);
-
-  const handleSelectProject = (type: 'diploma' | 'coursework' | 'practice') => {
-    setProjectType(type);
-    setChapters([...chapterTemplates[type]]);
-    window.history.pushState({}, '', `/tracker?type=${type}`);
   };
 
-  const totalProgress = chapters.length > 0 ? Math.round(
-    chapters.reduce((sum, ch) => sum + ch.progress, 0) / chapters.length
-  ) : 0;
+  const handleSelectProject = async (type: 'diploma' | 'coursework' | 'practice') => {
+    try {
+      setLoading(true);
+      
+      await apiRequest('/user-project', {
+        method: 'POST',
+        body: JSON.stringify({ projectType: type })
+      });
 
-  const handleFileUpload = (chapterId: number, file: File) => {
+      await loadProjectData(type);
+    } catch (error) {
+      console.error('Error selecting project:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateChapter = async (chapterKey: string, updates: any) => {
+    try {
+      await apiRequest(`/user-chapters/${chapterKey}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          projectType,
+          ...updates
+        })
+      });
+
+      // Оновлюємо локальний стан
+      setChapters(prev =>
+        prev.map(ch =>
+          ch.key === chapterKey
+            ? { ...ch, ...updates }
+            : ch
+        )
+      );
+
+      // Якщо статус змінився на inProgress, можливо потрібно оновити коментарі
+      if (updates.status === 'inProgress') {
+        try {
+          const comments = await apiRequest(`/teacher-comments?projectType=${projectType}&chapterKey=${chapterKey}`);
+          setChapters(prev =>
+            prev.map(ch =>
+              ch.key === chapterKey
+                ? { ...ch, teacherComments: comments }
+                : ch
+            )
+          );
+        } catch (error) {
+          console.warn('Error updating comments:', error);
+        }
+      }
+    } catch (error) {
+      console.error('Error updating chapter:', error);
+    }
+  };
+
+  const handleFileUpload = async (chapterId: number, file: File) => {
+    const chapter = chapters.find(ch => ch.id === chapterId);
+    if (!chapter) return;
+
     const fileSizeKB = Math.round(file.size / 1024);
     const fileSizeStr = fileSizeKB > 1024 ? `${(fileSizeKB / 1024).toFixed(1)} MB` : `${fileSizeKB} KB`;
     
-    setChapters(prev =>
-      prev.map(ch =>
-        ch.id === chapterId
-          ? { 
-              ...ch, 
-              progress: 70, 
-              status: 'review',
-              uploadedFile: {
-                name: file.name,
-                uploadDate: new Date().toLocaleDateString('uk-UA'),
-                size: fileSizeStr
+    const uploadedFile = {
+      name: file.name,
+      size: fileSizeStr
+    };
+
+    await updateChapter(chapter.key, {
+      progress: 70,
+      status: 'review',
+      uploadedFile
+    });
+  };
+
+  const handleDeleteFile = async (chapterId: number) => {
+    const chapter = chapters.find(ch => ch.id === chapterId);
+    if (!chapter) return;
+
+    try {
+      await apiRequest(`/user-chapters/${chapter.key}/file?projectType=${projectType}`, {
+        method: 'DELETE'
+      });
+
+      // Оновлюємо локальний стан
+      setChapters(prev =>
+        prev.map(ch =>
+          ch.id === chapterId
+            ? { 
+                ...ch, 
+                progress: 0, 
+                status: 'pending',
+                uploadedFile: undefined
               }
-            }
-          : ch
-      )
-    );
+            : ch
+        )
+      );
+    } catch (error) {
+      console.error('Error deleting file:', error);
+    }
   };
 
-  const handleDeleteFile = (chapterId: number) => {
-    setChapters(prev =>
-      prev.map(ch =>
-        ch.id === chapterId
-          ? { 
-              ...ch, 
-              progress: 0, 
-              status: 'pending',
-              uploadedFile: undefined
-            }
-          : ch
-      )
-    );
+  const handleSendForReview = async (chapterId: number) => {
+    const chapter = chapters.find(ch => ch.id === chapterId);
+    if (!chapter) return;
+
+    await updateChapter(chapter.key, { status: 'inProgress' });
   };
 
-  const handleSendForReview = (chapterId: number) => {
-    setChapters(prev =>
-      prev.map(ch =>
-        ch.id === chapterId
-          ? { ...ch, status: 'inProgress' }
-          : ch
-      )
-    );
-  };
+  const handleUpdateNote = async (chapterId: number, newNote: string) => {
+    const chapter = chapters.find(ch => ch.id === chapterId);
+    if (!chapter) return;
 
-  const handleUpdateNote = (chapterId: number, newNote: string) => {
-    setChapters(prev =>
-      prev.map(ch =>
-        ch.id === chapterId
-          ? { ...ch, studentNote: newNote }
-          : ch
-      )
-    );
+    await updateChapter(chapter.key, { studentNote: newNote });
   };
 
   const toggleNoteExpansion = (chapterId: number) => {
@@ -569,6 +444,21 @@ const ThesisTracker = () => {
     }));
   };
 
+  const totalProgress = chapters.length > 0 ? Math.round(
+    chapters.reduce((sum, ch) => sum + ch.progress, 0) / chapters.length
+  ) : 0;
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[var(--background)] flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4" />
+          <p className="text-[var(--muted-foreground)]">Завантаження...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[var(--background)] flex text-[var(--foreground)]">
       <div className="hidden md:block sticky top-0 h-screen bg-[var(--sidebar)] border-r border-[var(--sidebar-border)]">
@@ -582,7 +472,7 @@ const ThesisTracker = () => {
 
         <main className="flex-1 overflow-y-auto bg-[var(--background)]">
           {!projectType ? (
-            <WelcomeScreen onSelectProject={handleSelectProject} />
+            <WelcomeScreen onSelectProject={handleSelectProject} loading={loading} />
           ) : (
             <div className="max-w-6xl mx-auto py-6 px-4 space-y-6 pb-20">
               <Card className="bg-[var(--card)] text-[var(--card-foreground)]">
@@ -766,13 +656,25 @@ const ThesisTracker = () => {
                             <div className="space-y-2">
                               <Textarea
                                 value={chapter.studentNote}
-                                onChange={(e) => handleUpdateNote(chapter.id, e.target.value)}
+                                onChange={(e) => {
+                                  const newNote = e.target.value;
+                                  setChapters(prev =>
+                                    prev.map(ch =>
+                                      ch.id === chapter.id
+                                        ? { ...ch, studentNote: newNote }
+                                        : ch
+                                    )
+                                  );
+                                }}
                                 placeholder="Додайте свої нотатки до цього розділу..."
                                 className="min-h-[100px] bg-[var(--background)] border-[var(--border)]"
                               />
                               <Button
                                 size="sm"
-                                onClick={() => toggleNoteEditing(chapter.id)}
+                                onClick={async () => {
+                                  await handleUpdateNote(chapter.id, chapter.studentNote);
+                                  toggleNoteEditing(chapter.id);
+                                }}
                                 className="bg-[var(--primary)] text-[var(--primary-foreground)]"
                               >
                                 <Save className="w-3 h-3 mr-1" />

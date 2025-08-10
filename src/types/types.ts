@@ -143,8 +143,6 @@ export interface ChapterTemplate {
   studentNote: string;
 }
 
-export type ProjectType = 'diploma' | 'coursework' | 'practice';
-
 export interface UserType {
   name: string;
   firstName?: string;
@@ -223,4 +221,115 @@ export interface MenuItemType {
   href: string;
   icon: LucideIcon;
   badge?: string | null;
+}
+
+
+
+
+// types/thesis.ts
+
+export interface TeacherComment {
+  id: string;
+  text: string;
+  date: string;
+  status: 'info' | 'warning' | 'error' | 'success';
+}
+
+export interface ChapterData {
+  id: number;
+  key: string;
+  progress: number;
+  status: 'completed' | 'review' | 'inProgress' | 'pending';
+  studentNote: string;
+  uploadedFile?: {
+    name: string;
+    uploadDate: string;
+    size: string;
+  };
+  teacherComments: TeacherComment[];
+}
+
+export interface UserChapter {
+  user_id: number;
+  project_type: string;
+  chapter_key: string;
+  progress: number;
+  status: string;
+  student_note: string;
+  uploaded_file_name?: string;
+  uploaded_file_date?: string;
+  uploaded_file_size?: string;
+  updated_at: string;
+}
+
+export type ProjectType = 'diploma' | 'coursework' | 'practice';
+
+export interface ProjectOption {
+  type: ProjectType;
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+  title: string;
+  description: string;
+  color: string;
+}
+
+export interface WelcomeScreenProps {
+  onSelectProject: (type: ProjectType) => void;
+}
+
+export interface ChapterTemplates {
+  [key: string]: ChapterData[];
+}
+
+export interface ProjectTitles {
+  [key: string]: string;
+}
+
+// API related types
+export interface ApiRequestOptions extends RequestInit {
+  headers?: Record<string, string>;
+}
+
+export interface SaveChapterData {
+  projectType: string;
+  chapterKey: string;
+  progress: number;
+  status: string;
+  studentNote: string;
+  uploadedFileName: string | null;
+  uploadedFileDate: string | null;
+  uploadedFileSize: string | null;
+}
+
+
+
+export interface JwtUserPayload {
+  userId: number;
+  email: string;
+  role: string;
+}
+
+export interface Message {
+  id: string;
+  studentEmail: string;
+  sender: string;
+  content: string;
+  date: string;
+}
+
+export interface UserProject {
+  projectType: string | null;
+  chapters: ChapterData[];
+}
+
+export interface ChapterData {
+  id: number;
+  key: string;
+  progress: number;
+  status: 'completed' | 'review' | 'inProgress' | 'pending';
+  studentNote: string;
+  uploadedFile?: {
+    name: string;
+    uploadDate: string;
+    size: string;
+  };
 }

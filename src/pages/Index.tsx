@@ -37,6 +37,7 @@ import Sidebar from '@/components/Sidebar';
 import { useTranslation } from 'react-i18next';
 import type { ChapterData } from '../types/types'; 
 
+
 // Шаблони розділів (синхронізовані з ThesisTracker)
 const chapterTemplates: Record<string, Omit<ChapterData, 'teacherComments'>[]> = {
   diploma: [
