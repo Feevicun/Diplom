@@ -3,9 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { GlassButton } from "@/components/GlassButton";
-import { KeyRound } from "lucide-react";
+import { KeyRound, Eye, EyeOff } from "lucide-react"; // додано Eye, EyeOff
+import { useNavigate } from "react-router-dom";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import type { User } from "../types/types"; 
 
 const ForgotPasswordPage = () => {
   const [email, setEmail] = useState("");
@@ -14,6 +14,9 @@ const ForgotPasswordPage = () => {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const navigate = useNavigate();
 
   const handleReset = async () => {
     if (!email || !role) {
@@ -21,27 +24,27 @@ const ForgotPasswordPage = () => {
     }
 
     try {
-      const res = await fetch("../server/user.json");
-      const users: User[] = await res.json();
+      const response = await fetch("http://localhost:4000/api/forgot-password/verify", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, role }),
+      });
 
-      const matchedUser = users.find(
-        (user) => user.email === email && user.role === role
-      );
-
-      if (!matchedUser) {
+      if (response.ok) {
+        setUserFound(true);
+        setError("");
+      } else {
         setError("Користувача з такою поштою не знайдено.");
         setUserFound(false);
-        return;
       }
-
-      setUserFound(true);
-      setError("");
     } catch {
       setError("Помилка при завантаженні даних.");
     }
   };
 
-  const handleSaveNewPassword = () => {
+  const handleSaveNewPassword = async () => {
     if (newPassword.length < 6) {
       alert("Пароль має містити щонайменше 6 символів.");
       return;
@@ -52,12 +55,37 @@ const ForgotPasswordPage = () => {
       return;
     }
 
-    alert(`Пароль для ${email} успішно змінено! (тільки у пам'яті браузера)`);
+    try {
+      const response = await fetch("http://localhost:4000/api/forgot-password/reset", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ 
+          email, 
+          role, 
+          newPassword 
+        }),
+      });
 
-    setEmail("");
-    setNewPassword("");
-    setConfirmPassword("");
-    setUserFound(false);
+      const data = await response.json();
+
+      if (response.ok) {
+        alert(`Пароль для ${email} успішно змінено!`);
+        
+        setEmail("");
+        setNewPassword("");
+        setConfirmPassword("");
+        setUserFound(false);
+        setError("");
+
+        navigate("/");
+      } else {
+        alert(data.message || "Помилка при зміні паролю.");
+      }
+    } catch {
+      alert("Помилка з'єднання з сервером.");
+    }
   };
 
   return (
@@ -117,26 +145,52 @@ const ForgotPasswordPage = () => {
               </>
             ) : (
               <>
-                <div>
+                {/* Новий пароль з Eye toggle */}
+                <div className="relative">
                   <Label className="text-white/80 mb-1 block">Новий пароль</Label>
                   <Input
-                    type="password"
+                    type={showNewPassword ? "text" : "password"}
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     placeholder="Введіть новий пароль"
-                    className="w-full bg-white/10 border border-white/10 text-white/90"
+                    className="w-full bg-white/10 border border-white/10 text-white/90 placeholder:text-white/50 pr-12"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword((prev) => !prev)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-white/10 transition-colors"
+                    aria-label={showNewPassword ? "Сховати пароль" : "Показати пароль"}
+                  >
+                    {showNewPassword ? (
+                      <Eye size={18} className="text-white/70" />
+                    ) : (
+                      <EyeOff size={18} className="text-white/70" />
+                    )}
+                  </button>
                 </div>
 
-                <div>
+                {/* Підтвердження паролю з Eye toggle */}
+                <div className="relative">
                   <Label className="text-white/80 mb-1 block">Підтвердження паролю</Label>
                   <Input
-                    type="password"
+                    type={showConfirmPassword ? "text" : "password"}
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="Повторіть новий пароль"
-                    className="w-full bg-white/10 border border-white/10 text-white/90"
+                    className="w-full bg-white/10 border border-white/10 text-white/90 placeholder:text-white/50 pr-12"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword((prev) => !prev)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-white/10 transition-colors"
+                    aria-label={showConfirmPassword ? "Сховати пароль" : "Показати пароль"}
+                  >
+                    {showConfirmPassword ? (
+                      <Eye size={18} className="text-white/70" />
+                    ) : (
+                      <EyeOff size={18} className="text-white/70" />
+                    )}
+                  </button>
                 </div>
 
                 <GlassButton

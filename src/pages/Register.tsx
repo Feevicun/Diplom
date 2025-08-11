@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { GlassButton } from "@/components/GlassButton";
-import { GraduationCap } from "lucide-react";
+import { GraduationCap, Eye, EyeOff } from "lucide-react"; // додано Eye, EyeOff
 import { useNavigate } from "react-router-dom";
 
 const RegisterPage = () => {
@@ -29,6 +29,8 @@ const RegisterPage = () => {
 
   const [selectedFaculty, setSelectedFaculty] = useState<number | null>(null);
   const [selectedDepartment, setSelectedDepartment] = useState<number | null>(null);
+
+  const [showPassword, setShowPassword] = useState(false); // додано
 
   const navigate = useNavigate();
 
@@ -202,16 +204,30 @@ const RegisterPage = () => {
                 />
               </div>
 
-              {/* Password */}
+              {/* Password with Eye toggle */}
               <div>
                 <Label className="text-white/80 mb-1 block">Пароль</Label>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Введіть пароль"
-                  className="w-full bg-white/10 border border-white/10 text-white/90 rounded-md px-3 py-2 outline-none placeholder:text-white/50"
-                />
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Введіть пароль"
+                    className="w-full bg-white/10 border border-white/10 text-white/90 rounded-md px-3 py-2 outline-none placeholder:text-white/50 pr-12"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((prev) => !prev)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-white/10 transition-colors"
+                    aria-label={showPassword ? "Сховати пароль" : "Показати пароль"}
+                  >
+                    {showPassword ? (
+                      <Eye size={18} className="text-white/70" />
+                    ) : (
+                      <EyeOff size={18} className="text-white/70" />
+                    )}
+                  </button>
+                </div>
               </div>
 
               {/* Faculty */}

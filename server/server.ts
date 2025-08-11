@@ -161,6 +161,7 @@ app.post("/api/register", async (req: Request, res: Response) => {
 
 
 
+
 // GET /api/faculties
 app.get("/api/faculties", async (req: Request, res: Response) => {
   try {
@@ -318,6 +319,79 @@ app.put("/api/update-profile", async (req: Request, res: Response) => {
     }
 
     res.json({ message: "Profile updated successfully", user: result.rows[0] });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Database error" });
+  }
+});
+
+
+// API для перевірки користувача при забутому паролі
+app.post("/api/forgot-password/verify", async (req: Request, res: Response) => {
+  try {
+    const { email, role } = req.body;
+
+    if (!email || !role) {
+      return res.status(400).json({ message: "Email and role are required" });
+    }
+
+    // Перевіряємо чи існує користувач з такою поштою та роллю
+    const result = await pool.query(
+      "SELECT id, email, role FROM users WHERE email = $1 AND role = $2",
+      [email, role]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Повертаємо успішну відповідь (без паролю!)
+    res.json({ 
+      message: "User found", 
+      user: { 
+        id: result.rows[0].id,
+        email: result.rows[0].email, 
+        role: result.rows[0].role 
+      } 
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Database error" });
+  }
+});
+
+// API для зміни паролю
+app.post("/api/forgot-password/reset", async (req: Request, res: Response) => {
+  try {
+    const { email, role, newPassword } = req.body;
+
+    if (!email || !role || !newPassword) {
+      return res.status(400).json({ message: "Email, role and new password are required" });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ message: "Password must be at least 6 characters long" });
+    }
+
+    // Знаходимо користувача
+    const userResult = await pool.query(
+      "SELECT id FROM users WHERE email = $1 AND role = $2",
+      [email, role]
+    );
+
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const userId = userResult.rows[0].id;
+
+    // Оновлюємо пароль в БД
+    await pool.query(
+      "UPDATE users SET password = $1 WHERE id = $2",
+      [newPassword, userId]
+    );
+
+    res.json({ message: "Password updated successfully" });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Database error" });

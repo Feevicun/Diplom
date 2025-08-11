@@ -8,7 +8,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { GlassButton } from "@/components/GlassButton";
-import { Lock } from "lucide-react";
+import { Lock, Eye, EyeOff } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import {
@@ -23,41 +23,40 @@ const LoginPage = () => {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [role, setRole] = useState("student");
+    const [showPassword, setShowPassword] = useState(false);
 
     const handleLogin = async () => {
-  try {
-    const response = await fetch("http://localhost:4000/api/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password, role }),
-    });
+        try {
+            const response = await fetch("http://localhost:4000/api/login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email, password, role }),
+            });
 
-    const data = await response.json();
+            const data = await response.json();
 
-    if (!response.ok) {
-      alert(`Помилка: ${data.message}`);
-      return;
-    }
+            if (!response.ok) {
+                alert(`Помилка: ${data.message}`);
+                return;
+            }
 
-    console.log("User from server:", data.user);
-    console.log("Token:", data.token);
+            console.log("User from server:", data.user);
+            console.log("Token:", data.token);
 
-    // Зберігаємо токен у localStorage (або сесійному сховищі)
-    localStorage.setItem("token", data.token);
+            localStorage.setItem("token", data.token);
+            localStorage.setItem("currentUser", JSON.stringify(data.user));
 
-    // За бажанням можна зберегти й юзера
-    localStorage.setItem("currentUser", JSON.stringify(data.user));
+            if (role === "student") {
+                window.location.href = "/dashboard";
+            } else {
+                window.location.href = "/analytics";
+            }
+        } catch (error) {
+            console.error("Network error:", error);
+            alert("Помилка мережі. Спробуйте пізніше.");
+        }
+    };
 
-    if (role === "student") {
-      window.location.href = "/dashboard";
-    } else {
-      window.location.href = "/analytics";
-    }
-  } catch (error) {
-    console.error("Network error:", error);
-    alert("Помилка мережі. Спробуйте пізніше.");
-  }
-};
     return (
         <div className="min-h-screen bg-[#0e0f11] flex items-center justify-center px-4 py-12 relative overflow-hidden">
             {/* Blur background effects */}
@@ -74,7 +73,7 @@ const LoginPage = () => {
                             Вхід у кабінет
                         </CardTitle>
 
-                        {/* Переміщене поле "Роль" */}
+                        {/* Роль */}
                         <div className="mt-6 w-full mx-auto text-left">
                             <Label className="text-white/80 mb-1 block">Роль</Label>
                             <Select value={role} onValueChange={(val) => setRole(val)}>
@@ -102,16 +101,28 @@ const LoginPage = () => {
                             />
                         </div>
 
-                        {/* Password */}
-                        <div>
-                            <Label className="text-white/80 mb-1 block">Пароль</Label>
+                        {/* Password with eye toggle */}
+                        <Label className="text-white/80 mb-1 block">Пароль</Label>
+                        <div className="relative">
                             <Input
-                                type="password"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                placeholder="Введіть пароль"
-                                className="w-full bg-white/10 border border-white/10 text-white/90 placeholder:text-white/50"
+                              type={showPassword ? "text" : "password"}
+                              value={password}
+                              onChange={(e) => setPassword(e.target.value)}
+                              placeholder="Введіть пароль"
+                              className="w-full bg-white/10 border border-white/10 text-white/90 placeholder:text-white/50 pr-12"
                             />
+                            <button
+                              type="button"
+                              onClick={() => setShowPassword((prev) => !prev)}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-white/10 transition-colors"
+                            >
+                        {/* Якщо пароль показаний — показуємо Eye (очі відкриті), інакше EyeOff */}
+                        {showPassword ? (
+                          <Eye size={18} className="text-white/70" />
+                        ) : (
+                          <EyeOff size={18} className="text-white/70" />
+                        )}
+                            </button>
                         </div>
 
                         {/* Button */}
