@@ -49,6 +49,8 @@ interface ChapterData {
   teacherComments: TeacherComment[];
 }
 
+
+
 const projectTitles: Record<string, string> = {
   diploma: 'Дипломний проєкт',
   coursework: 'Курсова робота',

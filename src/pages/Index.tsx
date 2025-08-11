@@ -31,47 +31,32 @@ import {
   Activity,
   Plus,
   Settings,
+  Loader2,
 } from 'lucide-react';
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
 import { useTranslation } from 'react-i18next';
-import type { ChapterData } from '../types/types'; 
 
+interface TeacherComment {
+  id: string;
+  text: string;
+  date: string;
+  status: 'info' | 'warning' | 'error' | 'success';
+}
 
-// Шаблони розділів (синхронізовані з ThesisTracker)
-const chapterTemplates: Record<string, Omit<ChapterData, 'teacherComments'>[]> = {
-  diploma: [
-    { id: 1, key: 'intro', progress: 0, status: 'pending', studentNote: '' },
-    { id: 2, key: 'theory', progress: 0, status: 'pending', studentNote: '' },
-    { id: 3, key: 'design', progress: 0, status: 'pending', studentNote: '' },
-    { id: 4, key: 'implementation', progress: 0, status: 'pending', studentNote: '' },
-    { id: 5, key: 'conclusion', progress: 0, status: 'pending', studentNote: '' },
-    { id: 6, key: 'appendix', progress: 0, status: 'pending', studentNote: '' },
-    { id: 7, key: 'sources', progress: 0, status: 'pending', studentNote: '' },
-    { id: 8, key: 'abstract', progress: 0, status: 'pending', studentNote: '' },
-    { id: 9, key: 'cover', progress: 0, status: 'pending', studentNote: '' },
-    { id: 10, key: 'content', progress: 0, status: 'pending', studentNote: '' }
-  ],
-  coursework: [
-    { id: 1, key: 'intro', progress: 0, status: 'pending', studentNote: '' },
-    { id: 2, key: 'theory', progress: 0, status: 'pending', studentNote: '' },
-    { id: 3, key: 'design', progress: 0, status: 'pending', studentNote: '' },
-    { id: 4, key: 'implementation', progress: 0, status: 'pending', studentNote: '' },
-    { id: 5, key: 'conclusion', progress: 0, status: 'pending', studentNote: '' },
-    { id: 6, key: 'appendix', progress: 0, status: 'pending', studentNote: '' },
-    { id: 7, key: 'sources', progress: 0, status: 'pending', studentNote: '' },
-    { id: 8, key: 'abstract', progress: 0, status: 'pending', studentNote: '' },
-    { id: 9, key: 'cover', progress: 0, status: 'pending', studentNote: '' },
-    { id: 10, key: 'content', progress: 0, status: 'pending', studentNote: '' }
-  ],
-  practice: [
-    { id: 1, key: 'intro', progress: 0, status: 'pending', studentNote: '' },
-    { id: 2, key: 'tasks', progress: 0, status: 'pending', studentNote: '' },
-    { id: 3, key: 'diary', progress: 0, status: 'pending', studentNote: '' },
-    { id: 4, key: 'conclusion', progress: 0, status: 'pending', studentNote: '' },
-    { id: 5, key: 'report', progress: 0, status: 'pending', studentNote: '' }
-  ]
-};
+interface ChapterData {
+  id: number;
+  key: string;
+  progress: number;
+  status: 'completed' | 'review' | 'inProgress' | 'pending';
+  studentNote: string;
+  uploadedFile?: {
+    name: string;
+    uploadDate: string;
+    size: string;
+  };
+  teacherComments: TeacherComment[];
+}
 
 type UserType = {
   name: string;
@@ -81,134 +66,154 @@ type UserType = {
   role: string;
 };
 
+// API функції (ті ж що і в ThesisTracker)
+const apiRequest = async (url: string, options: any = {}) => {
+  const token = localStorage.getItem('token');
+  const defaultHeaders = {
+    'Content-Type': 'application/json',
+    ...(token && { 'Authorization': `Bearer ${token}` })
+  };
 
+  const response = await fetch(`/api${url}`, {
+    ...options,
+    headers: {
+      ...defaultHeaders,
+      ...options.headers,
+    },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || `API Error: ${response.status}`);
+  }
+
+  return response.json();
+};
 
 const Dashboard = () => {
   const { t } = useTranslation();
   const [user, setUser] = useState<UserType | null>(null);
   const [isFirstVisit, setIsFirstVisit] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   // Стани для відстеження проєкту (синхронізовані з ThesisTracker)
   const [projectType, setProjectType] = useState<string | null>(null); 
   const [chapters, setChapters] = useState<ChapterData[]>([]);
 
-  const STORAGE_PROJECT_TYPE = 'thesisTrackerProjectType';
-  const STORAGE_CHAPTERS = 'thesisTrackerChapters';
+  useEffect(() => {
+    async function fetchUser() {
+      try {
+        console.log('Починаємо fetch користувача...');
+        
+        const storedUser = localStorage.getItem('currentUser');
+        if (storedUser) {
+          try {
+            const parsedUser = JSON.parse(storedUser);
+            console.log('Знайшли користувача в localStorage:', parsedUser);
+            
+            // Переконуємось що є firstName
+            const userWithFirstName = {
+              ...parsedUser,
+              firstName: parsedUser.firstName || parsedUser.name?.split(' ')[0] || '',
+              name: parsedUser.name || ''
+            };
+            
+            setUser(userWithFirstName);
+            console.log('Встановили користувача з localStorage:', userWithFirstName);
+            return; // Якщо є дані в localStorage, не робимо API запит
+          } catch (error) {
+            console.log('Помилка парсингу localStorage:', error);
+          }
+        }
+        
+        // Якщо немає в localStorage, робимо API запит
+        const res = await fetch('/api/current-user', {
+          method: 'GET',
+          credentials: 'include',
+          cache: 'no-store',
+        });
 
-useEffect(() => {
-  async function fetchUser() {
-    try {
-      console.log('Починаємо fetch користувача...');
-      
-      const storedUser = localStorage.getItem('currentUser');
-      if (storedUser) {
-        try {
-          const parsedUser = JSON.parse(storedUser);
-          console.log('Знайшли користувача в localStorage:', parsedUser);
-          
-          // Переконуємось що є firstName
-          const userWithFirstName = {
-            ...parsedUser,
-            firstName: parsedUser.firstName || parsedUser.name?.split(' ')[0] || '',
-            name: parsedUser.name || ''
+        console.log('Отримали відповідь з API:', res.status, res.ok);
+
+        if (!res.ok) {
+          console.log('API Response not ok:', res.status, res.statusText);
+          setUser(null);
+          return;
+        }
+
+        const data = await res.json();
+        console.log('Отримані дані з API:', data);
+
+        if (data && data.user) {
+          const userWithFullName = {
+            ...data.user,
+            name: data.user.firstName + (data.user.lastName ? ' ' + data.user.lastName : ''),
           };
           
-          setUser(userWithFirstName);
-          console.log('Встановили користувача з localStorage:', userWithFirstName);
-          return; // Якщо є дані в localStorage, не робимо API запит
-        } catch (error) {
-          console.log('Помилка парсингу localStorage:', error);
+          console.log('Встановлюємо користувача з API:', userWithFullName);
+          setUser(userWithFullName);
+          
+          localStorage.setItem('currentUser', JSON.stringify(userWithFullName));
+        } else {
+          console.log('Дані користувача відсутні в API відповіді');
+          setUser(null);
         }
+      } catch (error) {
+        console.error('Помилка при отриманні користувача:', error);
+        setUser(null);
       }
+    }
+
+    fetchUser();
+    loadProjectData();
+
+    const firstVisitFlag = localStorage.getItem("firstVisitDone");
+    if (!firstVisitFlag) {
+      setIsFirstVisit(true);
+      localStorage.setItem("firstVisitDone", "true");
+    }
+  }, []);
+
+  const loadProjectData = async () => {
+    try {
+      setLoading(true);
       
-      // Якщо немає в localStorage, робимо API запит
-      const res = await fetch('/api/current-user', {
-        method: 'GET',
-        credentials: 'include',
-        cache: 'no-store',
-      });
-
-      console.log('Отримали відповідь з API:', res.status, res.ok);
-
-      if (!res.ok) {
-        console.log('API Response not ok:', res.status, res.statusText);
-        setUser(null);
-        return;
-      }
-
-      const data = await res.json();
-      console.log('Отримані дані з API:', data);
-
-      if (data && data.user) {
-        const userWithFullName = {
-          ...data.user,
-          name: data.user.firstName + (data.user.lastName ? ' ' + data.user.lastName : ''),
-        };
+      // Завантажуємо активний тип проекту користувача через API
+      const response = await apiRequest('/user-project');
+      
+      if (response.projectType) {
+        setProjectType(response.projectType);
         
-        console.log('Встановлюємо користувача з API:', userWithFullName);
-        setUser(userWithFullName);
+        // Завантажуємо глави для цього типу проекту
+        const chaptersResponse = await apiRequest(`/user-chapters?projectType=${response.projectType}`);
         
+        // Завантажуємо коментарі для кожної глави
+        const chaptersWithComments = await Promise.all(
+          chaptersResponse.map(async (chapter: ChapterData) => {
+            try {
+              const comments = await apiRequest(`/teacher-comments?projectType=${response.projectType}&chapterKey=${chapter.key}`);
+              return { ...chapter, teacherComments: comments };
+            } catch (error) {
+              console.warn(`Error loading comments for chapter ${chapter.key}:`, error);
+              return { ...chapter, teacherComments: [] };
+            }
+          })
+        );
         
-        localStorage.setItem('currentUser', JSON.stringify(userWithFullName));
+        setChapters(chaptersWithComments);
       } else {
-        console.log('Дані користувача відсутні в API відповіді');
-        setUser(null);
+        setProjectType(null);
+        setChapters([]);
       }
     } catch (error) {
-      console.error('Помилка при отриманні користувача:', error);
-      setUser(null);
+      console.error('Error loading project data:', error);
+      setProjectType(null);
+      setChapters([]);
+    } finally {
+      setLoading(false);
     }
-  }
-
-  fetchUser();
-  loadProjectData();
-
-  const firstVisitFlag = localStorage.getItem("firstVisitDone");
-  if (!firstVisitFlag) {
-    setIsFirstVisit(true);
-    localStorage.setItem("firstVisitDone", "true");
-  }
-}, []);
-
-
-
-const loadProjectData = () => {
-  const savedProjectType = localStorage.getItem(STORAGE_PROJECT_TYPE);
-
-  if (savedProjectType && ['diploma', 'coursework', 'practice'].includes(savedProjectType)) {
-    setProjectType(savedProjectType);
-
-    const savedChapters = localStorage.getItem(STORAGE_CHAPTERS);
-    if (savedChapters) {
-      try {
-        const parsedChapters = JSON.parse(savedChapters) as ChapterData[];  // Явний тип масиву
-
-        const chaptersWithComments = parsedChapters.map((ch: ChapterData) => ({
-          ...ch,
-          teacherComments: ch.teacherComments || []
-        }));
-
-        setChapters(chaptersWithComments);
-      } catch {
-        const defaultChapters = chapterTemplates[savedProjectType].map(template => ({
-          ...template,
-          teacherComments: []
-        }));
-        setChapters(defaultChapters);
-      }
-    } else {
-      const defaultChapters = chapterTemplates[savedProjectType].map(template => ({
-        ...template,
-        teacherComments: []
-      }));
-      setChapters(defaultChapters);
-    }
-  } else {
-    setProjectType(null);
-  }
-};
-
+  };
 
   // Функція для отримання динамічних даних про розділи
   const getChaptersStats = () => {
@@ -289,7 +294,7 @@ const loadProjectData = () => {
     { id: 3, type: 'approval', text: 'Розділ 1 затверджено', time: '3 дні тому', icon: CheckCircle },
   ];
 
-  // Оновлюємо quickStats з динамічними даними
+  // Оновлюємо quickStats з динамічними даними з API
   const chaptersStats = getChaptersStats();
   const quickStats = [
     {
@@ -322,7 +327,7 @@ const loadProjectData = () => {
     },
   ];
 
-  // Функція для отримання мілстоунів проєкту на основі реальних даних
+  // Функція для отримання мілстоунів проєкту на основі реальних даних з API
   const getProjectMilestones = () => {
     if (!projectType || chapters.length === 0) return [];
     
@@ -355,6 +360,27 @@ const loadProjectData = () => {
       priority: t('index.aiRecommendations.conclusion.priority'),
     },
   ];
+
+  // Показуємо індикатор завантаження для блоків прогресу
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex">
+        <div className="hidden md:block">
+          <Sidebar />
+        </div>
+        
+        <div className="flex-1 flex flex-col">
+          <Header />
+          <main className="flex-1 flex items-center justify-center">
+            <div className="text-center">
+              <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4" />
+              <p className="text-muted-foreground">Завантаження даних проекту...</p>
+            </div>
+          </main>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex">

@@ -30,6 +30,70 @@ app.use(cors({
 
 app.use(express.json());
 
+
+// Структури проектів
+const PROJECT_STRUCTURES = {
+  diploma: [
+    { key: 'intro', name: 'Вступ' },
+    { key: 'theory', name: 'Теоретична частина' },
+    { key: 'design', name: 'Проектна частина' },
+    { key: 'implementation', name: 'Реалізація' },
+    { key: 'conclusion', name: 'Висновки' },
+    { key: 'sources', name: 'Список літератури' },
+    { key: 'appendix', name: 'Додатки' },
+    { key: 'abstract', name: 'Реферат' },
+    { key: 'cover', name: 'Титульна сторінка' },
+    { key: 'content', name: 'Зміст' }
+  ],
+  coursework: [
+    { key: 'intro', name: 'Вступ' },
+    { key: 'theory', name: 'Теоретична частина' },
+    { key: 'design', name: 'Практична частина' },
+    { key: 'conclusion', name: 'Висновки' },
+    { key: 'sources', name: 'Список літератури' },
+    { key: 'appendix', name: 'Додатки' },
+    { key: 'cover', name: 'Титульна сторінка' },
+    { key: 'content', name: 'Зміст' }
+  ],
+  practice: [
+    { key: 'intro', name: 'Вступ' },
+    { key: 'tasks', name: 'Завдання практики' },
+    { key: 'diary', name: 'Щоденник практики' },
+    { key: 'report', name: 'Звіт про практику' },
+    { key: 'conclusion', name: 'Висновки' },
+    { key: 'sources', name: 'Список літератури' },
+    { key: 'appendix', name: 'Додатки' }
+  ]
+};
+
+// Функція для ініціалізації структури проекту
+async function initializeProjectStructure(userId, projectType) {
+  const structure = PROJECT_STRUCTURES[projectType];
+  if (!structure) {
+    throw new Error(`Unknown project type: ${projectType}`);
+  }
+
+  // Видаляємо існуючі записи для цього користувача та типу проекту
+  await pool.query(
+    'DELETE FROM user_chapters WHERE user_id = $1 AND project_type = $2',
+    [userId, projectType]
+  );
+
+  // Створюємо нові записи для всіх глав
+  for (const chapter of structure) {
+    await pool.query(
+      `INSERT INTO user_chapters 
+       (user_id, project_type, chapter_key, progress, status, student_note, created_at, updated_at)
+       VALUES ($1, $2, $3, 0, 'pending', '', NOW(), NOW())
+       ON CONFLICT (user_id, project_type, chapter_key) 
+       DO NOTHING`,
+      [userId, projectType, chapter.key]
+    );
+  }
+}
+
+
+
 // ============ API ROUTES ============
 
 // Middleware для аутентифікації через JWT
@@ -314,19 +378,17 @@ app.get("/api/user-project", authenticateToken, async (req: Request, res: Respon
     }
 
     const result = await pool.query(
-      'SELECT active_project_type FROM users WHERE id = $1',
+      'SELECT active_project_type FROM user_projects WHERE user_id = $1',
       [userId]
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ message: 'User not found' });
+      return res.json({ projectType: null });
     }
 
-    res.json({ 
-      projectType: result.rows[0].active_project_type 
-    });
+    res.json({ projectType: result.rows[0].active_project_type });
   } catch (err) {
-    console.error(err);
+    console.error('Error getting project type:', err);
     res.status(500).json({ message: 'Database error' });
   }
 });
@@ -342,47 +404,27 @@ app.post("/api/user-project", authenticateToken, async (req: Request, res: Respo
     }
 
     if (!projectType || !['diploma', 'coursework', 'practice'].includes(projectType)) {
-      return res.status(400).json({ message: "Valid project type is required" });
+      return res.status(400).json({ message: "Invalid project type" });
     }
 
-    // Оновлюємо активний тип проекту
+    // Оновлюємо або створюємо запис користувача з активним типом проекту
     await pool.query(
-      'UPDATE users SET active_project_type = $1 WHERE id = $2',
-      [projectType, userId]
-    );
-
-    // Перевіряємо чи існують глави для цього типу проекту
-    const existingChapters = await pool.query(
-      'SELECT * FROM user_chapters WHERE user_id = $1 AND project_type = $2',
+      `INSERT INTO user_projects (user_id, active_project_type, updated_at)
+       VALUES ($1, $2, NOW())
+       ON CONFLICT (user_id)
+       DO UPDATE SET active_project_type = $2, updated_at = NOW()`,
       [userId, projectType]
     );
 
-    // Якщо глав немає, створюємо їх з шаблону
-    if (existingChapters.rows.length === 0) {
-      const chapterKeys = {
-        diploma: ['intro', 'theory', 'design', 'implementation', 'conclusion', 'appendix', 'sources', 'abstract', 'cover', 'content'],
-        coursework: ['intro', 'theory', 'design', 'implementation', 'conclusion', 'appendix', 'sources', 'abstract', 'cover', 'content'],
-        practice: ['intro', 'tasks', 'diary', 'conclusion', 'report']
-      };
-
-      const keys = chapterKeys[projectType as keyof typeof chapterKeys];
-      
-      for (const key of keys) {
-        await pool.query(
-          `INSERT INTO user_chapters (user_id, project_type, chapter_key, progress, status, student_note) 
-           VALUES ($1, $2, $3, 0, 'pending', '') 
-           ON CONFLICT (user_id, project_type, chapter_key) DO NOTHING`,
-          [userId, projectType, key]
-        );
-      }
-    }
+    // Ініціалізуємо структуру проекту
+    await initializeProjectStructure(userId, projectType);
 
     res.json({ 
-      message: "Project type updated successfully",
+      message: "Project type set successfully", 
       projectType 
     });
   } catch (err) {
-    console.error(err);
+    console.error('Error setting project type:', err);
     res.status(500).json({ message: 'Database error' });
   }
 });
