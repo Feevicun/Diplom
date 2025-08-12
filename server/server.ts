@@ -6,7 +6,7 @@ import cors from "cors";
 import pool from './db.js'; 
 import { fileURLToPath } from "url";
 import jwt from 'jsonwebtoken';
-import type { Message, JwtUserPayload } from './types';
+import type { JwtUserPayload } from './types';
 
 
 
@@ -17,8 +17,7 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 4000;
 
-const dataFilePath = path.join(__dirname, "user.json");
-const messagesFilePath = path.join(__dirname, "messages.json");
+
 
 // JWT секрет (поки що тут, пізніше краще винести в env)
 const JWT_SECRET = "super_secret_key_change_this";
@@ -113,15 +112,15 @@ function authenticateToken(req: Request, res: Response, next: NextFunction) {
 }
 
 // Отримати всіх користувачів
-app.get("/api/users", (req: Request, res: Response) => {
+app.get("/api/users", async (req: Request, res: Response) => {
   try {
-    if (!fs.existsSync(dataFilePath)) {
-      return res.json([]);
-    }
-    const data = JSON.parse(fs.readFileSync(dataFilePath, "utf-8"));
-    res.json(data);
-  } catch {
-    res.status(500).json({ message: "Error reading data" });
+    const result = await pool.query(
+      "SELECT id, name, email, role, faculty_id, department_id FROM users ORDER BY id"
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error("Error fetching users:", err);
+    res.status(500).json({ message: "Database error fetching users" });
   }
 });
 
@@ -873,43 +872,49 @@ Only output valid JSON array as described above. Do not include any explanation 
   }
 });
 
-app.get("/api/messages", (req: Request, res: Response) => {
+// GET /api/messages?userEmail=...
+app.get("/api/messages", async (req: Request, res: Response) => {
   try {
-    const { userEmail } = req.query;
-
+    const userEmail = req.query.userEmail;
     if (!userEmail || typeof userEmail !== "string") {
       return res.status(400).json({ message: "userEmail is required and must be a string" });
     }
 
-    if (!fs.existsSync(messagesFilePath)) {
-      return res.json([]);
-    }
+    const result = await pool.query(
+      `SELECT id, studentemail, sender, content, createdat 
+       FROM messages 
+       WHERE studentemail = $1
+       ORDER BY createdat DESC`,
+      [userEmail]
+    );
 
-    const messages: Message[] = JSON.parse(fs.readFileSync(messagesFilePath, "utf-8"));
-    const userMessages = messages.filter((msg: Message) => msg.studentEmail === userEmail);
-
-    res.json(userMessages);
+    res.json(result.rows);
   } catch (err) {
-    console.error("Error reading messages:", err);
-    res.status(500).json({ message: "Error reading messages." });
+    console.error("Error fetching messages:", err);
+    res.status(500).json({ message: "Database error fetching messages" });
   }
 });
 
 // POST /api/messages
-app.post("/api/messages", async (req, res) => {
+app.post("/api/messages", async (req: Request, res: Response) => {
   try {
     const { studentEmail, sender, content } = req.body;
 
+    if (!studentEmail || !sender || !content) {
+      return res.status(400).json({ message: "studentEmail, sender and content are required" });
+    }
+
     const result = await pool.query(
-      `INSERT INTO messages (studentEmail, sender, content) 
-       VALUES ($1, $2, $3) RETURNING *`,
+      `INSERT INTO messages (studentemail, sender, content, createdat) 
+       VALUES ($1, $2, $3, NOW()) 
+       RETURNING id, studentemail, sender, content, createdat`,
       [studentEmail, sender, content]
     );
 
     res.status(201).json({ message: "Message sent successfully", data: result.rows[0] });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Database error" });
+    console.error("Error inserting message:", err);
+    res.status(500).json({ message: "Database error inserting message" });
   }
 });
 
