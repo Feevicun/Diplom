@@ -36,6 +36,8 @@ import {
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
 import { useTranslation } from 'react-i18next';
+import { format, isToday, isTomorrow, isYesterday, formatDistanceToNow } from 'date-fns';
+import { uk, enUS } from 'date-fns/locale';
 
 interface TeacherComment {
   id: string;
@@ -66,6 +68,24 @@ type UserType = {
   role: string;
 };
 
+// Тип для подій календаря
+interface CalendarEvent {
+  id: string;
+  title: string;
+  date: string;
+  type: 'task' | 'meeting' | 'deadline';
+}
+
+// Тип для активності з підтримкою календарних подій
+interface RecentActivity {
+  id: string;
+  type: 'comment' | 'deadline' | 'approval' | 'task' | 'meeting';
+  text: string;
+  time: string;
+  icon: any;
+  eventDate?: Date;
+}
+
 // API функції (ті ж що і в ThesisTracker)
 const apiRequest = async (url: string, options: any = {}) => {
   const token = localStorage.getItem('token');
@@ -91,7 +111,7 @@ const apiRequest = async (url: string, options: any = {}) => {
 };
 
 const Dashboard = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [user, setUser] = useState<UserType | null>(null);
   const [isFirstVisit, setIsFirstVisit] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -100,6 +120,117 @@ const Dashboard = () => {
   // Стани для відстеження проєкту (синхронізовані з ThesisTracker)
   const [projectType, setProjectType] = useState<string | null>(null); 
   const [chapters, setChapters] = useState<ChapterData[]>([]);
+  
+  // Новий стан для подій календаря
+  const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
+
+  // Локаль для форматування дат
+  const currentLocale = i18n.language === 'ua' ? uk : enUS;
+
+  // Функція для завантаження подій календаря
+  const fetchCalendarEvents = async () => {
+    if (!user?.email) return;
+    
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    
+    try {
+      const res = await fetch(`/api/events?userEmail=${encodeURIComponent(user.email)}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      
+      if (res.ok) {
+        const events: CalendarEvent[] = await res.json();
+        setCalendarEvents(events);
+      }
+    } catch (error) {
+      console.error('Error fetching calendar events:', error);
+    }
+  };
+
+  // Функція для генерації активності з календарних подій та системних подій
+  const generateRecentActivities = (): RecentActivity[] => {
+    const activities: RecentActivity[] = [];
+    
+    // Системні активності (можуть бути з API в майбутньому)
+    const systemActivities: RecentActivity[] = [
+      { 
+        id: 'system-1', 
+        type: 'comment', 
+        text: 'Новий коментар до розділу 2', 
+        time: '2 год тому', 
+        icon: MessageSquare 
+      },
+      { 
+        id: 'system-2', 
+        type: 'approval', 
+        text: 'Розділ 1 затверджено', 
+        time: '3 дні тому', 
+        icon: CheckCircle 
+      },
+    ];
+    
+    // Додаємо календарні події
+    const calendarActivities: RecentActivity[] = calendarEvents
+      .map(event => {
+        const eventDate = new Date(event.date);
+        let timeText = '';
+        let activityText = '';
+        
+        // Генеруємо текст часу
+        if (isToday(eventDate)) {
+          timeText = `сьогодні о ${format(eventDate, 'HH:mm')}`;
+        } else if (isTomorrow(eventDate)) {
+          timeText = 'завтра';
+        } else if (isYesterday(eventDate)) {
+          timeText = 'вчора';
+        } else {
+          timeText = formatDistanceToNow(eventDate, { 
+            locale: currentLocale, 
+            addSuffix: true 
+          });
+        }
+        
+        // Генеруємо текст активності
+        switch (event.type) {
+          case 'deadline':
+            activityText = `Дедлайн: ${event.title}`;
+            break;
+          case 'meeting':
+            activityText = `Зустріч: ${event.title}`;
+            break;
+          case 'task':
+            activityText = `Завдання: ${event.title}`;
+            break;
+          default:
+            activityText = event.title;
+        }
+        
+        return {
+          id: `calendar-${event.id}`,
+          type: event.type === 'deadline' ? 'deadline' : event.type === 'meeting' ? 'meeting' : 'task',
+          text: activityText,
+          time: timeText,
+          icon: event.type === 'deadline' ? AlertCircle : 
+                event.type === 'meeting' ? Users : 
+                Clock,
+          eventDate
+        } as RecentActivity;
+      })
+      // Сортуємо за датою (найближчі першими)
+      .sort((a, b) => {
+        if (!a.eventDate || !b.eventDate) return 0;
+        return a.eventDate.getTime() - b.eventDate.getTime();
+      });
+    
+    // Об'єднуємо та сортуємо всі активності
+    activities.push(...calendarActivities, ...systemActivities);
+    
+    // Повертаємо тільки останні 3 активностей
+    return activities.slice(0, 3);
+  };
 
   useEffect(() => {
     async function fetchUser() {
@@ -174,6 +305,13 @@ const Dashboard = () => {
       localStorage.setItem("firstVisitDone", "true");
     }
   }, []);
+
+  // Завантажуємо події календаря після встановлення користувача
+  useEffect(() => {
+    if (user?.email) {
+      fetchCalendarEvents();
+    }
+  }, [user]);
 
   const loadProjectData = async () => {
     try {
@@ -288,11 +426,8 @@ const Dashboard = () => {
 
   const currentWork = getCurrentWorkData();
 
-  const recentActivities = [
-    { id: 1, type: 'comment', text: 'Новий коментар до розділу 2', time: '2 год тому', icon: MessageSquare },
-    { id: 2, type: 'deadline', text: 'Нагадування: дедлайн завтра', time: '1 день тому', icon: AlertCircle },
-    { id: 3, type: 'approval', text: 'Розділ 1 затверджено', time: '3 дні тому', icon: CheckCircle },
-  ];
+  // Генеруємо активність з календарних подій та системних подій
+  const recentActivities = generateRecentActivities();
 
   // Оновлюємо quickStats з динамічними даними з API
   const chaptersStats = getChaptersStats();
@@ -603,28 +738,75 @@ const Dashboard = () => {
                         <div className="w-2 h-2 bg-primary rounded-full"></div>
                         <CardTitle className="text-lg">{t('index.recentActivity.title')}</CardTitle>
                       </div>
+                      <CardDescription>
+                        {recentActivities.length === 0 
+                          ? 'Немає недавньої активності'
+                          : `${recentActivities.length} останніх подій`
+                        }
+                      </CardDescription>
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-4">
-                        {recentActivities.map((activity) => {
-                          const Icon = activity.icon;
-                          return (
-                            <div key={activity.id} className="flex space-x-3">
-                              <div className="w-8 h-8 bg-muted rounded-xl flex items-center justify-center">
-                                <Icon className="h-4 w-4 text-muted-foreground" />
+                        {recentActivities.length === 0 ? (
+                          <div className="text-center py-8 text-muted-foreground">
+                            <Calendar className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                            <p className="text-sm">Немає подій для відображення</p>
+                            <Button variant="outline" size="sm" className="mt-3" asChild>
+                              <Link to="/calendar">
+                                <Plus className="w-3 h-3 mr-1" />
+                                Додати подію
+                              </Link>
+                            </Button>
+                          </div>
+                        ) : (
+                          recentActivities.map((activity) => {
+                            const Icon = activity.icon;
+                            return (
+                              <div key={activity.id} className="flex space-x-3 p-3 rounded-lg hover:bg-muted/50 transition-colors">
+                                <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${
+                                  activity.type === 'deadline' 
+                                    ? 'bg-red-100 text-red-600 dark:bg-red-900/20 dark:text-red-400' 
+                                    : activity.type === 'meeting'
+                                    ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400'
+                                    : activity.type === 'task'
+                                    ? 'bg-yellow-100 text-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-400'
+                                    : activity.type === 'approval'
+                                    ? 'bg-green-100 text-green-600 dark:bg-green-900/20 dark:text-green-400'
+                                    : 'bg-muted'
+                                }`}>
+                                  <Icon className="h-4 w-4" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium text-foreground">
+                                    {activity.text}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {activity.time}
+                                  </p>
+                                  {activity.eventDate && (
+                                    <div className="flex items-center gap-1 mt-1">
+                                      <Calendar className="w-3 h-3 text-muted-foreground" />
+                                      <span className="text-xs text-muted-foreground">
+                                        {format(activity.eventDate, 'dd MMM yyyy, HH:mm', { locale: currentLocale })}
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
                               </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-foreground">
-                                  {t(`index.recentActivity.activities.${activity.type}`)}
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                  {t(`index.recentActivity.times.${activity.type}`)}
-                                </p>
-                              </div>
-                            </div>
-                          );
-                        })}
+                            );
+                          })
+                        )}
                       </div>
+                      {recentActivities.length > 0 && (
+                        <div className="mt-4 pt-4 border-t">
+                          <Button variant="outline" size="sm" className="w-full" asChild>
+                            <Link to="/calendar">
+                              <Calendar className="w-4 h-4 mr-2" />
+                              Переглянути календар
+                            </Link>
+                          </Button>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
 
@@ -641,11 +823,13 @@ const Dashboard = () => {
                           {t('index.aiAssistant')}
                         </Link>
                       </Button>
-                      <Button variant="outline" className="w-full justify-start">
-                        <div className="w-8 h-8 bg-primary/10 rounded-xl flex items-center justify-center mr-3">
-                          <Calendar className="h-4 w-4 text-primary" />
-                        </div>
-                        {t('index.planner')}
+                      <Button variant="outline" className="w-full justify-start" asChild>
+                        <Link to="/calendar">
+                          <div className="w-8 h-8 bg-primary/10 rounded-xl flex items-center justify-center mr-3">
+                            <Calendar className="h-4 w-4 text-primary" />
+                          </div>
+                          {t('index.planner')}
+                        </Link>
                       </Button>
                       <Button variant="outline" className="w-full justify-start" asChild>
                         <Link to="/analytics">

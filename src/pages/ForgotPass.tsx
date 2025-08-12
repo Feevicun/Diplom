@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { GlassButton } from "@/components/GlassButton";
-import { KeyRound, Eye, EyeOff } from "lucide-react"; // додано Eye, EyeOff
+import { KeyRound, Eye, EyeOff } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -26,9 +26,7 @@ const ForgotPasswordPage = () => {
     try {
       const response = await fetch("http://localhost:4000/api/forgot-password/verify", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, role }),
       });
 
@@ -49,7 +47,6 @@ const ForgotPasswordPage = () => {
       alert("Пароль має містити щонайменше 6 символів.");
       return;
     }
-
     if (newPassword !== confirmPassword) {
       alert("Паролі не співпадають.");
       return;
@@ -58,27 +55,19 @@ const ForgotPasswordPage = () => {
     try {
       const response = await fetch("http://localhost:4000/api/forgot-password/reset", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ 
-          email, 
-          role, 
-          newPassword 
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, role, newPassword }),
       });
 
       const data = await response.json();
 
       if (response.ok) {
         alert(`Пароль для ${email} успішно змінено!`);
-        
         setEmail("");
         setNewPassword("");
         setConfirmPassword("");
         setUserFound(false);
         setError("");
-
         navigate("/");
       } else {
         alert(data.message || "Помилка при зміні паролю.");
@@ -145,52 +134,56 @@ const ForgotPasswordPage = () => {
               </>
             ) : (
               <>
-                {/* Новий пароль з Eye toggle */}
-                <div className="relative">
+                {/* Новий пароль */}
+                <div>
                   <Label className="text-white/80 mb-1 block">Новий пароль</Label>
-                  <Input
-                    type={showNewPassword ? "text" : "password"}
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="Введіть новий пароль"
-                    className="w-full bg-white/10 border border-white/10 text-white/90 placeholder:text-white/50 pr-12"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowNewPassword((prev) => !prev)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-white/10 transition-colors"
-                    aria-label={showNewPassword ? "Сховати пароль" : "Показати пароль"}
-                  >
-                    {showNewPassword ? (
-                      <Eye size={18} className="text-white/70" />
-                    ) : (
-                      <EyeOff size={18} className="text-white/70" />
-                    )}
-                  </button>
+                  <div className="relative">
+                    <Input
+                      type={showNewPassword ? "text" : "password"}
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="Введіть новий пароль"
+                      className="w-full bg-white/10 border border-white/10 text-white/90 placeholder:text-white/50 pr-12"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPassword((prev) => !prev)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-white/10 transition-colors"
+                      aria-label={showNewPassword ? "Сховати пароль" : "Показати пароль"}
+                    >
+                      {showNewPassword ? (
+                        <EyeOff size={18} className="text-white/70" />
+                      ) : (
+                        <Eye size={18} className="text-white/70" />
+                      )}
+                    </button>
+                  </div>
                 </div>
 
-                {/* Підтвердження паролю з Eye toggle */}
-                <div className="relative">
+                {/* Підтвердження паролю */}
+                <div>
                   <Label className="text-white/80 mb-1 block">Підтвердження паролю</Label>
-                  <Input
-                    type={showConfirmPassword ? "text" : "password"}
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="Повторіть новий пароль"
-                    className="w-full bg-white/10 border border-white/10 text-white/90 placeholder:text-white/50 pr-12"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword((prev) => !prev)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-white/10 transition-colors"
-                    aria-label={showConfirmPassword ? "Сховати пароль" : "Показати пароль"}
-                  >
-                    {showConfirmPassword ? (
-                      <Eye size={18} className="text-white/70" />
-                    ) : (
-                      <EyeOff size={18} className="text-white/70" />
-                    )}
-                  </button>
+                  <div className="relative">
+                    <Input
+                      type={showConfirmPassword ? "text" : "password"}
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="Повторіть новий пароль"
+                      className="w-full bg-white/10 border border-white/10 text-white/90 placeholder:text-white/50 pr-12"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword((prev) => !prev)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-white/10 transition-colors"
+                      aria-label={showConfirmPassword ? "Сховати пароль" : "Показати пароль"}
+                    >
+                      {showConfirmPassword ? (
+                        <EyeOff size={18} className="text-white/70" />
+                      ) : (
+                        <Eye size={18} className="text-white/70" />
+                      )}
+                    </button>
+                  </div>
                 </div>
 
                 <GlassButton
