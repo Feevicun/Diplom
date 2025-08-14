@@ -98,8 +98,8 @@ const Sidebar = () => {
 
   const mainMenuItems: MenuItemType[] = [
     { title: t('sidebar.dashboard'), href: '/dashboard', icon: Home, badge: null },
-    { title: t('sidebar.projects'), href: '/tracker', icon: FileText, badge: '2' },
-    { title: t('sidebar.tasks'), href: '/chat', icon: MessageSquare, badge: '3' },
+    { title: t('sidebar.projects'), href: '/tracker', icon: FileText },
+    { title: t('sidebar.tasks'), href: '/chat', icon: MessageSquare },
     { title: t('sidebar.calendar'), href: '/calendar', icon: Calendar, badge: null }
   ];
 

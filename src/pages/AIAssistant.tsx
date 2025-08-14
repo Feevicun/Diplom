@@ -139,12 +139,12 @@ const AIAssistant = () => {
 
   return (
     <div className="min-h-screen bg-background flex">
-      <div className="hidden md:block sticky top-0 h-screen">
-        <Sidebar />
-      </div>
+        <div className="hidden md:block">
+          <Sidebar />
+        </div>
 
-      <div className="flex-1 flex flex-col h-screen">
-        <div className="sticky top-0 z-10">
+      <div className="flex-1 flex flex-col h-screen overflow-hidden">
+        <div className="sticky top-0 z-10 bg-[var(--card)] border-b border-[var(--border)]">
           <Header />
         </div>
 

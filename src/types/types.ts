@@ -333,3 +333,36 @@ export interface ChapterData {
     size: string;
   };
 }
+
+
+
+
+
+
+export type ConversationListItem = {
+  id: string;
+  peerEmail: string;
+  peerName: string;
+  lastMessage: string;
+  lastMessageAt: number;
+  unreadCount: number;
+  peerOnline: boolean;
+};
+
+export type WsMessage = {
+  id: string;
+  conversationId: string;
+  senderEmail: string;
+  receiverEmail: string;
+  content: string;
+  timestamp: number;
+  attachmentName?: string;
+  readBy: string[];
+};
+
+export type UserLite = {
+  email: string;
+  firstName: string;
+  lastName: string;
+  role?: "student" | "supervisor";
+};

@@ -372,10 +372,10 @@ export default function Analytics() {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--background)] flex text-[var(--foreground)]">
-      <div className="hidden md:block sticky top-0 h-screen bg-[var(--sidebar)] border-r border-[var(--sidebar-border)]">
-        <Sidebar />
-      </div>
+    <div className="min-h-screen bg-background flex">
+        <div className="hidden md:block">
+          <Sidebar />
+        </div>
 
       <div className="flex-1 flex flex-col h-screen">
         <div className="sticky top-0 z-10 bg-[var(--card)] border-b border-[var(--border)]">
