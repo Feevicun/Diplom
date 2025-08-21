@@ -114,6 +114,8 @@ const ChatPage = () => {
     chat: null
   });
 
+  const contextMenuRef = useRef<HTMLDivElement>(null);
+
   // Мокові дані
   useEffect(() => {
     const initialCurrentUser: User = {
@@ -804,8 +806,11 @@ const ChatPage = () => {
   };
 
   // Обробник правого кліку миші
+   // Обробник правого кліку миші
   const handleRightClick = (e: React.MouseEvent, chat: Chat) => {
     e.preventDefault();
+    e.stopPropagation();
+    
     setContextMenu({
       visible: true,
       x: e.clientX,
@@ -856,24 +861,37 @@ const ChatPage = () => {
 
   // Ефект для закриття контекстного меню при кліку поза ним
   useEffect(() => {
-    const handleClickOutside = () => {
-      if (contextMenu.visible) {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (contextMenu.visible && contextMenuRef.current && !contextMenuRef.current.contains(e.target as Node)) {
         closeContextMenu();
       }
     };
 
-    document.addEventListener('click', handleClickOutside);
+    const handleEscapeKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && contextMenu.visible) {
+        closeContextMenu();
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('contextmenu', handleClickOutside);
+    document.addEventListener('keydown', handleEscapeKey);
+    
     return () => {
-      document.removeEventListener('click', handleClickOutside);
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('contextmenu', handleClickOutside);
+      document.removeEventListener('keydown', handleEscapeKey);
     };
   }, [contextMenu.visible]);
 
+  // Компонент контекстного меню
   // Компонент контекстного меню
   const renderContextMenu = () => {
     if (!contextMenu.visible || !contextMenu.chat) return null;
 
     return (
       <div 
+        ref={contextMenuRef}
         className="fixed z-50 bg-popover rounded-lg shadow-lg border border-border py-1 min-w-[180px]"
         style={{ left: contextMenu.x, top: contextMenu.y }}
         onClick={(e) => e.stopPropagation()}
@@ -982,7 +1000,7 @@ const ChatPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex" onClick={closeContextMenu}>
+    <div className="min-h-screen bg-background flex">
       {/* Sidebar */}
       <div className="hidden md:block">
         <Sidebar />
@@ -1028,8 +1046,7 @@ const ChatPage = () => {
                 </div>
               </div>
 
-              {/* Chat List */}
-              {/* Chat List */}
+      {/* Chat List */}
       <div className="flex-1 overflow-y-auto">
         <div className="p-2 space-y-1">
           {chats.filter(chat => !chat.isArchived).map(chat => (
