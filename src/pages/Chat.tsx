@@ -2,14 +2,17 @@ import { useState, useEffect, useRef } from 'react';
 import { 
   Send, Users, Plus, Search, MessageCircle, 
   Check, X, ArrowLeft, Paperclip, Phone, 
-  Video, MoreVertical, Pin, Trash2, Edit, Reply,
-  Image as ImageIcon, File, Download, ThumbsUp, Smile
+  Video, Pin, Trash2, Edit, Reply,
+  Image as ImageIcon, File, Download, ThumbsUp, Smile,
+  Mic, VideoOff, PhoneOff, UserPlus, BellOff,
+  Archive, BellRing
 } from 'lucide-react';
 
 // Import components
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
 
+// Типи даних
 type Message = {
   id: number;
   senderId: number;
@@ -20,7 +23,7 @@ type Message = {
   attachment?: { 
     name: string; 
     url?: string; 
-    type: 'image' | 'file' | 'audio';
+    type: 'image' | 'file' | 'audio' | 'video';
     size?: string;
   };
   chatId: number;
@@ -28,6 +31,7 @@ type Message = {
   reactions?: { [key: string]: number };
   replyTo?: number;
   readBy?: number[];
+  isDeleted?: boolean;
 };
 
 type User = {
@@ -35,9 +39,11 @@ type User = {
   name: string;
   email: string;
   role: string;
-  status?: 'online' | 'offline' | 'away';
+  status?: 'online' | 'offline' | 'away' | 'dnd';
   avatar?: string;
   lastSeen?: string;
+  isContact?: boolean;
+  phone?: string;
 };
 
 type Chat = {
@@ -51,165 +57,30 @@ type Chat = {
   updatedAt: string;
   isPinned?: boolean;
   isArchived?: boolean;
+  isMuted?: boolean;
   description?: string;
   admins?: number[];
+  image?: string;
+};
+
+type Call = {
+  id: number;
+  type: 'audio' | 'video';
+  participants: number[];
+  status: 'ringing' | 'ongoing' | 'ended' | 'missed';
+  startTime: string;
+  endTime?: string;
+  duration?: number;
 };
 
 const ChatPage = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [chats, setChats] = useState<Chat[]>([
-    {
-      id: 1,
-      name: "Олексій Петренко",
-      type: 'direct',
-      participants: [],
-      unreadCount: 3,
-      lastMessage: {
-        id: 1,
-        senderId: 2,
-        senderName: "Олексій Петренко",
-        senderEmail: "alex@example.com",
-        content: "Привіт! Як справи з проектом?",
-        timestamp: "14:32",
-        chatId: 1,
-        readBy: [1, 2]
-      },
-      createdAt: "2024-01-15T10:00:00Z",
-      updatedAt: "2024-01-15T14:32:00Z",
-      isPinned: true
-    },
-    {
-      id: 2,
-      name: "Команда розробки",
-      type: 'group',
-      participants: [],
-      unreadCount: 0,
-      lastMessage: {
-        id: 2,
-        senderId: 3,
-        senderName: "Марія Коваленко",
-        senderEmail: "maria@example.com",
-        content: "Завтра о 10:00 зустріч",
-        timestamp: "12:45",
-        chatId: 2,
-        readBy: [1, 3, 4]
-      },
-      createdAt: "2024-01-15T09:00:00Z",
-      updatedAt: "2024-01-15T12:45:00Z",
-      description: "Чат для обговорення проектів",
-      admins: [1, 3]
-    },
-    {
-      id: 3,
-      name: "Анна Сидорова",
-      type: 'direct',
-      participants: [],
-      unreadCount: 0,
-      lastMessage: {
-        id: 3,
-        senderId: 4,
-        senderName: "Анна Сидорова",
-        senderEmail: "anna@example.com",
-        content: "Дякую за допомогу! 👍",
-        timestamp: "11:20",
-        chatId: 3,
-        readBy: [1, 4]
-      },
-      createdAt: "2024-01-15T08:00:00Z",
-      updatedAt: "2024-01-15T11:20:00Z"
-    },
-    {
-      id: 4,
-      name: "Навчальний чат",
-      type: 'group',
-      participants: [],
-      unreadCount: 12,
-      lastMessage: {
-        id: 4,
-        senderId: 5,
-        senderName: "Іван Іваненко",
-        senderEmail: "ivan@example.com",
-        content: "Хто буде на лекції?",
-        timestamp: "10:15",
-        chatId: 4,
-        readBy: [5, 6, 7]
-      },
-      createdAt: "2024-01-14T08:00:00Z",
-      updatedAt: "2024-01-15T10:15:00Z",
-      description: "Загальний чат для навчання",
-      admins: [1],
-      isPinned: true
-    }
-  ]);
+  const [chats, setChats] = useState<Chat[]>([]);
   const [activeChat, setActiveChat] = useState<Chat | null>(null);
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: 1,
-      senderId: 2,
-      senderName: "Олексій Петренко",
-      senderEmail: "alex@example.com",
-      content: "Привіт! Як справи з проектом?",
-      timestamp: "14:30",
-      chatId: 1,
-      readBy: [1, 2]
-    },
-    {
-      id: 2,
-      senderId: 1,
-      senderName: "Ви",
-      senderEmail: "you@example.com",
-      content: "Привіт! Все йде добре. Сьогодні закінчив основний функціонал.",
-      timestamp: "14:31",
-      chatId: 1,
-      readBy: [1, 2]
-    },
-    {
-      id: 3,
-      senderId: 2,
-      senderName: "Олексій Петренко",
-      senderEmail: "alex@example.com",
-      content: "Чудово! Можеш показати результат завтра?",
-      timestamp: "14:32",
-      chatId: 1,
-      readBy: [1, 2]
-    },
-    {
-      id: 4,
-      senderId: 1,
-      senderName: "Ви",
-      senderEmail: "you@example.com",
-      content: "Так, звісно. Ось скріншоти інтерфейсу:",
-      timestamp: "14:33",
-      chatId: 1,
-      readBy: [1, 2],
-      attachment: {
-        name: "interface-preview.png",
-        url: "#",
-        type: "image",
-        size: "2.4 MB"
-      }
-    },
-    {
-      id: 5,
-      senderId: 2,
-      senderName: "Олексій Петренко",
-      senderEmail: "alex@example.com",
-      content: "Виглядає дуже добре! 👍",
-      timestamp: "14:35",
-      chatId: 1,
-      readBy: [1, 2],
-      reactions: { "👍": 1 }
-    }
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [file, setFile] = useState<File | null>(null);
-  const [users] = useState<User[]>([
-    { id: 2, name: "Олексій Петренко", email: "alex@example.com", role: "Викладач", status: "online", lastSeen: "2024-01-15T14:35:00Z" },
-    { id: 3, name: "Марія Коваленко", email: "maria@example.com", role: "Студент", status: "away", lastSeen: "2024-01-15T13:20:00Z" },
-    { id: 4, name: "Анна Сидорова", email: "anna@example.com", role: "Адмін", status: "offline", lastSeen: "2024-01-15T11:20:00Z" },
-    { id: 5, name: "Іван Іваненко", email: "ivan@example.com", role: "Студент", status: "online", lastSeen: "2024-01-15T14:20:00Z" },
-    { id: 6, name: "Катерина Мельник", email: "kate@example.com", role: "Викладач", status: "online", lastSeen: "2024-01-15T14:10:00Z" }
-  ]);
+  const [users, setUsers] = useState<User[]>([]);
   const [showNewChatDialog, setShowNewChatDialog] = useState(false);
   const [showNewGroupDialog, setShowNewGroupDialog] = useState(false);
   const [selectedUsers, setSelectedUsers] = useState<number[]>([]);
@@ -218,23 +89,233 @@ const ChatPage = () => {
   const [showChatList, setShowChatList] = useState(true);
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [editingMessage, setEditingMessage] = useState<Message | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [onlineUsers, setOnlineUsers] = useState<number[]>([]);
+  const [calls, setCalls] = useState<Call[]>([]);
+  const [activeCall, setActiveCall] = useState<Call | null>(null);
+  const [typingUsers, setTypingUsers] = useState<number[]>([]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const audioRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Новий стан для контекстного меню
+  const [contextMenu, setContextMenu] = useState<{
+    visible: boolean;
+    x: number;
+    y: number;
+    chat: Chat | null;
+  }>({
+    visible: false,
+    x: 0,
+    y: 0,
+    chat: null
+  });
+
+  // Мокові дані
   useEffect(() => {
-    setCurrentUser({
+    const initialCurrentUser: User = {
       id: 1,
       name: "Ваше Ім'я",
       email: "you@example.com",
       role: "Користувач",
-      status: "online"
-    });
+      status: "online",
+      phone: "+380991234567"
+    };
+    
+    const initialUsers: User[] = [
+      { id: 2, name: "Олексій Петренко", email: "alex@example.com", role: "Викладач", status: "online", lastSeen: new Date().toISOString(), isContact: true, phone: "+380991234568" },
+      { id: 3, name: "Марія Коваленко", email: "maria@example.com", role: "Студент", status: "away", lastSeen: new Date().toISOString(), isContact: true, phone: "+380991234569" },
+      { id: 4, name: "Анна Сидорова", email: "anna@example.com", role: "Адмін", status: "offline", lastSeen: new Date().toISOString(), isContact: false, phone: "+380991234570" },
+      { id: 5, name: "Іван Іваненко", email: "ivan@example.com", role: "Студент", status: "online", lastSeen: new Date().toISOString(), isContact: true, phone: "+380991234571" },
+      { id: 6, name: "Катерина Мельник", email: "kate@example.com", role: "Викладач", status: "online", lastSeen: new Date().toISOString(), isContact: true, phone: "+380991234572" }
+    ];
+    
+    const initialChats: Chat[] = [
+      {
+        id: 1,
+        name: "Олексій Петренко",
+        type: 'direct',
+        participants: [initialCurrentUser, initialUsers[0]],
+        unreadCount: 3,
+        lastMessage: {
+          id: 1,
+          senderId: 2,
+          senderName: "Олексій Петренко",
+          senderEmail: "alex@example.com",
+          content: "Привіт! Як справи з проектом?",
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          chatId: 1,
+          readBy: [1, 2]
+        },
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        isPinned: true
+      },
+      {
+        id: 2,
+        name: "Команда розробки",
+        type: 'group',
+        participants: [initialCurrentUser, initialUsers[0], initialUsers[1], initialUsers[4]],
+        unreadCount: 0,
+        lastMessage: {
+          id: 2,
+          senderId: 3,
+          senderName: "Марія Коваленко",
+          senderEmail: "maria@example.com",
+          content: "Завтра о 10:00 зустріч",
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          chatId: 2,
+          readBy: [1, 3, 4]
+        },
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        description: "Чат для обговорення проектів",
+        admins: [1, 3]
+      },
+      {
+        id: 3,
+        name: "Анна Сидорова",
+        type: 'direct',
+        participants: [initialCurrentUser, initialUsers[2]],
+        unreadCount: 0,
+        lastMessage: {
+          id: 3,
+          senderId: 4,
+          senderName: "Анна Сидорова",
+          senderEmail: "anna@example.com",
+          content: "Дякую за допомогу! 👍",
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          chatId: 3,
+          readBy: [1, 4]
+        },
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      },
+      {
+        id: 4,
+        name: "Навчальний чат",
+        type: 'group',
+        participants: [initialCurrentUser, initialUsers[0], initialUsers[3], initialUsers[4]],
+        unreadCount: 12,
+        lastMessage: {
+          id: 4,
+          senderId: 5,
+          senderName: "Іван Іваненко",
+          senderEmail: "ivan@example.com",
+          content: "Хто буде на лекції?",
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          chatId: 4,
+          readBy: [5, 6, 7]
+        },
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        description: "Загальний чат для навчання",
+        admins: [1],
+        isPinned: true,
+        isMuted: true
+      }
+    ];
+    
+    const initialMessages: Message[] = [
+      {
+        id: 1,
+        senderId: 2,
+        senderName: "Олексій Петренко",
+        senderEmail: "alex@example.com",
+        content: "Привіт! Як справи з проектом?",
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        chatId: 1,
+        readBy: [1, 2]
+      },
+      {
+        id: 2,
+        senderId: 1,
+        senderName: "Ви",
+        senderEmail: "you@example.com",
+        content: "Привіт! Все йде добре. Сьогодні закінчив основний функціонал.",
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        chatId: 1,
+        readBy: [1, 2]
+      },
+      {
+        id: 3,
+        senderId: 2,
+        senderName: "Олексій Петренко",
+        senderEmail: "alex@example.com",
+        content: "Чудово! Можеш показати результат завтра?",
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        chatId: 1,
+        readBy: [1, 2]
+      },
+      {
+        id: 4,
+        senderId: 1,
+        senderName: "Ви",
+        senderEmail: "you@example.com",
+        content: "Так, звісно. Ось скріншоти інтерфейсу:",
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        chatId: 1,
+        readBy: [1, 2],
+        attachment: {
+          name: "interface-preview.png",
+          url: "#",
+          type: "image",
+          size: "2.4 MB"
+        }
+      },
+      {
+        id: 5,
+        senderId: 2,
+        senderName: "Олексій Петренко",
+        senderEmail: "alex@example.com",
+        content: "Виглядає дуже добре! 👍",
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        chatId: 1,
+        readBy: [1, 2],
+        reactions: { "👍": 1 }
+      }
+    ];
+    
+    setCurrentUser(initialCurrentUser);
+    setUsers(initialUsers);
+    setChats(initialChats);
+    setMessages(initialMessages);
+    setOnlineUsers([1, 2, 5, 6]);
   }, []);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, replyingTo]);
+
+  // Ефект для імітації набору тексту
+  useEffect(() => {
+    if (newMessage && activeChat) {
+      const otherParticipants = activeChat.participants.filter(p => p.id !== currentUser?.id);
+      if (otherParticipants.length > 0 && Math.random() > 0.7) {
+        const typingUserId = otherParticipants[0].id;
+        if (!typingUsers.includes(typingUserId)) {
+          setTypingUsers(prev => [...prev, typingUserId]);
+          
+          if (typingTimeoutRef.current) {
+            clearTimeout(typingTimeoutRef.current);
+          }
+          
+          typingTimeoutRef.current = setTimeout(() => {
+            setTypingUsers(prev => prev.filter(id => id !== typingUserId));
+          }, 3000);
+        }
+      }
+    }
+    
+    return () => {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+    };
+  }, [newMessage, activeChat]);
 
   const filteredUsers = users.filter(user => 
     user.id !== currentUser?.id && 
@@ -254,7 +335,9 @@ const ChatPage = () => {
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       attachment: file ? { 
         name: file.name, 
-        type: file.type.startsWith('image/') ? 'image' : 'file',
+        type: file.type.startsWith('image/') ? 'image' : 
+              file.type.startsWith('video/') ? 'video' : 
+              file.type.startsWith('audio/') ? 'audio' : 'file',
         size: `${(file.size / 1024 / 1024).toFixed(1)} MB`
       } : undefined,
       chatId: activeChat.id,
@@ -266,12 +349,110 @@ const ChatPage = () => {
     setNewMessage('');
     setFile(null);
     setReplyingTo(null);
+    setTypingUsers([]);
     
     setChats(prev => prev.map(chat => 
       chat.id === activeChat.id 
-        ? { ...chat, lastMessage: message, updatedAt: new Date().toISOString() }
+        ? { ...chat, lastMessage: message, updatedAt: new Date().toISOString(), unreadCount: 0 }
         : chat
     ));
+  };
+
+  const handleDeleteMessage = (messageId: number) => {
+    setMessages(prev => prev.map(msg => 
+      msg.id === messageId 
+        ? { ...msg, isDeleted: true, content: "Повідомлення видалено", attachment: undefined } 
+        : msg
+    ));
+  };
+
+  const handleStartCall = (type: 'audio' | 'video') => {
+    if (!activeChat || !currentUser) return;
+    
+    const call: Call = {
+      id: Date.now(),
+      type,
+      participants: [currentUser.id, ...activeChat.participants.filter(p => p.id !== currentUser.id).map(p => p.id)],
+      status: 'ringing',
+      startTime: new Date().toISOString()
+    };
+    
+    setActiveCall(call);
+    setCalls(prev => [...prev, call]);
+    
+    // Імітація відповіді на дзвінок через 5 секунд
+    setTimeout(() => {
+      if (activeCall?.id === call.id) {
+        setActiveCall(prev => prev ? { ...prev, status: 'ongoing' } : null);
+        setCalls(prev => prev.map(c => c.id === call.id ? { ...c, status: 'ongoing' } : c));
+      }
+    }, 5000);
+  };
+
+  const handleEndCall = () => {
+    if (!activeCall) return;
+    
+    const endedCall = {
+      ...activeCall,
+      status: 'ended',
+      endTime: new Date().toISOString(),
+      duration: Math.floor((new Date().getTime() - new Date(activeCall.startTime).getTime()) / 1000)
+    };
+    
+    setCalls(prev => prev.map(call => call.id === activeCall.id ? endedCall : call));
+    setActiveCall(null);
+  };
+
+  const handleAddToContacts = (userId: number) => {
+    setUsers(prev => prev.map(user => 
+      user.id === userId ? { ...user, isContact: true } : user
+    ));
+  };
+
+  const startRecording = async () => {
+    try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        alert("Ваш браузер не підтримує запис аудіо");
+        return;
+      }
+      
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      audioRecorderRef.current = recorder;
+      audioChunksRef.current = [];
+      
+      recorder.ondataavailable = (e) => {
+        audioChunksRef.current.push(e.data);
+      };
+      
+      recorder.onstop = () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        const audioFile = new File([audioBlob], 'audio-message.webm', { type: 'audio/webm' });
+        setFile(audioFile);
+        
+        stream.getTracks().forEach(track => track.stop());
+      };
+      
+      recorder.start();
+      setIsRecording(true);
+      
+      // Автоматично зупинити запис через 30 секунд
+      setTimeout(() => {
+        if (isRecording) {
+          stopRecording();
+        }
+      }, 30000);
+    } catch (error) {
+      console.error('Помилка доступу до мікрофона:', error);
+      alert("Не вдалося отримати доступ до мікрофона");
+    }
+  };
+
+  const stopRecording = () => {
+    if (audioRecorderRef.current && isRecording) {
+      audioRecorderRef.current.stop();
+      setIsRecording(false);
+    }
   };
 
   const handleCreateDirectChat = (userId: number) => {
@@ -285,6 +466,7 @@ const ChatPage = () => {
     if (existingChat) {
       setActiveChat(existingChat);
       setShowNewChatDialog(false);
+      setMessages(messages.filter(m => m.chatId === existingChat.id));
       return;
     }
 
@@ -300,6 +482,7 @@ const ChatPage = () => {
 
     setChats(prev => [...prev, newChat]);
     setActiveChat(newChat);
+    setMessages([]);
     setShowNewChatDialog(false);
   };
 
@@ -321,6 +504,7 @@ const ChatPage = () => {
 
     setChats(prev => [...prev, newChat]);
     setActiveChat(newChat);
+    setMessages([]);
     setShowNewGroupDialog(false);
     setGroupChatName('');
     setSelectedUsers([]);
@@ -368,6 +552,12 @@ const ChatPage = () => {
     if (diffMinutes < 60) return `${diffMinutes} хв тому`;
     if (diffMinutes < 1440) return `${Math.floor(diffMinutes / 60)} год тому`;
     return `${Math.floor(diffMinutes / 1440)} дн тому`;
+  };
+
+  const formatCallDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
   const renderAvatar = (name: string, isOnline?: boolean, size = 'default') => {
@@ -428,6 +618,17 @@ const ChatPage = () => {
                   <p className="font-medium truncate text-foreground text-sm">{user.name}</p>
                   <p className="text-xs text-muted-foreground truncate">{user.email}</p>
                 </div>
+                {!user.isContact && (
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleAddToContacts(user.id);
+                    }}
+                    className="p-1 hover:bg-accent rounded-md transition-colors"
+                  >
+                    <UserPlus className="w-4 h-4 text-muted-foreground" />
+                  </button>
+                )}
               </div>
             ))
           )}
@@ -559,6 +760,35 @@ const ChatPage = () => {
       );
     }
 
+    if (attachment.type === 'audio') {
+      return (
+        <div className="mt-2 p-2 bg-muted rounded-lg border border-border flex items-center gap-2 max-w-xs">
+          <Mic className="h-6 w-6 text-primary flex-shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-medium truncate text-foreground">{attachment.name}</p>
+            <p className="text-xs text-muted-foreground">{attachment.size}</p>
+          </div>
+          <button className="p-1 hover:bg-accent rounded-md flex-shrink-0 transition-colors">
+            <Download className="h-3 w-3 text-muted-foreground" />
+          </button>
+        </div>
+      );
+    }
+
+    if (attachment.type === 'video') {
+      return (
+        <div className="mt-2 rounded-lg overflow-hidden bg-muted max-w-xs">
+          <div className="h-32 bg-gradient-to-br from-muted to-muted/80 flex items-center justify-center">
+            <Video className="h-8 w-8 text-muted-foreground" />
+          </div>
+          <div className="p-2">
+            <p className="text-xs font-medium truncate text-foreground">{attachment.name}</p>
+            <p className="text-xs text-muted-foreground">{attachment.size}</p>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="mt-2 p-2 bg-muted rounded-lg border border-border flex items-center gap-2 max-w-xs">
         <File className="h-6 w-6 text-primary flex-shrink-0" />
@@ -573,8 +803,186 @@ const ChatPage = () => {
     );
   };
 
+  // Обробник правого кліку миші
+  const handleRightClick = (e: React.MouseEvent, chat: Chat) => {
+    e.preventDefault();
+    setContextMenu({
+      visible: true,
+      x: e.clientX,
+      y: e.clientY,
+      chat
+    });
+  };
+
+  // Закриття контекстного меню
+  const closeContextMenu = () => {
+    setContextMenu({
+      visible: false,
+      x: 0,
+      y: 0,
+      chat: null
+    });
+  };
+
+  // Функції для обробки дій меню
+  const handleTogglePinChat = (chatId: number) => {
+    setChats(prev => prev.map(chat => 
+      chat.id === chatId ? { ...chat, isPinned: !chat.isPinned } : chat
+    ));
+    closeContextMenu();
+  };
+
+  const handleToggleMuteChat = (chatId: number) => {
+    setChats(prev => prev.map(chat => 
+      chat.id === chatId ? { ...chat, isMuted: !chat.isMuted } : chat
+    ));
+    closeContextMenu();
+  };
+
+  const handleToggleArchiveChat = (chatId: number) => {
+    setChats(prev => prev.map(chat => 
+      chat.id === chatId ? { ...chat, isArchived: !chat.isArchived } : chat
+    ));
+    closeContextMenu();
+  };
+
+  const handleDeleteChat = (chatId: number) => {
+    setChats(prev => prev.filter(chat => chat.id !== chatId));
+    if (activeChat?.id === chatId) {
+      setActiveChat(null);
+    }
+    closeContextMenu();
+  };
+
+  // Ефект для закриття контекстного меню при кліку поза ним
+  useEffect(() => {
+    const handleClickOutside = () => {
+      if (contextMenu.visible) {
+        closeContextMenu();
+      }
+    };
+
+    document.addEventListener('click', handleClickOutside);
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, [contextMenu.visible]);
+
+  // Компонент контекстного меню
+  const renderContextMenu = () => {
+    if (!contextMenu.visible || !contextMenu.chat) return null;
+
+    return (
+      <div 
+        className="fixed z-50 bg-popover rounded-lg shadow-lg border border-border py-1 min-w-[180px]"
+        style={{ left: contextMenu.x, top: contextMenu.y }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          onClick={() => handleTogglePinChat(contextMenu.chat!.id)}
+          className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted transition-colors text-left"
+        >
+          <Pin className="w-4 h-4 text-muted-foreground" />
+          <span>{contextMenu.chat.isPinned ? 'Відкріпити' : 'Закріпити'}</span>
+        </button>
+        
+        <button
+          onClick={() => handleToggleMuteChat(contextMenu.chat!.id)}
+          className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted transition-colors text-left"
+        >
+          {contextMenu.chat.isMuted ? (
+            <>
+              <BellRing className="w-4 h-4 text-muted-foreground" />
+              <span>Увімкнути сповіщення</span>
+            </>
+          ) : (
+            <>
+              <BellOff className="w-4 h-4 text-muted-foreground" />
+              <span>Вимкнути сповіщення</span>
+            </>
+          )}
+        </button>
+        
+        <button
+          onClick={() => handleToggleArchiveChat(contextMenu.chat!.id)}
+          className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted transition-colors text-left"
+        >
+          <Archive className="w-4 h-4 text-muted-foreground" />
+          <span>{contextMenu.chat.isArchived ? 'Розархівувати' : 'Архівувати'}</span>
+        </button>
+        
+        <div className="h-px bg-border my-1"></div>
+        
+        <button
+          onClick={() => handleDeleteChat(contextMenu.chat!.id)}
+          className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-destructive/10 text-destructive transition-colors text-left"
+        >
+          <Trash2 className="w-4 h-4" />
+          <span>Видалити чат</span>
+        </button>
+      </div>
+    );
+  };
+
+  const renderCallInterface = () => {
+    if (!activeCall) return null;
+    
+    const otherParticipants = activeCall.participants.filter(id => id !== currentUser?.id);
+    const participantNames = otherParticipants.map(id => users.find(u => u.id === id)?.name).join(', ');
+    
+    return (
+      <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center">
+        <div className="bg-popover rounded-xl p-6 w-full max-w-md">
+          <div className="text-center mb-6">
+            <h2 className="text-xl font-semibold text-popover-foreground mb-2">
+              {activeCall.type === 'audio' ? 'Аудіодзвінок' : 'Відеодзвінок'}
+            </h2>
+            <p className="text-muted-foreground">
+              {activeCall.status === 'ringing' ? 'Дзвінок...' : participantNames}
+            </p>
+            {activeCall.status === 'ongoing' && (
+              <p className="text-muted-foreground mt-2">
+                {formatCallDuration(Math.floor((new Date().getTime() - new Date(activeCall.startTime).getTime()) / 1000))}
+              </p>
+            )}
+          </div>
+          
+          <div className="flex justify-center gap-4">
+            {activeCall.status === 'ringing' ? (
+              <>
+                <button 
+                  onClick={handleEndCall}
+                  className="p-3 bg-destructive text-destructive-foreground rounded-full"
+                >
+                  <PhoneOff className="w-6 h-6" />
+                </button>
+              </>
+            ) : (
+              <>
+                <button className="p-3 bg-muted text-muted-foreground rounded-full">
+                  <Mic className="w-6 h-6" />
+                </button>
+                <button 
+                  onClick={handleEndCall}
+                  className="p-3 bg-destructive text-destructive-foreground rounded-full"
+                >
+                  <PhoneOff className="w-6 h-6" />
+                </button>
+                {activeCall.type === 'video' && (
+                  <button className="p-3 bg-muted text-muted-foreground rounded-full">
+                    <VideoOff className="w-6 h-6" />
+                  </button>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
-    <div className="min-h-screen bg-background flex">
+    <div className="min-h-screen bg-background flex" onClick={closeContextMenu}>
       {/* Sidebar */}
       <div className="hidden md:block">
         <Sidebar />
@@ -621,60 +1029,68 @@ const ChatPage = () => {
               </div>
 
               {/* Chat List */}
-              <div className="flex-1 overflow-y-auto">
-                <div className="p-2 space-y-1">
-                  {chats.map(chat => (
-                    <div 
-                      key={chat.id} 
-                      className={`p-3 rounded-lg cursor-pointer transition-colors ${
-                        activeChat?.id === chat.id 
-                          ? 'bg-accent border border-accent-foreground/20' 
-                          : 'hover:bg-muted'
-                      }`}
-                      onClick={() => {
-                        setActiveChat(chat);
-                        setShowChatList(false);
-                      }}
-                    >
-                      <div className="flex items-center gap-2">
-                        <div className="relative">
-                          {chat.type === 'group' ? (
-                            <div className="w-8 h-8 bg-gradient-to-br from-accent to-primary rounded-full flex items-center justify-center text-accent-foreground font-semibold">
-                              <Users className="w-4 h-4" />
-                            </div>
-                          ) : (
-                            renderAvatar(chat.name, true, 'default')
-                          )}
-                          {chat.unreadCount > 0 && (
-                            <div className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-xs rounded-full h-4 w-4 flex items-center justify-center font-medium">
-                              {chat.unreadCount > 9 ? '9+' : chat.unreadCount}
-                            </div>
-                          )}
-                          {chat.isPinned && (
-                            <div className="absolute -bottom-1 -right-1 bg-yellow-500 p-0.5 rounded-full">
-                              <Pin className="h-2 w-2 text-white" />
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between mb-0.5">
-                            <h3 className="font-medium text-card-foreground truncate text-sm">{chat.name}</h3>
-                            <span className="text-xs text-muted-foreground flex-shrink-0">
-                              {chat.lastMessage?.timestamp}
-                            </span>
-                          </div>
-                          {chat.lastMessage && (
-                            <p className="text-xs text-muted-foreground truncate">
-                              {chat.type === 'group' && `${chat.lastMessage.senderName}: `}
-                              {chat.lastMessage.content}
-                            </p>
-                          )}
-                        </div>
-                      </div>
+              {/* Chat List */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="p-2 space-y-1">
+          {chats.filter(chat => !chat.isArchived).map(chat => (
+            <div 
+              key={chat.id} 
+              className={`p-3 rounded-lg cursor-pointer transition-colors ${
+                activeChat?.id === chat.id 
+                  ? 'bg-accent border border-accent-foreground/20' 
+                  : 'hover:bg-muted'
+              }`}
+              onClick={() => {
+                setActiveChat(chat);
+                setShowChatList(false);
+                setMessages(messages.filter(m => m.chatId === chat.id));
+              }}
+              onContextMenu={(e) => handleRightClick(e, chat)}
+            >
+              <div className="flex items-center gap-2">
+                <div className="relative">
+                  {chat.type === 'group' ? (
+                    <div className="w-8 h-8 bg-gradient-to-br from-accent to-primary rounded-full flex items-center justify-center text-accent-foreground font-semibold">
+                      <Users className="w-4 h-4" />
                     </div>
-                  ))}
+                  ) : (
+                    renderAvatar(chat.name, true, 'default')
+                  )}
+                  {chat.unreadCount > 0 && (
+                    <div className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-xs rounded-full h-4 w-4 flex items-center justify-center font-medium">
+                      {chat.unreadCount > 9 ? '9+' : chat.unreadCount}
+                    </div>
+                  )}
+                  {chat.isPinned && (
+                    <div className="absolute -bottom-1 -right-1 bg-yellow-500 p-0.5 rounded-full">
+                      <Pin className="h-2 w-2 text-white" />
+                    </div>
+                  )}
+                  {chat.isMuted && (
+                    <div className="absolute -bottom-1 -left-1 bg-muted p-0.5 rounded-full">
+                      <BellOff className="h-2 w-2 text-muted-foreground" />
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between mb-0.5">
+                    <h3 className="font-medium text-card-foreground truncate text-sm">{chat.name}</h3>
+                    <span className="text-xs text-muted-foreground flex-shrink-0">
+                      {chat.lastMessage?.timestamp}
+                    </span>
+                  </div>
+                  {chat.lastMessage && (
+                    <p className="text-xs text-muted-foreground truncate">
+                      {chat.type === 'group' && `${chat.lastMessage.senderName}: `}
+                      {chat.lastMessage.content}
+                    </p>
+                  )}
                 </div>
               </div>
+            </div>
+          ))}
+        </div>
+      </div>
             </div>
           )}
 
@@ -707,7 +1123,10 @@ const ChatPage = () => {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <button
-                        onClick={() => setShowChatList(true)}
+                        onClick={() => {
+                          setActiveChat(null);
+                          setShowChatList(true);
+                        }}
                         className="md:hidden p-1 hover:bg-muted rounded-md transition-colors"
                       >
                         <ArrowLeft className="w-4 h-4 text-muted-foreground" />
@@ -740,14 +1159,17 @@ const ChatPage = () => {
                     </div>
                     
                     <div className="flex items-center gap-1">
-                      <button className="p-2 hover:bg-muted rounded-md transition-colors">
+                      <button 
+                        onClick={() => handleStartCall('audio')}
+                        className="p-2 hover:bg-muted rounded-md transition-colors"
+                      >
                         <Phone className="w-4 h-4 text-muted-foreground" />
                       </button>
-                      <button className="p-2 hover:bg-muted rounded-md transition-colors">
+                      <button 
+                        onClick={() => handleStartCall('video')}
+                        className="p-2 hover:bg-muted rounded-md transition-colors"
+                      >
                         <Video className="w-4 h-4 text-muted-foreground" />
-                      </button>
-                      <button className="p-2 hover:bg-muted rounded-md transition-colors">
-                        <MoreVertical className="w-4 h-4 text-muted-foreground" />
                       </button>
                     </div>
                   </div>
@@ -755,7 +1177,7 @@ const ChatPage = () => {
 
                 {/* Messages */}
                 <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                  {messages.map((message) => (
+                  {messages.filter(m => m.chatId === activeChat.id).map((message) => (
                     <div
                       key={message.id}
                       className={`flex ${message.senderId === currentUser?.id ? 'justify-end' : 'justify-start'}`}
@@ -837,7 +1259,10 @@ const ChatPage = () => {
                                     >
                                       <Edit className="w-3 h-3 text-muted-foreground" />
                                     </button>
-                                    <button className="p-1 hover:bg-muted rounded-md transition-colors">
+                                    <button 
+                                      onClick={() => handleDeleteMessage(message.id)}
+                                      className="p-1 hover:bg-muted rounded-md transition-colors"
+                                    >
                                       <Trash2 className="w-3 h-3 text-destructive" />
                                     </button>
                                   </>
@@ -864,6 +1289,25 @@ const ChatPage = () => {
                       </div>
                     </div>
                   ))}
+                  
+                  {/* Typing indicator */}
+                  {typingUsers.length > 0 && (
+                    <div className="flex justify-start">
+                      <div className="flex items-end gap-2 max-w-md">
+                        {activeChat.type === 'group' && (
+                          renderAvatar(users.find(u => u.id === typingUsers[0])?.name || '', false, 'small')
+                        )}
+                        <div className="bg-card border border-border rounded-xl px-3 py-2">
+                          <div className="flex space-x-1">
+                            <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce"></div>
+                            <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                            <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
                   <div ref={messagesEndRef} />
                 </div>
 
@@ -928,6 +1372,15 @@ const ChatPage = () => {
                       <button className="p-2 hover:bg-muted rounded-md transition-colors">
                         <Smile className="w-4 h-4 text-muted-foreground" />
                       </button>
+                      <button 
+                        onMouseDown={startRecording}
+                        onMouseUp={stopRecording}
+                        onTouchStart={startRecording}
+                        onTouchEnd={stopRecording}
+                        className={`p-2 rounded-md transition-colors ${isRecording ? 'bg-destructive text-destructive-foreground' : 'hover:bg-muted'}`}
+                      >
+                        <Mic className="w-4 h-4" />
+                      </button>
                     </div>
                     
                     <div className="flex-1">
@@ -959,7 +1412,7 @@ const ChatPage = () => {
                           <button 
                             onClick={() => setFile(null)}
                             className="p-0.5 hover:bg-accent rounded-md transition-colors"
-                          >
+                        >
                             <X className="w-3 h-3 text-muted-foreground" />
                           </button>
                         </div>
@@ -984,6 +1437,8 @@ const ChatPage = () => {
       {/* Dialogs */}
       {renderNewChatDialog()}
       {renderNewGroupDialog()}
+      {renderCallInterface()}
+      {renderContextMenu()}
     </div>
   );
 };
