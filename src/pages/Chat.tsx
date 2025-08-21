@@ -5,7 +5,7 @@ import {
   Video, Pin, Trash2, Edit, Reply,
   Image as ImageIcon, File, Download, ThumbsUp, Smile,
   Mic, VideoOff, PhoneOff, UserPlus, BellOff,
-  Archive, BellRing
+  Archive, BellRing, ChevronDown, ChevronUp
 } from 'lucide-react';
 
 // Import components
@@ -95,12 +95,6 @@ const ChatPage = () => {
   const [activeCall, setActiveCall] = useState<Call | null>(null);
   const [typingUsers, setTypingUsers] = useState<number[]>([]);
 
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const audioRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
-  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
   // Новий стан для контекстного меню
   const [contextMenu, setContextMenu] = useState<{
     visible: boolean;
@@ -114,7 +108,17 @@ const ChatPage = () => {
     chat: null
   });
 
+  // Новий стан для відображення архіву
+  const [showArchived, setShowArchived] = useState(false);
+  const [showArchiveHint, setShowArchiveHint] = useState(true);
+
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const audioRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const contextMenuRef = useRef<HTMLDivElement>(null);
+  const chatListRef = useRef<HTMLDivElement>(null);
 
   // Мокові дані
   useEffect(() => {
@@ -218,6 +222,26 @@ const ChatPage = () => {
         admins: [1],
         isPinned: true,
         isMuted: true
+      },
+      {
+        id: 5,
+        name: "Старий чат",
+        type: 'direct',
+        participants: [initialCurrentUser, initialUsers[3]],
+        unreadCount: 0,
+        lastMessage: {
+          id: 5,
+          senderId: 5,
+          senderName: "Іван Іваненко",
+          senderEmail: "ivan@example.com",
+          content: "До зустрічі!",
+          timestamp: new Date(Date.now() - 86400000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          chatId: 5,
+          readBy: [1, 5]
+        },
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        isArchived: true
       }
     ];
     
@@ -319,11 +343,60 @@ const ChatPage = () => {
     };
   }, [newMessage, activeChat]);
 
+  // Ефект для обробки скролу до архіву
+  useEffect(() => {
+    const chatList = chatListRef.current;
+    if (!chatList) return;
+
+    const handleScroll = () => {
+      const isNearBottom = chatList.scrollTop + chatList.clientHeight >= chatList.scrollHeight - 50;
+      
+      if (isNearBottom && showArchiveHint) {
+        setShowArchiveHint(false);
+      } else if (!isNearBottom && !showArchiveHint) {
+        setShowArchiveHint(true);
+      }
+    };
+
+    chatList.addEventListener('scroll', handleScroll);
+    return () => chatList.removeEventListener('scroll', handleScroll);
+  }, [showArchiveHint]);
+
+  // Ефект для закриття контекстного меню при кліку поза ним
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (contextMenu.visible && contextMenuRef.current && !contextMenuRef.current.contains(e.target as Node)) {
+        closeContextMenu();
+      }
+    };
+
+    const handleEscapeKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && contextMenu.visible) {
+        closeContextMenu();
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('contextmenu', handleClickOutside);
+    document.addEventListener('keydown', handleEscapeKey);
+    
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('contextmenu', handleClickOutside);
+      document.removeEventListener('keydown', handleEscapeKey);
+    };
+  }, [contextMenu.visible]);
+
   const filteredUsers = users.filter(user => 
     user.id !== currentUser?.id && 
     (user.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
     user.email.toLowerCase().includes(searchTerm.toLowerCase()))
   );
+
+  // Розділяємо чати на закріплені та незакріплені
+  const pinnedChats = chats.filter(chat => chat.isPinned && !chat.isArchived);
+  const unpinnedChats = chats.filter(chat => !chat.isPinned && !chat.isArchived);
+  const archivedChats = chats.filter(chat => chat.isArchived);
 
   const handleSendMessage = () => {
     if ((!newMessage.trim() && !file) || !activeChat || !currentUser) return;
@@ -581,6 +654,64 @@ const ChatPage = () => {
     );
   };
 
+  // Обробник правого кліку миші
+  const handleRightClick = (e: React.MouseEvent, chat: Chat) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    setContextMenu({
+      visible: true,
+      x: e.clientX,
+      y: e.clientY,
+      chat
+    });
+  };
+
+  // Закриття контекстного меню
+  const closeContextMenu = () => {
+    setContextMenu({
+      visible: false,
+      x: 0,
+      y: 0,
+      chat: null
+    });
+  };
+
+  // Функції для обробки дій меню
+  const handleTogglePinChat = (chatId: number) => {
+    setChats(prev => prev.map(chat => 
+      chat.id === chatId ? { ...chat, isPinned: !chat.isPinned } : chat
+    ));
+    closeContextMenu();
+  };
+
+  const handleToggleMuteChat = (chatId: number) => {
+    setChats(prev => prev.map(chat => 
+      chat.id === chatId ? { ...chat, isMuted: !chat.isMuted } : chat
+    ));
+    closeContextMenu();
+  };
+
+  const handleToggleArchiveChat = (chatId: number) => {
+    setChats(prev => prev.map(chat => 
+      chat.id === chatId ? { ...chat, isArchived: !chat.isArchived } : chat
+    ));
+    closeContextMenu();
+  };
+
+  const handleDeleteChat = (chatId: number) => {
+    setChats(prev => prev.filter(chat => chat.id !== chatId));
+    if (activeChat?.id === chatId) {
+      setActiveChat(null);
+    }
+    closeContextMenu();
+  };
+
+  // Функція для перемикання відображення архіву
+  const toggleArchived = () => {
+    setShowArchived(!showArchived);
+  };
+
   const renderNewChatDialog = () => (
     <div className={`fixed inset-0 z-50 ${showNewChatDialog ? '' : 'hidden'}`}>
       <div className="fixed inset-0 bg-black/20 backdrop-blur-sm" onClick={() => setShowNewChatDialog(false)} />
@@ -805,86 +936,6 @@ const ChatPage = () => {
     );
   };
 
-  // Обробник правого кліку миші
-   // Обробник правого кліку миші
-  const handleRightClick = (e: React.MouseEvent, chat: Chat) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    setContextMenu({
-      visible: true,
-      x: e.clientX,
-      y: e.clientY,
-      chat
-    });
-  };
-
-  // Закриття контекстного меню
-  const closeContextMenu = () => {
-    setContextMenu({
-      visible: false,
-      x: 0,
-      y: 0,
-      chat: null
-    });
-  };
-
-  // Функції для обробки дій меню
-  const handleTogglePinChat = (chatId: number) => {
-    setChats(prev => prev.map(chat => 
-      chat.id === chatId ? { ...chat, isPinned: !chat.isPinned } : chat
-    ));
-    closeContextMenu();
-  };
-
-  const handleToggleMuteChat = (chatId: number) => {
-    setChats(prev => prev.map(chat => 
-      chat.id === chatId ? { ...chat, isMuted: !chat.isMuted } : chat
-    ));
-    closeContextMenu();
-  };
-
-  const handleToggleArchiveChat = (chatId: number) => {
-    setChats(prev => prev.map(chat => 
-      chat.id === chatId ? { ...chat, isArchived: !chat.isArchived } : chat
-    ));
-    closeContextMenu();
-  };
-
-  const handleDeleteChat = (chatId: number) => {
-    setChats(prev => prev.filter(chat => chat.id !== chatId));
-    if (activeChat?.id === chatId) {
-      setActiveChat(null);
-    }
-    closeContextMenu();
-  };
-
-  // Ефект для закриття контекстного меню при кліку поза ним
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (contextMenu.visible && contextMenuRef.current && !contextMenuRef.current.contains(e.target as Node)) {
-        closeContextMenu();
-      }
-    };
-
-    const handleEscapeKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && contextMenu.visible) {
-        closeContextMenu();
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    document.addEventListener('contextmenu', handleClickOutside);
-    document.addEventListener('keydown', handleEscapeKey);
-    
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('contextmenu', handleClickOutside);
-      document.removeEventListener('keydown', handleEscapeKey);
-    };
-  }, [contextMenu.visible]);
-
-  // Компонент контекстного меню
   // Компонент контекстного меню
   const renderContextMenu = () => {
     if (!contextMenu.visible || !contextMenu.chat) return null;
@@ -930,14 +981,13 @@ const ChatPage = () => {
         </button>
         
         <div className="h-px bg-border my-1"></div>
-        
         <button
-          onClick={() => handleDeleteChat(contextMenu.chat!.id)}
-          className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-destructive/10 text-destructive transition-colors text-left"
-        >
-          <Trash2 className="w-4 h-4" />
-          <span>Видалити чат</span>
-        </button>
+  onClick={() => handleDeleteChat(contextMenu.chat!.id)}
+  className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-destructive/10 text-destructive transition-colors text-left"
+>
+  <Trash2 className="w-4 h-4" />
+  <span>Видалити чат</span>
+</button>
       </div>
     );
   };
@@ -999,6 +1049,81 @@ const ChatPage = () => {
     );
   };
 
+  // Допоміжний компонент для елемента списку чатів
+  const ChatListItem = ({ 
+    chat, 
+    activeChat, 
+    onChatClick, 
+    onRightClick, 
+    isArchived = false 
+  }: { 
+    chat: Chat; 
+    activeChat: Chat | null; 
+    onChatClick: () => void; 
+    onRightClick: (e: React.MouseEvent, chat: Chat) => void;
+    isArchived?: boolean;
+  }) => {
+    return (
+      <div 
+        className={`p-3 rounded-lg cursor-pointer transition-colors ${
+          activeChat?.id === chat.id 
+            ? 'bg-accent border border-accent-foreground/20' 
+            : 'hover:bg-muted'
+        } ${isArchived ? 'opacity-70' : ''}`}
+        onClick={onChatClick}
+        onContextMenu={(e) => onRightClick(e, chat)}
+      >
+        <div className="flex items-center gap-2">
+          <div className="relative">
+            {chat.type === 'group' ? (
+              <div className="w-8 h-8 bg-gradient-to-br from-accent to-primary rounded-full flex items-center justify-center text-accent-foreground font-semibold">
+                <Users className="w-4 h-4" />
+              </div>
+            ) : (
+              <div className="relative">
+                <div className="w-8 h-8 bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center text-primary-foreground font-semibold">
+                  {chat.name.split(' ').map(n => n[0]?.toUpperCase()).join('')}
+                </div>
+                {chat.participants.find(p => p.id !== currentUser?.id)?.status === 'online' && (
+                  <div className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-green-500 rounded-full border border-card"></div>
+                )}
+              </div>
+            )}
+            {chat.unreadCount > 0 && (
+              <div className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-xs rounded-full h-4 w-4 flex items-center justify-center font-medium">
+                {chat.unreadCount > 9 ? '9+' : chat.unreadCount}
+              </div>
+            )}
+            {chat.isPinned && (
+              <div className="absolute -bottom-1 -right-1 bg-yellow-500 p-0.5 rounded-full">
+                <Pin className="h-2 w-2 text-white" />
+              </div>
+            )}
+            {chat.isMuted && (
+              <div className="absolute -bottom-1 -left-1 bg-muted p-0.5 rounded-full">
+                <BellOff className="h-2 w-2 text-muted-foreground" />
+              </div>
+            )}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between mb-0.5">
+              <h3 className="font-medium text-card-foreground truncate text-sm">{chat.name}</h3>
+              <span className="text-xs text-muted-foreground flex-shrink-0">
+                {chat.lastMessage?.timestamp}
+              </span>
+            </div>
+            {chat.lastMessage && (
+              <p className="text-xs text-muted-foreground truncate">
+                {chat.type === 'group' && `${chat.lastMessage.senderName}: `}
+                {chat.lastMessage.content}
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-background flex">
       {/* Sidebar */}
@@ -1046,68 +1171,99 @@ const ChatPage = () => {
                 </div>
               </div>
 
-      {/* Chat List */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="p-2 space-y-1">
-          {chats.filter(chat => !chat.isArchived).map(chat => (
-            <div 
-              key={chat.id} 
-              className={`p-3 rounded-lg cursor-pointer transition-colors ${
-                activeChat?.id === chat.id 
-                  ? 'bg-accent border border-accent-foreground/20' 
-                  : 'hover:bg-muted'
-              }`}
-              onClick={() => {
-                setActiveChat(chat);
-                setShowChatList(false);
-                setMessages(messages.filter(m => m.chatId === chat.id));
-              }}
-              onContextMenu={(e) => handleRightClick(e, chat)}
-            >
-              <div className="flex items-center gap-2">
-                <div className="relative">
-                  {chat.type === 'group' ? (
-                    <div className="w-8 h-8 bg-gradient-to-br from-accent to-primary rounded-full flex items-center justify-center text-accent-foreground font-semibold">
-                      <Users className="w-4 h-4" />
-                    </div>
-                  ) : (
-                    renderAvatar(chat.name, true, 'default')
-                  )}
-                  {chat.unreadCount > 0 && (
-                    <div className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-xs rounded-full h-4 w-4 flex items-center justify-center font-medium">
-                      {chat.unreadCount > 9 ? '9+' : chat.unreadCount}
+              {/* Chat List */}
+              <div 
+                ref={chatListRef}
+                className="flex-1 overflow-y-auto relative"
+              >
+                <div className="p-2">
+                  {/* Закріплені чати */}
+                  {pinnedChats.length > 0 && (
+                    <div className="mb-4">
+                      <div className="px-2 py-1 text-xs font-medium text-muted-foreground uppercase">
+                        Закріплені
+                      </div>
+                      <div className="space-y-1">
+                        {pinnedChats.map(chat => (
+                          <ChatListItem 
+                            key={chat.id} 
+                            chat={chat} 
+                            activeChat={activeChat}
+                            onChatClick={() => {
+                              setActiveChat(chat);
+                              setShowChatList(false);
+                              setMessages(messages.filter(m => m.chatId === chat.id));
+                            }}
+                            onRightClick={(e) => handleRightClick(e, chat)}
+                          />
+                        ))}
+                      </div>
                     </div>
                   )}
-                  {chat.isPinned && (
-                    <div className="absolute -bottom-1 -right-1 bg-yellow-500 p-0.5 rounded-full">
-                      <Pin className="h-2 w-2 text-white" />
+
+                  {/* Незакріплені чати */}
+                  {unpinnedChats.length > 0 && (
+                    <div className="mb-4">
+                      {pinnedChats.length > 0 && (
+                        <div className="px-2 py-1 text-xs font-medium text-muted-foreground uppercase">
+                          Всі чати
+                        </div>
+                      )}
+                      <div className="space-y-1">
+                        {unpinnedChats.map(chat => (
+                          <ChatListItem 
+                            key={chat.id} 
+                            chat={chat} 
+                            activeChat={activeChat}
+                            onChatClick={() => {
+                              setActiveChat(chat);
+                              setShowChatList(false);
+                              setMessages(messages.filter(m => m.chatId === chat.id));
+                            }}
+                            onRightClick={(e) => handleRightClick(e, chat)}
+                          />
+                        ))}
+                      </div>
                     </div>
                   )}
-                  {chat.isMuted && (
-                    <div className="absolute -bottom-1 -left-1 bg-muted p-0.5 rounded-full">
-                      <BellOff className="h-2 w-2 text-muted-foreground" />
+
+                  {/* Архів */}
+                  {archivedChats.length > 0 && (
+                    <div className="border-t border-border pt-3">
+                      <button
+                        onClick={toggleArchived}
+                        className="w-full flex items-center justify-between px-2 py-2 text-sm text-muted-foreground hover:bg-muted rounded-lg transition-colors"
+                      >
+                        <span>Архівовані чати</span>
+                        {showArchived ? (
+                          <ChevronUp className="w-4 h-4" />
+                        ) : (
+                          <ChevronDown className="w-4 h-4" />
+                        )}
+                      </button>
+                      
+                      {showArchived && (
+                        <div className="mt-2 space-y-1">
+                          {archivedChats.map(chat => (
+                            <ChatListItem 
+                              key={chat.id} 
+                              chat={chat} 
+                              activeChat={activeChat}
+                              onChatClick={() => {
+                                setActiveChat(chat);
+                                setShowChatList(false);
+                                setMessages(messages.filter(m => m.chatId === chat.id));
+                              }}
+                              onRightClick={(e) => handleRightClick(e, chat)}
+                              isArchived
+                            />
+                          ))}
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between mb-0.5">
-                    <h3 className="font-medium text-card-foreground truncate text-sm">{chat.name}</h3>
-                    <span className="text-xs text-muted-foreground flex-shrink-0">
-                      {chat.lastMessage?.timestamp}
-                    </span>
-                  </div>
-                  {chat.lastMessage && (
-                    <p className="text-xs text-muted-foreground truncate">
-                      {chat.type === 'group' && `${chat.lastMessage.senderName}: `}
-                      {chat.lastMessage.content}
-                    </p>
                   )}
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
-      </div>
             </div>
           )}
 
@@ -1233,13 +1389,13 @@ const ChatPage = () => {
                                 <div className="flex items-center gap-1 mt-1">
                                   {Object.entries(message.reactions).map(([reaction, count]) => (
                                     <div key={reaction} className={`px-1 py-0.5 rounded-full flex items-center text-xs ${
-                                      message.senderId === currentUser?.id 
-                                        ? 'bg-primary-foreground/20 text-primary-foreground' 
-                                        : 'bg-muted text-muted-foreground'
-                                    }`}>
-                                      <span>{reaction}</span>
-                                      <span className="ml-0.5 font-medium">{count}</span>
-                                    </div>
+  message.senderId === currentUser?.id 
+    ? 'bg-primary-foreground/20 text-primary-foreground' 
+    : 'bg-muted text-muted-foreground'
+}`}>
+  <span>{reaction}</span>
+  <span className="ml-0.5 font-medium">{count}</span>
+</div>
                                   ))}
                                 </div>
                               )}
@@ -1429,7 +1585,7 @@ const ChatPage = () => {
                           <button 
                             onClick={() => setFile(null)}
                             className="p-0.5 hover:bg-accent rounded-md transition-colors"
-                        >
+                          >
                             <X className="w-3 h-3 text-muted-foreground" />
                           </button>
                         </div>
