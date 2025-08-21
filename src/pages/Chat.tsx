@@ -5,7 +5,8 @@ import {
   Video, Pin, Trash2, Edit, Reply,
   Image as ImageIcon, File, Download, ThumbsUp, Smile,
   Mic, VideoOff, PhoneOff, UserPlus, BellOff,
-  Archive, BellRing, ChevronDown, ChevronUp
+  Archive, BellRing, ChevronDown, ChevronUp,
+  Play, Pause, StopCircle
 } from 'lucide-react';
 
 // Import components
@@ -89,13 +90,20 @@ const ChatPage = () => {
   const [showChatList, setShowChatList] = useState(true);
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [editingMessage, setEditingMessage] = useState<Message | null>(null);
-  const [isRecording, setIsRecording] = useState(false);
   const [onlineUsers, setOnlineUsers] = useState<number[]>([]);
   const [calls, setCalls] = useState<Call[]>([]);
   const [activeCall, setActiveCall] = useState<Call | null>(null);
   const [typingUsers, setTypingUsers] = useState<number[]>([]);
 
-  // Новий стан для контекстного меню
+  // Нові стани для голосових повідомлень
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordedAudio, setRecordedAudio] = useState<Blob | null>(null);
+  const [audioUrl, setAudioUrl] = useState<string>('');
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const [recordingTimer, setRecordingTimer] = useState<NodeJS.Timeout | null>(null);
+
+  // Стани для контекстного меню та архіву
   const [contextMenu, setContextMenu] = useState<{
     visible: boolean;
     x: number;
@@ -108,7 +116,6 @@ const ChatPage = () => {
     chat: null
   });
 
-  // Новий стан для відображення архіву
   const [showArchived, setShowArchived] = useState(false);
   const [showArchiveHint, setShowArchiveHint] = useState(true);
 
@@ -119,6 +126,7 @@ const ChatPage = () => {
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const contextMenuRef = useRef<HTMLDivElement>(null);
   const chatListRef = useRef<HTMLDivElement>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // Мокові дані
   useEffect(() => {
@@ -387,6 +395,15 @@ const ChatPage = () => {
     };
   }, [contextMenu.visible]);
 
+  // Ефект для очищення URL при unmount
+  useEffect(() => {
+    return () => {
+      if (audioUrl) {
+        URL.revokeObjectURL(audioUrl);
+      }
+    };
+  }, [audioUrl]);
+
   const filteredUsers = users.filter(user => 
     user.id !== currentUser?.id && 
     (user.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -484,6 +501,7 @@ const ChatPage = () => {
     ));
   };
 
+  // Функція для початку запису
   const startRecording = async () => {
     try {
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -502,8 +520,9 @@ const ChatPage = () => {
       
       recorder.onstop = () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        const audioFile = new File([audioBlob], 'audio-message.webm', { type: 'audio/webm' });
-        setFile(audioFile);
+        setRecordedAudio(audioBlob);
+        const url = URL.createObjectURL(audioBlob);
+        setAudioUrl(url);
         
         stream.getTracks().forEach(track => track.stop());
       };
@@ -511,23 +530,95 @@ const ChatPage = () => {
       recorder.start();
       setIsRecording(true);
       
-      // Автоматично зупинити запис через 30 секунд
+      // Таймер для відображення часу запису
+      let time = 0;
+      const timer = setInterval(() => {
+        time += 1;
+        setRecordingTime(time);
+      }, 1000);
+      
+      setRecordingTimer(timer);
+      
+      // Автоматично зупинити запис через 60 секунд
       setTimeout(() => {
         if (isRecording) {
           stopRecording();
         }
-      }, 30000);
+      }, 60000);
     } catch (error) {
       console.error('Помилка доступу до мікрофона:', error);
       alert("Не вдалося отримати доступ до мікрофона");
     }
   };
 
+  // Функція для зупинки запису
   const stopRecording = () => {
     if (audioRecorderRef.current && isRecording) {
       audioRecorderRef.current.stop();
       setIsRecording(false);
+      
+      if (recordingTimer) {
+        clearInterval(recordingTimer);
+        setRecordingTimer(null);
+      }
+      setRecordingTime(0);
     }
+  };
+
+  // Функція для відтворення записаного аудіо
+  const playRecordedAudio = () => {
+    if (audioUrl && audioRef.current) {
+      audioRef.current.play();
+      setIsPlaying(true);
+    }
+  };
+
+  // Функція для паузи аудіо
+  const pauseRecordedAudio = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      setIsPlaying(false);
+    }
+  };
+
+  // Функція для відправки голосового повідомлення
+  const sendVoiceMessage = () => {
+    if (!recordedAudio || !activeChat || !currentUser) return;
+
+    const message: Message = {
+      id: Date.now(),
+      senderId: currentUser.id,
+      senderName: currentUser.name,
+      senderEmail: currentUser.email,
+      content: "Голосове повідомлення",
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      attachment: { 
+        name: "voice-message.webm",
+        type: "audio",
+        size: `${(recordedAudio.size / 1024).toFixed(1)} KB`,
+        url: audioUrl
+      },
+      chatId: activeChat.id,
+      readBy: [currentUser.id]
+    };
+
+    setMessages(prev => [...prev, message]);
+    setRecordedAudio(null);
+    setAudioUrl('');
+    setIsPlaying(false);
+    
+    setChats(prev => prev.map(chat => 
+      chat.id === activeChat.id 
+        ? { ...chat, lastMessage: message, updatedAt: new Date().toISOString(), unreadCount: 0 }
+        : chat
+    ));
+  };
+
+  // Функція для скасування запису
+  const cancelRecording = () => {
+    stopRecording();
+    setRecordedAudio(null);
+    setAudioUrl('');
   };
 
   const handleCreateDirectChat = (userId: number) => {
@@ -796,7 +887,10 @@ const ChatPage = () => {
           <div>
             <label className="block text-xs font-medium mb-1 text-foreground">Учасники</label>
             <div className="relative mb-2">
-              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+              Ось повний код з продовженням:
+
+```jsx
+<Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
               <input
                 type="text"
                 placeholder="Пошук користувачів..."
@@ -896,10 +990,31 @@ const ChatPage = () => {
     if (attachment.type === 'audio') {
       return (
         <div className="mt-2 p-2 bg-muted rounded-lg border border-border flex items-center gap-2 max-w-xs">
-          <Mic className="h-6 w-6 text-primary flex-shrink-0" />
+          <button 
+            onClick={() => {
+              if (audioRef.current?.src === attachment.url) {
+                if (audioRef.current.paused) {
+                  audioRef.current.play();
+                } else {
+                  audioRef.current.pause();
+                }
+              } else {
+                if (audioRef.current) {
+                  audioRef.current.src = attachment.url || '';
+                  audioRef.current.play();
+                }
+              }
+            }}
+            className="p-1.5 bg-primary text-primary-foreground rounded-full flex-shrink-0"
+          >
+            <Play className="h-4 w-4" />
+          </button>
           <div className="flex-1 min-w-0">
             <p className="text-xs font-medium truncate text-foreground">{attachment.name}</p>
             <p className="text-xs text-muted-foreground">{attachment.size}</p>
+          </div>
+          <div className="w-16 h-1 bg-muted-foreground/20 rounded-full overflow-hidden">
+            <div className="h-full bg-primary w-1/2"></div>
           </div>
           <button className="p-1 hover:bg-accent rounded-md flex-shrink-0 transition-colors">
             <Download className="h-3 w-3 text-muted-foreground" />
@@ -981,13 +1096,14 @@ const ChatPage = () => {
         </button>
         
         <div className="h-px bg-border my-1"></div>
+        
         <button
-  onClick={() => handleDeleteChat(contextMenu.chat!.id)}
-  className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-destructive/10 text-destructive transition-colors text-left"
->
-  <Trash2 className="w-4 h-4" />
-  <span>Видалити чат</span>
-</button>
+          onClick={() => handleDeleteChat(contextMenu.chat!.id)}
+          className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-destructive/10 text-destructive transition-colors text-left"
+        >
+          <Trash2 className="w-4 h-4" />
+          <span>Видалити чат</span>
+        </button>
       </div>
     );
   };
@@ -1262,6 +1378,17 @@ const ChatPage = () => {
                       )}
                     </div>
                   )}
+
+                  {/* Підказка про архів */}
+                  {showArchiveHint && archivedChats.length > 0 && !showArchived && (
+                    <div className="absolute bottom-2 left-0 right-0 px-2">
+                      <div className="bg-accent/10 border border-accent/20 rounded-lg p-2 text-center">
+                        <p className="text-xs text-accent-foreground">
+                          Прокрутіть вниз для доступу до архіву
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -1307,8 +1434,8 @@ const ChatPage = () => {
                       
                       {activeChat.type === 'group' ? (
                         <div className="w-8 h-8 bg-gradient-to-br from-accent to-primary rounded-full flex items-center justify-center text-accent-foreground font-semibold">
-                          <Users className="w-4 h-4" />
-                        </div>
+  <Users className="w-4 h-4" />
+</div>
                       ) : (
                         renderAvatar(activeChat.name, true, 'default')
                       )}
@@ -1389,13 +1516,13 @@ const ChatPage = () => {
                                 <div className="flex items-center gap-1 mt-1">
                                   {Object.entries(message.reactions).map(([reaction, count]) => (
                                     <div key={reaction} className={`px-1 py-0.5 rounded-full flex items-center text-xs ${
-  message.senderId === currentUser?.id 
-    ? 'bg-primary-foreground/20 text-primary-foreground' 
-    : 'bg-muted text-muted-foreground'
-}`}>
-  <span>{reaction}</span>
-  <span className="ml-0.5 font-medium">{count}</span>
-</div>
+                                      message.senderId === currentUser?.id 
+                                        ? 'bg-primary-foreground/20 text-primary-foreground' 
+                                        : 'bg-muted text-muted-foreground'
+                                    }`}>
+                                      <span>{reaction}</span>
+                                      <span className="ml-0.5 font-medium">{count}</span>
+                                    </div>
                                   ))}
                                 </div>
                               )}
@@ -1527,6 +1654,78 @@ const ChatPage = () => {
 
                 {/* Message Input */}
                 <div className="p-4 bg-card border-t border-border">
+                  {/* Аудіо елемент для відтворення */}
+                  <audio 
+                    ref={audioRef}
+                    onEnded={() => setIsPlaying(false)}
+                    onPause={() => setIsPlaying(false)}
+                    className="hidden"
+                  />
+                  
+                  {recordedAudio ? (
+                    // Відображення записаного аудіо перед відправкою
+                    <div className="flex items-center gap-3 p-3 bg-muted rounded-lg mb-3">
+                      <button 
+                        onClick={isPlaying ? pauseRecordedAudio : playRecordedAudio}
+                        className="p-2 bg-primary text-primary-foreground rounded-full"
+                      >
+                        {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                      </button>
+                      
+                      <div className="flex-1">
+                        <div className="w-full h-1 bg-muted-foreground/20 rounded-full overflow-hidden">
+                          <div 
+                            className="h-full bg-primary transition-all duration-300"
+                            style={{ width: isPlaying ? '50%' : '0%' }}
+                          ></div>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {Math.floor(recordingTime / 60)}:{(recordingTime % 60).toString().padStart(2, '0')}
+                        </p>
+                      </div>
+                      
+                      <div className="flex gap-2">
+                        <button 
+                          onClick={cancelRecording}
+                          className="p-2 text-destructive hover:bg-destructive/10 rounded-md"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                        <button 
+                          onClick={sendVoiceMessage}
+                          className="p-2 bg-primary text-primary-foreground rounded-md"
+                        >
+                          <Send className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ) : isRecording ? (
+                    // Відображення процесу запису
+                    <div className="flex items-center gap-3 p-3 bg-destructive/10 rounded-lg mb-3">
+                      <div className="p-2 bg-destructive text-destructive-foreground rounded-full animate-pulse">
+                        <Mic className="h-4 w-4" />
+                      </div>
+                      
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 bg-destructive rounded-full animate-pulse"></div>
+                          <div className="w-2 h-2 bg-destructive rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+                          <div className="w-2 h-2 bg-destructive rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
+                        </div>
+                        <p className="text-xs text-destructive mt-1">
+                          Запис: {Math.floor(recordingTime / 60)}:{(recordingTime % 60).toString().padStart(2, '0')}
+                        </p>
+                      </div>
+                      
+                      <button 
+                        onClick={stopRecording}
+                        className="p-2 bg-destructive text-destructive-foreground rounded-md"
+                      >
+                        <StopCircle className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ) : null}
+
                   <div className="flex items-end gap-3">
                     <input 
                       type="file" 
@@ -1546,13 +1745,10 @@ const ChatPage = () => {
                         <Smile className="w-4 h-4 text-muted-foreground" />
                       </button>
                       <button 
-                        onMouseDown={startRecording}
-                        onMouseUp={stopRecording}
-                        onTouchStart={startRecording}
-                        onTouchEnd={stopRecording}
-                        className={`p-2 rounded-md transition-colors ${isRecording ? 'bg-destructive text-destructive-foreground' : 'hover:bg-muted'}`}
+                        onClick={startRecording}
+                        className="p-2 hover:bg-muted rounded-md transition-colors"
                       >
-                        <Mic className="w-4 h-4" />
+                        <Mic className="w-4 h-4 text-muted-foreground" />
                       </button>
                     </div>
                     
