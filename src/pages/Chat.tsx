@@ -1,23 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
-  Send, Users, Plus, Search, ChevronRight, MessageCircle, 
-  Check, X, ArrowLeft, Paperclip, Smile, Video, Phone, 
-  MoreVertical, Pin, Archive, Trash2, Edit, Reply, Forward,
-  Image as ImageIcon, File, Download, ThumbsUp, Eye
+  Send, Users, Plus, Search, MessageCircle, 
+  Check, X, ArrowLeft, Paperclip, Phone, 
+  Video, MoreVertical, Pin, Trash2, Edit, Reply,
+  Image as ImageIcon, File, Download, ThumbsUp, Smile
 } from 'lucide-react';
+
+// Import components
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
-import { useTranslation } from 'react-i18next';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Badge } from '@/components/ui/badge';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 type Message = {
   id: number;
@@ -44,8 +35,6 @@ type User = {
   name: string;
   email: string;
   role: string;
-  faculty_id?: number;
-  department_id?: number;
   status?: 'online' | 'offline' | 'away';
   avatar?: string;
   lastSeen?: string;
@@ -67,7 +56,6 @@ type Chat = {
 };
 
 const ChatPage = () => {
-  const { t } = useTranslation();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [chats, setChats] = useState<Chat[]>([
     {
@@ -223,15 +211,13 @@ const ChatPage = () => {
     { id: 6, name: "Катерина Мельник", email: "kate@example.com", role: "Викладач", status: "online", lastSeen: "2024-01-15T14:10:00Z" }
   ]);
   const [showNewChatDialog, setShowNewChatDialog] = useState(false);
-  const [showGroupChatDialog, setShowGroupChatDialog] = useState(false);
+  const [showNewGroupDialog, setShowNewGroupDialog] = useState(false);
   const [selectedUsers, setSelectedUsers] = useState<number[]>([]);
   const [groupChatName, setGroupChatName] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [showChatList, setShowChatList] = useState(true);
-  const [activeTab, setActiveTab] = useState('all');
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [editingMessage, setEditingMessage] = useState<Message | null>(null);
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -255,13 +241,6 @@ const ChatPage = () => {
     (user.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
     user.email.toLowerCase().includes(searchTerm.toLowerCase()))
   );
-
-  const filteredChats = chats.filter(chat => {
-    if (activeTab === 'unread') return chat.unreadCount > 0;
-    if (activeTab === 'pinned') return chat.isPinned;
-    if (activeTab === 'groups') return chat.type === 'group';
-    return true;
-  });
 
   const handleSendMessage = () => {
     if ((!newMessage.trim() && !file) || !activeChat || !currentUser) return;
@@ -288,7 +267,6 @@ const ChatPage = () => {
     setFile(null);
     setReplyingTo(null);
     
-    // Оновлення останнього повідомлення в чаті
     setChats(prev => prev.map(chat => 
       chat.id === activeChat.id 
         ? { ...chat, lastMessage: message, updatedAt: new Date().toISOString() }
@@ -343,7 +321,7 @@ const ChatPage = () => {
 
     setChats(prev => [...prev, newChat]);
     setActiveChat(newChat);
-    setShowGroupChatDialog(false);
+    setShowNewGroupDialog(false);
     setGroupChatName('');
     setSelectedUsers([]);
     setSearchTerm('');
@@ -392,201 +370,158 @@ const ChatPage = () => {
     return `${Math.floor(diffMinutes / 1440)} дн тому`;
   };
 
-  const renderNewChatDialog = () => (
-    <Dialog open={showNewChatDialog} onOpenChange={setShowNewChatDialog}>
-      <DialogTrigger asChild>
-        <Button 
-          size="sm" 
-          className="gap-2 px-4 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-full shadow-md transition-all duration-300"
-        >
-          <Plus className="w-4 h-4" />
-          <span className="font-medium">{t('chat.newChat') || 'Новий чат'}</span>
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="max-w-md rounded-2xl">
-        <DialogHeader>
-          <DialogTitle className="text-lg font-semibold text-center">
-            {t('chat.newChat') || 'Новий чат'}
-          </DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4 pt-2">
-          <div className="relative">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder={t('chat.searchUsers') || 'Пошук користувачів...'}
-              className="pl-10 rounded-xl"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-          <ScrollArea className="h-64 rounded-xl border">
-            {filteredUsers.length === 0 ? (
-              <div className="py-6 text-center text-sm text-muted-foreground">
-                {t('chat.noUsersFound') || 'Користувачів не знайдено'}
-              </div>
-            ) : (
-              <div className="divide-y">
-                {filteredUsers.map(user => (
-                  <div
-                    key={user.id}
-                    className="flex items-center gap-3 p-3 hover:bg-accent cursor-pointer transition-colors"
-                    onClick={() => handleCreateDirectChat(user.id)}
-                  >
-                    <div className="relative">
-                      <Avatar className="h-11 w-11">
-                        <AvatarImage src={user.avatar} />
-                        <AvatarFallback className="text-sm bg-gradient-to-br from-blue-400 to-blue-600 text-white">
-                          {getInitials(user.name)}
-                        </AvatarFallback>
-                      </Avatar>
-                      {user.status === 'online' && (
-                        <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
-                      )}
-                      {user.status === 'away' && (
-                        <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-yellow-500 rounded-full border-2 border-white"></div>
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium truncate">{user.name}</p>
-                      <p className="text-sm text-muted-foreground truncate">{user.email}</p>
-                    </div>
-                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                  </div>
-                ))}
-              </div>
-            )}
-          </ScrollArea>
+  const renderAvatar = (name: string, isOnline?: boolean, size = 'default') => {
+    const sizeClasses = {
+      small: 'w-6 h-6 text-xs',
+      default: 'w-8 h-8 text-xs',
+      large: 'w-10 h-10 text-sm'
+    };
+    
+    return (
+      <div className="relative">
+        <div className={`${sizeClasses[size]} bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center text-primary-foreground font-semibold`}>
+          {getInitials(name)}
         </div>
-      </DialogContent>
-    </Dialog>
+        {isOnline && (
+          <div className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-green-500 rounded-full border border-card"></div>
+        )}
+      </div>
+    );
+  };
+
+  const renderNewChatDialog = () => (
+    <div className={`fixed inset-0 z-50 ${showNewChatDialog ? '' : 'hidden'}`}>
+      <div className="fixed inset-0 bg-black/20 backdrop-blur-sm" onClick={() => setShowNewChatDialog(false)} />
+      <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-popover rounded-xl shadow-xl p-4 border border-border">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-popover-foreground">Новий чат</h2>
+          <button onClick={() => setShowNewChatDialog(false)} className="p-1 hover:bg-muted rounded-md transition-colors">
+            <X className="w-4 h-4 text-muted-foreground" />
+          </button>
+        </div>
+        
+        <div className="relative mb-3">
+          <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+          <input
+            type="text"
+            placeholder="Пошук користувачів..."
+            className="w-full pl-9 pr-3 py-2 bg-input border-0 rounded-lg text-foreground placeholder:text-muted-foreground focus:bg-background focus:ring-1 focus:ring-ring transition-all text-sm"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+        
+        <div className="space-y-1 max-h-64 overflow-y-auto">
+          {filteredUsers.length === 0 ? (
+            <div className="py-6 text-center text-muted-foreground text-sm">
+              Користувачів не знайдено
+            </div>
+          ) : (
+            filteredUsers.map(user => (
+              <div
+                key={user.id}
+                className="flex items-center gap-2 p-2 hover:bg-muted rounded-lg cursor-pointer transition-colors"
+                onClick={() => handleCreateDirectChat(user.id)}
+              >
+                {renderAvatar(user.name, user.status === 'online')}
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium truncate text-foreground text-sm">{user.name}</p>
+                  <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
   );
 
   const renderNewGroupDialog = () => (
-    <Dialog open={showGroupChatDialog} onOpenChange={setShowGroupChatDialog}>
-      <DialogTrigger asChild>
-        <Button 
-          size="sm" 
-          variant="outline" 
-          className="gap-2 px-4 border-blue-200 text-blue-600 hover:bg-blue-50 transition-all duration-300 rounded-full shadow-sm"
-        >
-          <Users className="w-4 h-4" />
-          <span className="font-medium">{t('chat.newGroup') || 'Нова група'}</span>
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="text-lg font-semibold text-center">
-            {t('chat.newGroup') || 'Створити групу'}
-          </DialogTitle>
-        </DialogHeader>
+    <div className={`fixed inset-0 z-50 ${showNewGroupDialog ? '' : 'hidden'}`}>
+      <div className="fixed inset-0 bg-black/20 backdrop-blur-sm" onClick={() => setShowNewGroupDialog(false)} />
+      <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-popover rounded-xl shadow-xl p-4 border border-border">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-popover-foreground">Нова група</h2>
+          <button onClick={() => setShowNewGroupDialog(false)} className="p-1 hover:bg-muted rounded-md transition-colors">
+            <X className="w-4 h-4 text-muted-foreground" />
+          </button>
+        </div>
         
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium mb-2">
-              {t('chat.groupName') || 'Назва групи'}
-            </label>
-            <Input
-              placeholder={t('chat.groupNamePlaceholder') || 'Введіть назву групи...'}
+            <label className="block text-xs font-medium mb-1 text-foreground">Назва групи</label>
+            <input
+              type="text"
+              placeholder="Введіть назву групи..."
+              className="w-full px-3 py-2 bg-input border-0 rounded-lg text-foreground placeholder:text-muted-foreground focus:bg-background focus:ring-1 focus:ring-ring transition-all text-sm"
               value={groupChatName}
               onChange={(e) => setGroupChatName(e.target.value)}
-              className="rounded-xl"
             />
           </div>
+          
           <div>
-            <label className="block text-sm font-medium mb-2">
-              {t('chat.selectParticipants') || 'Оберіть учасників'}
-            </label>
+            <label className="block text-xs font-medium mb-1 text-foreground">Учасники</label>
             <div className="relative mb-2">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder={t('chat.searchUsers') || 'Пошук користувачів...'}
-                className="pl-10 rounded-xl"
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Пошук користувачів..."
+                className="w-full pl-9 pr-3 py-2 bg-input border-0 rounded-lg text-foreground placeholder:text-muted-foreground focus:bg-background focus:ring-1 focus:ring-ring transition-all text-sm"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            <ScrollArea className="h-48 rounded-xl border">
-              {filteredUsers.length === 0 ? (
-                <div className="py-6 text-center text-sm text-muted-foreground">
-                  {t('chat.noUsersFound') || 'Користувачів не знайдено'}
-                </div>
-              ) : (
-                <div className="divide-y">
-                  {filteredUsers.map(user => (
-                    <div key={user.id} className="flex items-center gap-3 p-3 hover:bg-accent rounded-lg">
-                      <div className="flex items-center space-x-2">
-                        <div className="relative">
-                          <input
-                            type="checkbox"
-                            id={`user-${user.id}`}
-                            checked={selectedUsers.includes(user.id)}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setSelectedUsers(prev => [...prev, user.id]);
-                              } else {
-                                setSelectedUsers(prev => prev.filter(id => id !== user.id));
-                              }
-                            }}
-                            className="sr-only"
-                          />
-                          <label
-                            htmlFor={`user-${user.id}`}
-                            className={`flex items-center justify-center w-5 h-5 rounded border cursor-pointer ${
-                              selectedUsers.includes(user.id)
-                                ? 'bg-blue-500 border-blue-500 text-white'
-                                : 'border-gray-300'
-                            }`}
-                          >
-                            {selectedUsers.includes(user.id) && (
-                              <Check className="h-3 w-3" />
-                            )}
-                          </label>
-                        </div>
-                        <label
-                          htmlFor={`user-${user.id}`}
-                          className="flex-1 flex items-center gap-3 cursor-pointer"
-                        >
-                          <Avatar className="h-8 w-8">
-                            <AvatarImage src={user.avatar} />
-                            <AvatarFallback className="text-xs bg-gradient-to-br from-blue-400 to-blue-600 text-white">
-                              {getInitials(user.name)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium truncate">{user.name}</p>
-                            <p className="text-xs text-muted-foreground truncate">{user.role}</p>
-                          </div>
-                        </label>
-                      </div>
+            
+            <div className="space-y-1 max-h-40 overflow-y-auto">
+              {filteredUsers.map(user => (
+                <div key={user.id} className="flex items-center gap-2 p-2 hover:bg-muted rounded-lg">
+                  <label className="flex items-center gap-2 flex-1 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={selectedUsers.includes(user.id)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedUsers(prev => [...prev, user.id]);
+                        } else {
+                          setSelectedUsers(prev => prev.filter(id => id !== user.id));
+                        }
+                      }}
+                      className="w-4 h-4 rounded border border-border text-primary focus:ring-ring"
+                    />
+                    {renderAvatar(user.name, user.status === 'online', 'small')}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium truncate text-foreground text-sm">{user.name}</p>
+                      <p className="text-xs text-muted-foreground">{user.role}</p>
                     </div>
-                  ))}
+                  </label>
                 </div>
-              )}
-            </ScrollArea>
+              ))}
+            </div>
+            
             {selectedUsers.length > 0 && (
-              <div className="mt-3">
-                <p className="text-sm font-medium mb-2">
-                  {t('chat.selectedParticipants') || 'Обрані учасники'} · {selectedUsers.length}
+              <div className="mt-3 p-2 bg-accent/10 rounded-lg">
+                <p className="text-xs font-medium text-accent-foreground mb-1">
+                  Обрано: {selectedUsers.length} учасників
                 </p>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-1">
                   {users
                     .filter(u => selectedUsers.includes(u.id))
                     .map(user => (
-                      <div 
+                      <span 
                         key={user.id}
-                        className="flex items-center gap-2 bg-blue-50 px-3 py-1.5 rounded-full text-sm"
+                        className="inline-flex items-center gap-1 bg-accent text-accent-foreground px-2 py-0.5 rounded-md text-xs"
                       >
-                        <span className="font-medium text-blue-700">{user.name}</span>
+                        {user.name}
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             setSelectedUsers(prev => prev.filter(id => id !== user.id));
                           }}
-                          className="text-blue-400 hover:text-blue-600"
+                          className="hover:text-destructive transition-colors"
                         >
-                          <X className="h-3 w-3" />
+                          <X className="w-3 h-3" />
                         </button>
-                      </div>
+                      </span>
                     ))}
                 </div>
               </div>
@@ -594,17 +529,17 @@ const ChatPage = () => {
           </div>
         </div>
         
-        <div className="flex justify-end pt-4">
-          <Button
+        <div className="flex justify-end pt-4 border-t border-border mt-4">
+          <button
             onClick={handleCreateGroupChat}
             disabled={!groupChatName.trim() || selectedUsers.length === 0}
-            className="rounded-full bg-blue-500 hover:bg-blue-600"
+            className="px-4 py-2 bg-primary hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground text-primary-foreground rounded-lg font-medium transition-colors text-sm"
           >
-            {t('chat.createGroup') || 'Створити групу'}
-          </Button>
+            Створити групу
+          </button>
         </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </div>
   );
 
   const renderAttachment = (attachment: Message['attachment']) => {
@@ -612,19 +547,12 @@ const ChatPage = () => {
 
     if (attachment.type === 'image') {
       return (
-        <div className="mt-2 rounded-lg overflow-hidden border">
-          <div className="relative group">
-            <div className="h-48 bg-gray-100 flex items-center justify-center">
-              <ImageIcon className="h-12 w-12 text-gray-400" />
-            </div>
-            <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
-              <Button variant="secondary" size="sm" className="rounded-full">
-                <Eye className="h-4 w-4 mr-1" /> Переглянути
-              </Button>
-            </div>
+        <div className="mt-2 rounded-lg overflow-hidden bg-muted max-w-xs">
+          <div className="h-32 bg-gradient-to-br from-muted to-muted/80 flex items-center justify-center">
+            <ImageIcon className="h-8 w-8 text-muted-foreground" />
           </div>
-          <div className="p-3 bg-white">
-            <p className="text-sm font-medium truncate">{attachment.name}</p>
+          <div className="p-2">
+            <p className="text-xs font-medium truncate text-foreground">{attachment.name}</p>
             <p className="text-xs text-muted-foreground">{attachment.size}</p>
           </div>
         </div>
@@ -632,542 +560,432 @@ const ChatPage = () => {
     }
 
     return (
-      <div className="mt-2 p-3 bg-blue-50 rounded-lg border border-blue-100 flex items-center gap-3">
-        <File className="h-8 w-8 text-blue-500" />
+      <div className="mt-2 p-2 bg-muted rounded-lg border border-border flex items-center gap-2 max-w-xs">
+        <File className="h-6 w-6 text-primary flex-shrink-0" />
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium truncate">{attachment.name}</p>
+          <p className="text-xs font-medium truncate text-foreground">{attachment.name}</p>
           <p className="text-xs text-muted-foreground">{attachment.size}</p>
         </div>
-        <Button variant="ghost" size="sm" className="rounded-full">
-          <Download className="h-4 w-4" />
-        </Button>
-      </div>
-    );
-  };
-
-  const renderReactions = (reactions: Message['reactions']) => {
-    if (!reactions) return null;
-
-    return (
-      <div className="flex items-center gap-1 mt-1">
-        {Object.entries(reactions).map(([reaction, count]) => (
-          <div key={reaction} className="bg-blue-100 px-1.5 py-0.5 rounded-full flex items-center text-xs">
-            <span>{reaction}</span>
-            <span className="ml-1 text-blue-700 font-medium">{count}</span>
-          </div>
-        ))}
+        <button className="p-1 hover:bg-accent rounded-md flex-shrink-0 transition-colors">
+          <Download className="h-3 w-3 text-muted-foreground" />
+        </button>
       </div>
     );
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-background flex">
+      {/* Sidebar */}
       <div className="hidden md:block">
         <Sidebar />
       </div>
       
-      <div className="flex-1 flex flex-col">
-        <Header />
-        
-        <main className="flex-1 flex overflow-hidden">
-          {/* Chat List Panel */}
+      <div className="flex-1 flex flex-col h-screen">
+        {/* Header */}
+        <div className="sticky top-0 z-10 bg-card border-b border-border">
+          <Header />
+        </div>
+
+        {/* Chat Content */}
+        <div className="flex-1 flex overflow-hidden">
+          {/* Chat Sidebar */}
           {showChatList && (
-            <div className="w-full md:w-96 border-r bg-white flex flex-col shadow-sm">
-              {/* Chat List Header */}
-              <div className="p-4 border-b">
+            <div className="w-full md:w-64 bg-card border-r border-border flex flex-col">
+              {/* Chat Header */}
+              <div className="p-4 border-b border-border">
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-2xl font-bold text-gray-800">{t('chat.title') || 'Повідомлення'}</h2>
-                  <Button
-                    variant="ghost"
-                    size="sm"
+                  <h1 className="text-lg font-bold text-card-foreground">Повідомлення</h1>
+                  <button
                     onClick={() => setShowChatList(false)}
-                    className="md:hidden"
+                    className="md:hidden p-1 hover:bg-muted rounded-md transition-colors"
                   >
-                    <ArrowLeft className="w-4 h-4" />
-                  </Button>
+                    <ArrowLeft className="w-4 h-4 text-muted-foreground" />
+                  </button>
                 </div>
                 
-                <div className="flex items-center gap-2 mb-4">
-                  {renderNewChatDialog()}
-                  {renderNewGroupDialog()}
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setShowNewChatDialog(true)}
+                    className="flex-1 flex items-center justify-center gap-1 py-1.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg font-medium transition-colors text-sm"
+                  >
+                    <Plus className="w-3 h-3" />
+                    <span>Новий чат</span>
+                  </button>
+                  <button
+                    onClick={() => setShowNewGroupDialog(true)}
+                    className="p-1.5 bg-muted hover:bg-muted/80 rounded-lg transition-colors"
+                  >
+                    <Users className="w-3 h-3 text-muted-foreground" />
+                  </button>
                 </div>
-
-                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                  <TabsList className="grid grid-cols-4 w-full bg-gray-100 p-1 rounded-xl">
-                    <TabsTrigger value="all" className="rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-sm">Усі</TabsTrigger>
-                    <TabsTrigger value="unread" className="rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-sm">
-                      Непрочитані
-                    </TabsTrigger>
-                    <TabsTrigger value="pinned" className="rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-sm">Закріплені</TabsTrigger>
-                    <TabsTrigger value="groups" className="rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-sm">Групи</TabsTrigger>
-                  </TabsList>
-                </Tabs>
               </div>
 
               {/* Chat List */}
-              <ScrollArea className="flex-1">
+              <div className="flex-1 overflow-y-auto">
                 <div className="p-2 space-y-1">
-                  {filteredChats.map(chat => (
+                  {chats.map(chat => (
                     <div 
                       key={chat.id} 
-                      className={`p-3 rounded-xl cursor-pointer transition-all ${
+                      className={`p-3 rounded-lg cursor-pointer transition-colors ${
                         activeChat?.id === chat.id 
-                          ? 'bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 shadow-sm' 
-                          : 'hover:bg-gray-50'
+                          ? 'bg-accent border border-accent-foreground/20' 
+                          : 'hover:bg-muted'
                       }`}
                       onClick={() => {
                         setActiveChat(chat);
                         setShowChatList(false);
                       }}
                     >
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2">
                         <div className="relative">
-                          <Avatar className="h-12 w-12">
-                            <AvatarFallback className={chat.type === 'group' ? "bg-gradient-to-br from-purple-500 to-purple-700 text-white" : "bg-gradient-to-br from-blue-500 to-blue-700 text-white"}>
-                              {chat.type === 'group' ? (
-                                <Users className="w-5 h-5" />
-                              ) : (
-                                getInitials(chat.name)
-                              )}
-                            </AvatarFallback>
-                          </Avatar>
+                          {chat.type === 'group' ? (
+                            <div className="w-8 h-8 bg-gradient-to-br from-accent to-primary rounded-full flex items-center justify-center text-accent-foreground font-semibold">
+                              <Users className="w-4 h-4" />
+                            </div>
+                          ) : (
+                            renderAvatar(chat.name, true, 'default')
+                          )}
                           {chat.unreadCount > 0 && (
-                            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center shadow">
-                              {chat.unreadCount}
-                            </span>
+                            <div className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-xs rounded-full h-4 w-4 flex items-center justify-center font-medium">
+                              {chat.unreadCount > 9 ? '9+' : chat.unreadCount}
+                            </div>
                           )}
                           {chat.isPinned && (
-                            <div className="absolute -bottom-1 -right-1 bg-blue-500 p-1 rounded-full shadow">
-                              <Pin className="h-3 w-3 text-white" />
+                            <div className="absolute -bottom-1 -right-1 bg-yellow-500 p-0.5 rounded-full">
+                              <Pin className="h-2 w-2 text-white" />
                             </div>
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between">
-                            <p className="font-semibold truncate text-gray-800">{chat.name}</p>
-                            <span className="text-xs text-gray-500 whitespace-nowrap">
+                          <div className="flex items-center justify-between mb-0.5">
+                            <h3 className="font-medium text-card-foreground truncate text-sm">{chat.name}</h3>
+                            <span className="text-xs text-muted-foreground flex-shrink-0">
                               {chat.lastMessage?.timestamp}
                             </span>
                           </div>
-                          <div className="flex items-center gap-2">
-                            {chat.lastMessage && (
-                              <p className="text-sm text-gray-500 truncate flex-1">
-                                {chat.type === 'group' && `${chat.lastMessage.senderName}: `}
-                                {chat.lastMessage.content}
-                              </p>
-                            )}
-                            {chat.type === 'group' && (
-                              <Badge variant="outline" className="text-xs bg-gray-100">
-                                {chat.participants.length}
-                              </Badge>
-                            )}
-                          </div>
+                          {chat.lastMessage && (
+                            <p className="text-xs text-muted-foreground truncate">
+                              {chat.type === 'group' && `${chat.lastMessage.senderName}: `}
+                              {chat.lastMessage.content}
+                            </p>
+                          )}
                         </div>
                       </div>
                     </div>
                   ))}
                 </div>
-              </ScrollArea>
+              </div>
             </div>
           )}
 
-          {/* Chat Content */}
-          <div className="flex-1 flex flex-col bg-white">
+          {/* Main Chat Area */}
+          <div className="flex-1 flex flex-col">
             {!activeChat ? (
-              <div className="flex-1 flex items-center justify-center p-4 bg-gradient-to-br from-gray-50 to-gray-100">
-                <div className="text-center max-w-md p-6 bg-white rounded-2xl shadow-lg border">
-                  <div className="inline-flex items-center justify-center p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full shadow-lg mb-4">
-                    <MessageCircle className="h-10 w-10 text-white" />
+              <div className="flex-1 flex items-center justify-center">
+                <div className="text-center max-w-md px-4">
+                  <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <MessageCircle className="w-8 h-8 text-primary" />
                   </div>
-                  <h3 className="text-2xl font-bold text-gray-800 mb-2">
-                    {t('chat.selectChat') || 'Оберіть чат'}
+                  <h3 className="text-xl font-semibold text-foreground mb-2">
+                    Оберіть чат
                   </h3>
-                  <p className="text-gray-600 mb-6">
-                    {t('chat.selectChatDescription') || 'Виберіть існуючий чат або створіть новий для початку спілкування'}
+                  <p className="text-muted-foreground mb-4 text-sm">
+                    Виберіть існуючий чат або створіть новий для початку спілкування
                   </p>
-                  <div className="flex gap-3 justify-center">
-                    <Button
-                      onClick={() => setShowChatList(true)}
-                      className="md:hidden rounded-full bg-blue-500 hover:bg-blue-600"
-                    >
-                      {t('chat.showChats') || 'Переглянути чати'}
-                    </Button>
-                    <Button
-                      onClick={() => setShowNewChatDialog(true)}
-                      variant="outline"
-                      className="rounded-full border-blue-200 text-blue-600 hover:bg-blue-50"
-                    >
-                      <Plus className="w-4 h-4 mr-2" />
-                      Новий чат
-                    </Button>
-                  </div>
+                  <button
+                    onClick={() => setShowChatList(true)}
+                    className="md:hidden px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg font-medium transition-colors text-sm"
+                  >
+                    Переглянути чати
+                  </button>
                 </div>
               </div>
             ) : (
-              <div className="flex-1 flex flex-col">
+              <>
                 {/* Chat Header */}
-                <div className="p-4 border-b bg-white flex items-center justify-between shadow-sm">
-                  <div className="flex items-center gap-3">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setShowChatList(true)}
-                      className="md:hidden rounded-full"
-                    >
-                      <ArrowLeft className="w-4 h-4" />
-                    </Button>
-                    <Avatar className="h-10 w-10">
-                      <AvatarFallback className={activeChat.type === 'group' ? "bg-gradient-to-br from-purple-500 to-purple-600 text-white" : "bg-gradient-to-br from-blue-500 to-blue-600 text-white"}>
-                        {activeChat.type === 'group' ? (
-                          <Users className="w-5 h-5" />
-                        ) : (
-                          getInitials(activeChat.name)
-                        )}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <h3 className="font-semibold text-gray-800">{activeChat.name}</h3>
+                <div className="p-4 bg-card border-b border-border">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => setShowChatList(true)}
+                        className="md:hidden p-1 hover:bg-muted rounded-md transition-colors"
+                      >
+                        <ArrowLeft className="w-4 h-4 text-muted-foreground" />
+                      </button>
+                      
                       {activeChat.type === 'group' ? (
-                        <p className="text-sm text-gray-500">
-                          {activeChat.participants.length} {t('chat.participants') || 'учасників'}
-                          {activeChat.description && ` · ${activeChat.description}`}
-                        </p>
-                      ) : (
-                        <p className="text-sm text-gray-500">
-                          {users.find(u => u.id === activeChat.participants.find(p => p.id !== currentUser?.id)?.id)?.status === 'online' 
-                            ? 'В мережі' 
-                            : `Був(ла) ${formatLastSeen(users.find(u => u.id === activeChat.participants.find(p => p.id !== currentUser?.id)?.id)?.lastSeen || new Date().toISOString())}`
-                          }
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button variant="ghost" size="icon" className="rounded-full">
-                            <Phone className="h-5 w-5 text-blue-600" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Голосовий виклик</TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button variant="ghost" size="icon" className="rounded-full">
-                            <Video className="h-5 w-5 text-blue-600" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Відеовиклик</TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button variant="ghost" size="icon" className="rounded-full">
-                          <MoreVertical className="h-5 w-5 text-gray-600" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-48 p-2 rounded-xl">
-                        <div className="space-y-1">
-                          <Button variant="ghost" className="w-full justify-start rounded-lg">
-                            <Pin className="h-4 w-4 mr-2" /> Закріпити чат
-                          </Button>
-                          <Button variant="ghost" className="w-full justify-start rounded-lg">
-                            <Archive className="h-4 w-4 mr-2" /> Архівувати
-                          </Button>
-                          <Button variant="ghost" className="w-full justify-start text-red-500 hover:text-red-600 rounded-lg">
-                            <Trash2 className="h-4 w-4 mr-2" /> Видалити чат
-                          </Button>
+                        <div className="w-8 h-8 bg-gradient-to-br from-accent to-primary rounded-full flex items-center justify-center text-accent-foreground font-semibold">
+                          <Users className="w-4 h-4" />
                         </div>
-                      </PopoverContent>
-                    </Popover>
+                      ) : (
+                        renderAvatar(activeChat.name, true, 'default')
+                      )}
+                      
+                      <div>
+                        <h2 className="text-base font-semibold text-card-foreground">{activeChat.name}</h2>
+                        {activeChat.type === 'group' ? (
+                          <p className="text-xs text-muted-foreground">
+                            {activeChat.participants.length} учасників
+                            {activeChat.description && ` • ${activeChat.description}`}
+                          </p>
+                        ) : (
+                          <p className="text-xs text-muted-foreground">
+                            {users.find(u => u.id === activeChat.participants.find(p => p.id !== currentUser?.id)?.id)?.status === 'online' 
+                              ? 'В мережі' 
+                              : `Був(ла) ${formatLastSeen(users.find(u => u.id === activeChat.participants.find(p => p.id !== currentUser?.id)?.id)?.lastSeen || new Date().toISOString())}`
+                            }
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-1">
+                      <button className="p-2 hover:bg-muted rounded-md transition-colors">
+                        <Phone className="w-4 h-4 text-muted-foreground" />
+                      </button>
+                      <button className="p-2 hover:bg-muted rounded-md transition-colors">
+                        <Video className="w-4 h-4 text-muted-foreground" />
+                      </button>
+                      <button className="p-2 hover:bg-muted rounded-md transition-colors">
+                        <MoreVertical className="w-4 h-4 text-muted-foreground" />
+                      </button>
+                    </div>
                   </div>
                 </div>
 
                 {/* Messages */}
-                <ScrollArea className="flex-1 p-4 bg-gradient-to-b from-gray-50 to-gray-100">
-                  <div className="space-y-6 max-w-3xl mx-auto">
-                    {messages.map((message) => (
-                      <div
-                        key={message.id}
-                        className={`flex ${message.senderId === currentUser?.id ? 'justify-end' : 'justify-start'}`}
-                      >
-                        <div className="flex items-end gap-2 max-w-xs lg:max-w-md">
-                          {message.senderId !== currentUser?.id && activeChat.type === 'group' && (
-                            <Avatar className="h-8 w-8">
-                              <AvatarFallback className="text-xs bg-gradient-to-br from-blue-400 to-blue-600 text-white">
-                                {getInitials(message.senderName)}
-                              </AvatarFallback>
-                            </Avatar>
+                <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                  {messages.map((message) => (
+                    <div
+                      key={message.id}
+                      className={`flex ${message.senderId === currentUser?.id ? 'justify-end' : 'justify-start'}`}
+                    >
+                      <div className="flex items-end gap-2 max-w-md">
+                        {message.senderId !== currentUser?.id && activeChat.type === 'group' && (
+                          renderAvatar(message.senderName, false, 'small')
+                        )}
+                        <div className="flex flex-col">
+                          {activeChat.type === 'group' && message.senderId !== currentUser?.id && (
+                            <span className="text-xs text-muted-foreground mb-0.5 px-1">
+                              {message.senderName}
+                            </span>
                           )}
-                          <div className="flex flex-col">
-                            {activeChat.type === 'group' && message.senderId !== currentUser?.id && (
-                              <span className="text-xs text-gray-500 mb-1 ml-1">
-                                {message.senderName}
-                              </span>
-                            )}
-                            <div className="group relative">
-                              <div
-                                className={`rounded-2xl px-4 py-2 ${
-                                  message.senderId === currentUser?.id
-                                    ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-br-md'
-                                    : 'bg-white border border-gray-200 rounded-bl-md shadow-sm'
-                                }`}
-                              >
-                                {message.replyTo && (
-                                  <div className="text-xs border-l-2 border-blue-300 pl-2 mb-2 text-gray-500 italic">
-                                    У відповідь на: "{messages.find(m => m.id === message.replyTo)?.content}"
-                                  </div>
-                                )}
-                                <p className="text-sm">{message.content}</p>
-                                {message.attachment && renderAttachment(message.attachment)}
-                                {message.reactions && renderReactions(message.reactions)}
-                                <div className={`flex items-center mt-1 ${message.senderId === currentUser?.id ? 'justify-end' : 'justify-start'}`}>
-                                  <span className="text-xs opacity-80">
-                                    {message.timestamp}
-                                    {message.isEdited && <span className="italic"> (ред.)</span>}
-                                  </span>
-                                  {message.senderId === currentUser?.id && (
-                                    <CheckCheck className="h-3 w-3 ml-1 text-white" />
-                                  )}
+                          <div className="group relative">
+                            <div
+                              className={`rounded-xl px-3 py-2 max-w-xs ${
+                                message.senderId === currentUser?.id
+                                  ? 'bg-primary text-primary-foreground rounded-br-sm'
+                                  : 'bg-card border border-border text-card-foreground rounded-bl-sm'
+                              }`}
+                            >
+                              {message.replyTo && (
+                                <div className={`text-xs border-l-2 pl-2 mb-1 ${
+                                  message.senderId === currentUser?.id 
+                                    ? 'border-primary-foreground/30 text-primary-foreground/70' 
+                                    : 'border-border text-muted-foreground'
+                                }`}>
+                                  <p className="italic">У відповідь на:</p>
+                                  <p className="truncate">"{messages.find(m => m.id === message.replyTo)?.content}"</p>
                                 </div>
-                              </div>
-                              
-                              {/* Message actions */}
-                              <div className="absolute top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity flex bg-white rounded-full shadow-lg border">
+                              )}
+                              <p className="text-sm leading-relaxed">{message.content}</p>
+                              {message.attachment && renderAttachment(message.attachment)}
+                              {message.reactions && (
+                                <div className="flex items-center gap-1 mt-1">
+                                  {Object.entries(message.reactions).map(([reaction, count]) => (
+                                    <div key={reaction} className={`px-1 py-0.5 rounded-full flex items-center text-xs ${
+                                      message.senderId === currentUser?.id 
+                                        ? 'bg-primary-foreground/20 text-primary-foreground' 
+                                        : 'bg-muted text-muted-foreground'
+                                    }`}>
+                                      <span>{reaction}</span>
+                                      <span className="ml-0.5 font-medium">{count}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                            
+                            <div className={`flex items-center mt-0.5 text-xs text-muted-foreground ${
+                              message.senderId === currentUser?.id ? 'justify-end' : 'justify-start'
+                            }`}>
+                              <span>
+                                {message.timestamp}
+                                {message.isEdited && <span className="italic ml-0.5">(ред.)</span>}
+                              </span>
+                              {message.senderId === currentUser?.id && (
+                                <div className="ml-1 flex">
+                                  <Check className="w-3 h-3" />
+                                  <Check className="w-3 h-3 -ml-0.5" />
+                                </div>
+                              )}
+                            </div>
+                            
+                            {/* Message actions */}
+                            <div className={`absolute top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity ${
+                              message.senderId === currentUser?.id ? 'left-0 -translate-x-full' : 'right-0 translate-x-full'
+                            }`}>
+                              <div className="flex bg-popover rounded-lg shadow-lg border border-border p-0.5">
                                 {message.senderId === currentUser?.id ? (
                                   <>
-                                    <TooltipProvider>
-                                      <Tooltip>
-                                        <TooltipTrigger asChild>
-                                          <Button 
-                                            variant="ghost" 
-                                            size="icon" 
-                                            className="h-8 w-8 rounded-full"
-                                            onClick={() => {
-                                              setEditingMessage(message);
-                                              setNewMessage(message.content);
-                                            }}
-                                          >
-                                            <Edit className="h-3 w-3" />
-                                          </Button>
-                                        </TooltipTrigger>
-                                        <TooltipContent>Редагувати</TooltipContent>
-                                      </Tooltip>
-                                    </TooltipProvider>
-                                    <TooltipProvider>
-                                      <Tooltip>
-                                        <TooltipTrigger asChild>
-                                          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
-                                            <Trash2 className="h-3 w-3" />
-                                          </Button>
-                                        </TooltipTrigger>
-                                        <TooltipContent>Видалити</TooltipContent>
-                                      </Tooltip>
-                                    </TooltipProvider>
+                                    <button 
+                                      onClick={() => {
+                                        setEditingMessage(message);
+                                        setNewMessage(message.content);
+                                      }}
+                                      className="p-1 hover:bg-muted rounded-md transition-colors"
+                                    >
+                                      <Edit className="w-3 h-3 text-muted-foreground" />
+                                    </button>
+                                    <button className="p-1 hover:bg-muted rounded-md transition-colors">
+                                      <Trash2 className="w-3 h-3 text-destructive" />
+                                    </button>
                                   </>
                                 ) : (
                                   <>
-                                    <TooltipProvider>
-                                      <Tooltip>
-                                        <TooltipTrigger asChild>
-                                          <Button 
-                                            variant="ghost" 
-                                            size="icon" 
-                                            className="h-8 w-8 rounded-full"
-                                            onClick={() => setReplyingTo(message)}
-                                          >
-                                            <Reply className="h-3 w-3" />
-                                          </Button>
-                                        </TooltipTrigger>
-                                        <TooltipContent>Відповісти</TooltipContent>
-                                      </Tooltip>
-                                    </TooltipProvider>
-                                    <TooltipProvider>
-                                      <Tooltip>
-                                        <TooltipTrigger asChild>
-                                          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
-                                            <Forward className="h-3 w-3" />
-                                          </Button>
-                                        </TooltipTrigger>
-                                        <TooltipContent>Переслати</TooltipContent>
-                                      </Tooltip>
-                                    </TooltipProvider>
+                                    <button 
+                                      onClick={() => setReplyingTo(message)}
+                                      className="p-1 hover:bg-muted rounded-md transition-colors"
+                                    >
+                                      <Reply className="w-3 h-3 text-muted-foreground" />
+                                    </button>
+                                    <button 
+                                      onClick={() => handleReaction(message.id, '👍')}
+                                      className="p-1 hover:bg-muted rounded-md transition-colors"
+                                    >
+                                      <ThumbsUp className="w-3 h-3 text-muted-foreground" />
+                                    </button>
                                   </>
                                 )}
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Button 
-                                        variant="ghost" 
-                                        size="icon" 
-                                        className="h-8 w-8 rounded-full"
-                                        onClick={() => handleReaction(message.id, '👍')}
-                                      >
-                                        <ThumbsUp className="h-3 w-3" />
-                                      </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>Реакція</TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
                               </div>
                             </div>
                           </div>
                         </div>
                       </div>
-                    ))}
-                    <div ref={messagesEndRef} />
-                  </div>
-                </ScrollArea>
+                    </div>
+                  ))}
+                  <div ref={messagesEndRef} />
+                </div>
 
                 {/* Reply indicator */}
                 {replyingTo && (
-                  <div className="border-t bg-blue-50 p-3 flex items-center justify-between">
-                    <div className="flex-1">
-                      <p className="text-xs font-medium text-blue-700">Відповідь {replyingTo.senderId === currentUser?.id ? 'собі' : replyingTo.senderName}</p>
-                      <p className="text-xs text-blue-600 truncate">{replyingTo.content}</p>
+                  <div className="px-4 py-2 bg-accent/10 border-t border-accent/20">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <p className="text-xs font-medium text-accent-foreground">
+                          Відповідь {replyingTo.senderId === currentUser?.id ? 'собі' : replyingTo.senderName}
+                        </p>
+                        <p className="text-xs text-muted-foreground truncate">{replyingTo.content}</p>
+                      </div>
+                      <button 
+                        onClick={() => setReplyingTo(null)}
+                        className="p-1 hover:bg-accent/20 rounded-md ml-2 transition-colors"
+                      >
+                        <X className="w-3 h-3 text-muted-foreground" />
+                      </button>
                     </div>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-6 w-6 rounded-full"
-                      onClick={() => setReplyingTo(null)}
-                    >
-                      <X className="h-3 w-3" />
-                    </Button>
                   </div>
                 )}
 
                 {/* Edit indicator */}
                 {editingMessage && (
-                  <div className="border-t bg-yellow-50 p-3 flex items-center justify-between">
-                    <div className="flex-1">
-                      <p className="text-xs font-medium text-yellow-700">Редагування повідомлення</p>
-                      <p className="text-xs text-yellow-600 truncate">{editingMessage.content}</p>
+                  <div className="px-4 py-2 bg-yellow-500/10 border-t border-yellow-500/20">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <p className="text-xs font-medium text-yellow-700 dark:text-yellow-400">Редагування повідомлення</p>
+                        <p className="text-xs text-muted-foreground truncate">{editingMessage.content}</p>
+                      </div>
+                      <button 
+                        onClick={() => {
+                          setEditingMessage(null);
+                          setNewMessage('');
+                        }}
+                        className="p-1 hover:bg-yellow-500/20 rounded-md ml-2 transition-colors"
+                      >
+                        <X className="w-3 h-3 text-muted-foreground" />
+                      </button>
                     </div>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-6 w-6 rounded-full"
-                      onClick={() => {
-                        setEditingMessage(null);
-                        setNewMessage('');
-                      }}
-                    >
-                      <X className="h-3 w-3" />
-                    </Button>
                   </div>
                 )}
 
                 {/* Message Input */}
-                <div className="p-4 border-t bg-white">
-                  <div className="flex items-end gap-2">
-                    <div className="flex items-center">
-                      <input 
-                        type="file" 
-                        ref={fileInputRef} 
-                        className="hidden" 
-                        onChange={(e) => setFile(e.target.files?.[0] || null)}
-                      />
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="rounded-full text-gray-500"
-                              onClick={() => fileInputRef.current?.click()}
-                            >
-                              <Paperclip className="h-5 w-5" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Прикріпити файл</TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="rounded-full text-gray-500"
-                              onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                            >
-                              <Smile className="h-5 w-5" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Емоції</TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </div>
-                    <Textarea
-                      value={newMessage}
-                      onChange={(e) => setNewMessage(e.target.value)}
-                      placeholder={t('chat.placeholder') || 'Напишіть повідомлення...'}
-                      className="min-h-[60px] resize-none flex-1 rounded-2xl bg-gray-100 border-none focus:bg-white focus:ring-2 focus:ring-blue-200"
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !e.shiftKey) {
-                          e.preventDefault();
-                          if (editingMessage) {
-                            handleEditMessage();
-                          } else {
-                            handleSendMessage();
-                          }
-                        }
-                      }}
+                <div className="p-4 bg-card border-t border-border">
+                  <div className="flex items-end gap-3">
+                    <input 
+                      type="file" 
+                      ref={fileInputRef} 
+                      className="hidden" 
+                      onChange={(e) => setFile(e.target.files?.[0] || null)}
                     />
-                    <Button 
+                    
+                    <div className="flex gap-1">
+                      <button 
+                        onClick={() => fileInputRef.current?.click()}
+                        className="p-2 hover:bg-muted rounded-md transition-colors"
+                      >
+                        <Paperclip className="w-4 h-4 text-muted-foreground" />
+                      </button>
+                      <button className="p-2 hover:bg-muted rounded-md transition-colors">
+                        <Smile className="w-4 h-4 text-muted-foreground" />
+                      </button>
+                    </div>
+                    
+                    <div className="flex-1">
+                      <div className="relative">
+                        <textarea
+                          value={newMessage}
+                          onChange={(e) => setNewMessage(e.target.value)}
+                          placeholder="Напишіть повідомлення..."
+                          className="w-full px-3 py-2 bg-input border-0 rounded-xl text-foreground placeholder:text-muted-foreground focus:bg-background focus:ring-1 focus:ring-ring resize-none transition-all text-sm"
+                          rows={1}
+                          style={{ minHeight: '40px', maxHeight: '100px' }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                              e.preventDefault();
+                              if (editingMessage) {
+                                handleEditMessage();
+                              } else {
+                                handleSendMessage();
+                              }
+                            }
+                          }}
+                        />
+                      </div>
+                      
+                      {file && (
+                        <div className="mt-2 flex items-center gap-2 p-2 bg-muted rounded-lg">
+                          <Paperclip className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-xs text-foreground flex-1 truncate">{file.name}</span>
+                          <button 
+                            onClick={() => setFile(null)}
+                            className="p-0.5 hover:bg-accent rounded-md transition-colors"
+                          >
+                            <X className="w-3 h-3 text-muted-foreground" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <button 
                       onClick={editingMessage ? handleEditMessage : handleSendMessage} 
                       disabled={!newMessage.trim() && !file}
-                      size="icon"
-                      className="h-12 w-12 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 shadow-md"
+                      className="p-2 bg-primary hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground text-primary-foreground rounded-md transition-colors"
                     >
-                      {editingMessage ? <Check className="h-5 w-5" /> : <Send className="h-5 w-5" />}
-                    </Button>
+                      {editingMessage ? <Check className="w-4 h-4" /> : <Send className="w-4 h-4" />}
+                    </button>
                   </div>
-                  {file && (
-                    <div className="mt-2 flex items-center gap-2 bg-blue-50 p-2 rounded-lg">
-                      <Paperclip className="h-4 w-4 text-blue-500" />
-                      <span className="text-sm text-blue-700 truncate flex-1">{file.name}</span>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-6 w-6 rounded-full"
-                        onClick={() => setFile(null)}
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  )}
                 </div>
-              </div>
+              </>
             )}
           </div>
-        </main>
+        </div>
       </div>
+
+      {/* Dialogs */}
+      {renderNewChatDialog()}
+      {renderNewGroupDialog()}
     </div>
   );
 };
-
-// Допоміжний компонент для іконки двійної галочки
-const CheckCheck = ({ className }: { className?: string }) => (
-  <svg 
-    xmlns="http://www.w3.org/2000/svg" 
-    viewBox="0 0 24 24" 
-    fill="none" 
-    stroke="currentColor" 
-    strokeWidth="2" 
-    strokeLinecap="round" 
-    strokeLinejoin="round" 
-    className={className}
-  >
-    <path d="M7.5 12.5 9 14l4-4" />
-    <path d="M12 14l4-4" />
-    <path d="M16 7h.01" />
-    <path d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-  </svg>
-);
 
 export default ChatPage;
