@@ -7,7 +7,7 @@ import {
   CheckCircle,
   Copy,
   RefreshCw,
-  Sparkles
+  Sparkles,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';

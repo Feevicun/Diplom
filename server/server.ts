@@ -663,76 +663,6 @@ app.delete("/api/user-chapters/:chapterKey/file", authenticateToken, async (req:
   }
 });
 
-// GET /api/teacher-comments - отримати коментарі викладача для глави
-app.get("/api/teacher-comments", authenticateToken, async (req: Request, res: Response) => {
-  try {
-    const userId = req.user?.userId;
-    const { projectType, chapterKey } = req.query;
-
-    if (!userId) {
-      return res.status(401).json({ message: "Unauthorized" });
-    }
-
-    const result = await pool.query(
-      `SELECT tc.id, tc.text, tc.status, tc.created_at as date,
-              u.name as teacher_name
-       FROM teacher_comments tc
-       LEFT JOIN users u ON tc.teacher_id = u.id
-       WHERE tc.user_id = $1 AND tc.project_type = $2 AND tc.chapter_key = $3
-       ORDER BY tc.created_at DESC`,
-      [userId, projectType, chapterKey]
-    );
-
-    const comments = result.rows.map(row => ({
-      id: row.id.toString(),
-      text: row.text,
-      status: row.status,
-      date: new Date(row.date).toLocaleDateString('uk-UA'),
-      teacherName: row.teacher_name
-    }));
-
-    res.json(comments);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Database error' });
-  }
-});
-
-// POST /api/teacher-comments - додати коментар викладача (тільки для викладачів)
-app.post("/api/teacher-comments", authenticateToken, async (req: Request, res: Response) => {
-  try {
-    const teacherId = req.user?.userId;
-    const { studentUserId, projectType, chapterKey, text, status } = req.body;
-
-    if (!teacherId) {
-      return res.status(401).json({ message: "Unauthorized" });
-    }
-
-    // Перевіряємо, чи користувач є викладачем
-    const teacherCheck = await pool.query(
-      'SELECT role FROM users WHERE id = $1',
-      [teacherId]
-    );
-
-    if (teacherCheck.rows.length === 0 || teacherCheck.rows[0].role !== 'teacher') {
-      return res.status(403).json({ message: "Only teachers can add comments" });
-    }
-
-    const result = await pool.query(
-      `INSERT INTO teacher_comments (user_id, project_type, chapter_key, teacher_id, text, status)
-       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-      [studentUserId, projectType, chapterKey, teacherId, text, status || 'info']
-    );
-
-    res.status(201).json({ 
-      message: "Comment added successfully", 
-      comment: result.rows[0] 
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Database error' });
-  }
-});
 
 
 app.post("/api/generate-topics", async (req, res) => {
@@ -863,58 +793,12 @@ Only output valid JSON array as described above. Do not include any explanation 
       return res.status(500).json({ message: "No response from AI." });
     }
 
-    // ✅ Парсимо JSON
+    // Парсимо JSON
     const parsedStructure = JSON.parse(message);
     return res.status(200).json(parsedStructure);
   } catch (error) {
     console.error("Error generating structure:", error);
     return res.status(500).json({ message: "Failed to generate structure." });
-  }
-});
-
-// GET /api/messages?userEmail=...
-app.get("/api/messages", async (req: Request, res: Response) => {
-  try {
-    const userEmail = req.query.userEmail;
-    if (!userEmail || typeof userEmail !== "string") {
-      return res.status(400).json({ message: "userEmail is required and must be a string" });
-    }
-
-    const result = await pool.query(
-      `SELECT id, studentemail, sender, content, createdat 
-       FROM messages 
-       WHERE studentemail = $1
-       ORDER BY createdat DESC`,
-      [userEmail]
-    );
-
-    res.json(result.rows);
-  } catch (err) {
-    console.error("Error fetching messages:", err);
-    res.status(500).json({ message: "Database error fetching messages" });
-  }
-});
-
-// POST /api/messages
-app.post("/api/messages", async (req: Request, res: Response) => {
-  try {
-    const { studentEmail, sender, content } = req.body;
-
-    if (!studentEmail || !sender || !content) {
-      return res.status(400).json({ message: "studentEmail, sender and content are required" });
-    }
-
-    const result = await pool.query(
-      `INSERT INTO messages (studentemail, sender, content, createdat) 
-       VALUES ($1, $2, $3, NOW()) 
-       RETURNING id, studentemail, sender, content, createdat`,
-      [studentEmail, sender, content]
-    );
-
-    res.status(201).json({ message: "Message sent successfully", data: result.rows[0] });
-  } catch (err) {
-    console.error("Error inserting message:", err);
-    res.status(500).json({ message: "Database error inserting message" });
   }
 });
 

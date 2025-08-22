@@ -6,7 +6,7 @@ import {
   Image as ImageIcon, File, Download, ThumbsUp, Smile,
   Mic, VideoOff, PhoneOff, UserPlus, BellOff,
   Archive, BellRing, ChevronDown, ChevronUp,
-  Play, Pause, StopCircle, AlertCircle, Info
+  Play, Pause, StopCircle, AlertCircle, Info, Menu
 } from 'lucide-react';
 
 // Import components
@@ -340,6 +340,20 @@ const ChatPage = () => {
 
     // Виявлення браузера
     detectBrowser();
+
+    // Встановити початковий стан для мобільних пристроїв
+    const handleResize = () => {
+      if (window.innerWidth >= 768) {
+        setShowChatList(true);
+      } else {
+        setShowChatList(false);
+      }
+    };
+    
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   // Виявлення браузера
@@ -1406,6 +1420,7 @@ const ChatPage = () => {
           <div>
             <label className="block text-xs font-medium mb-1 text-foreground">Учасники</label>
             <div className="relative mb-2">
+              ```tsx
               <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
               <input
                 type="text"
@@ -1600,81 +1615,6 @@ const ChatPage = () => {
     );
   };
 
-  // Допоміжний компонент для елемента списку чатів
-  const ChatListItem = ({ 
-    chat, 
-    activeChat, 
-    onChatClick, 
-    onRightClick, 
-    isArchived = false 
-  }: { 
-    chat: Chat; 
-    activeChat: Chat | null; 
-    onChatClick: () => void; 
-    onRightClick: (e: React.MouseEvent, chat: Chat) => void;
-    isArchived?: boolean;
-  }) => {
-    return (
-      <div 
-        className={`p-3 rounded-lg cursor-pointer transition-colors ${
-          activeChat?.id === chat.id 
-            ? 'bg-accent border border-accent-foreground/20' 
-            : 'hover:bg-muted'
-        } ${isArchived ? 'opacity-70' : ''}`}
-        onClick={onChatClick}
-        onContextMenu={(e) => onRightClick(e, chat)}
-      >
-        <div className="flex items-center gap-2">
-          <div className="relative">
-            {chat.type === 'group' ? (
-              <div className="w-8 h-8 bg-gradient-to-br from-accent to-primary rounded-full flex items-center justify-center text-accent-foreground font-semibold">
-                <Users className="w-4 h-4" />
-              </div>
-            ) : (
-              <div className="relative">
-                <div className="w-8 h-8 bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center text-primary-foreground font-semibold">
-                  {chat.name.split(' ').map(n => n[0]?.toUpperCase()).join('')}
-                </div>
-                {chat.participants.find(p => p.id !== currentUser?.id)?.status === 'online' && (
-                  <div className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-green-500 rounded-full border border-card"></div>
-                )}
-              </div>
-            )}
-            {chat.unreadCount > 0 && (
-              <div className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-xs rounded-full h-4 w-4 flex items-center justify-center font-medium">
-                {chat.unreadCount > 9 ? '9+' : chat.unreadCount}
-              </div>
-            )}
-            {chat.isPinned && (
-              <div className="absolute -bottom-1 -right-1 bg-yellow-500 p-0.5 rounded-full">
-                <Pin className="h-2 w-2 text-white" />
-              </div>
-            )}
-            {chat.isMuted && (
-              <div className="absolute -bottom-1 -left-1 bg-muted p-0.5 rounded-full">
-                <BellOff className="h-2 w-2 text-muted-foreground" />
-              </div>
-            )}
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between mb-0.5">
-              <h3 className="font-medium text-card-foreground truncate text-sm">{chat.name}</h3>
-              <span className="text-xs text-muted-foreground flex-shrink-0">
-                {chat.lastMessage?.timestamp}
-              </span>
-            </div>
-            {chat.lastMessage && (
-              <p className="text-xs text-muted-foreground truncate">
-                {chat.type === 'group' && `${chat.lastMessage.senderName}: `}
-                {chat.lastMessage.content}
-              </p>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  };
-
   return (
     <div className="min-h-screen bg-background flex">
       {/* Sidebar */}
@@ -1690,19 +1630,29 @@ const ChatPage = () => {
 
         {/* Chat Content */}
         <div className="flex-1 flex overflow-hidden">
-          {/* Chat Sidebar */}
+          {/* Chat Sidebar - показується тільки коли showChatList = true */}
           {showChatList && (
             <div className="w-full md:w-64 bg-card border-r border-border flex flex-col">
-              {/* Chat Header */}
+              {/* Заголовок з кнопками */}
               <div className="p-4 border-b border-border">
                 <div className="flex items-center justify-between mb-4">
                   <h1 className="text-lg font-bold text-card-foreground">Повідомлення</h1>
-                  <button
-                    onClick={() => setShowChatList(false)}
-                    className="md:hidden p-1 hover:bg-muted rounded-md transition-colors"
-                  >
-                    <ArrowLeft className="w-4 h-4 text-muted-foreground" />
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setShowChatList(false)}
+                      className="p-1 hover:bg-muted rounded-md transition-colors md:hidden"
+                      title="Сховати чати"
+                    >
+                      <ArrowLeft className="w-4 h-4 text-muted-foreground" />
+                    </button>
+                    <button
+                      onClick={() => setShowChatList(false)}
+                      className="p-1 hover:bg-muted rounded-md transition-colors hidden md:block"
+                      title="Сховати чати"
+                    >
+                      <X className="w-4 h-4 text-muted-foreground" />
+                    </button>
+                  </div>
                 </div>
                 
                 <div className="flex gap-2">
@@ -1716,17 +1666,15 @@ const ChatPage = () => {
                   <button
                     onClick={() => setShowNewGroupDialog(true)}
                     className="p-1.5 bg-muted hover:bg-muted/80 rounded-lg transition-colors"
+                    title="Створити групу"
                   >
                     <Users className="w-3 h-3 text-muted-foreground" />
                   </button>
                 </div>
               </div>
 
-              {/* Chat List */}
-              <div 
-                ref={chatListRef}
-                className="flex-1 overflow-y-auto relative"
-              >
+              {/* Список чатів */}
+              <div ref={chatListRef} className="flex-1 overflow-y-auto">
                 <div className="p-2">
                   {/* Закріплені чати */}
                   {pinnedChats.length > 0 && (
@@ -1736,17 +1684,52 @@ const ChatPage = () => {
                       </div>
                       <div className="space-y-1">
                         {pinnedChats.map(chat => (
-                          <ChatListItem 
-                            key={chat.id} 
-                            chat={chat} 
-                            activeChat={activeChat}
-                            onChatClick={() => {
+                          <div
+                            key={chat.id}
+                            className={`p-3 rounded-lg cursor-pointer transition-colors ${
+                              activeChat?.id === chat.id 
+                                ? 'bg-accent border border-accent-foreground/20' 
+                                : 'hover:bg-muted'
+                            }`}
+                            onClick={() => {
                               setActiveChat(chat);
-                              setShowChatList(false);
-                              setMessages(messages.filter(m => m.chatId === chat.id));
+                              if (window.innerWidth < 768) {
+                                setShowChatList(false);
+                              }
                             }}
-                            onRightClick={(e) => handleRightClick(e, chat)}
-                          />
+                            onContextMenu={(e) => handleRightClick(e, chat)}
+                          >
+                            <div className="flex items-center gap-2">
+                              <div className="relative">
+                                {chat.type === 'group' ? (
+                                  <div className="w-8 h-8 bg-gradient-to-br from-accent to-primary rounded-full flex items-center justify-center text-accent-foreground font-semibold">
+                                    <Users className="w-4 h-4" />
+                                  </div>
+                                ) : (
+                                  renderAvatar(chat.name, true)
+                                )}
+                                {chat.unreadCount > 0 && (
+                                  <div className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-xs rounded-full h-4 w-4 flex items-center justify-center font-medium">
+                                    {chat.unreadCount > 9 ? '9+' : chat.unreadCount}
+                                  </div>
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between mb-0.5">
+                                  <h3 className="font-medium text-card-foreground truncate text-sm">{chat.name}</h3>
+                                  <span className="text-xs text-muted-foreground flex-shrink-0">
+                                    {chat.lastMessage?.timestamp}
+                                  </span>
+                                </div>
+                                {chat.lastMessage && (
+                                  <p className="text-xs text-muted-foreground truncate">
+                                    {chat.type === 'group' && `${chat.lastMessage.senderName}: `}
+                                    {chat.lastMessage.content}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          </div>
                         ))}
                       </div>
                     </div>
@@ -1762,17 +1745,52 @@ const ChatPage = () => {
                       )}
                       <div className="space-y-1">
                         {unpinnedChats.map(chat => (
-                          <ChatListItem 
-                            key={chat.id} 
-                            chat={chat} 
-                            activeChat={activeChat}
-                            onChatClick={() => {
+                          <div
+                            key={chat.id}
+                            className={`p-3 rounded-lg cursor-pointer transition-colors ${
+                              activeChat?.id === chat.id 
+                                ? 'bg-accent border border-accent-foreground/20' 
+                                : 'hover:bg-muted'
+                            }`}
+                            onClick={() => {
                               setActiveChat(chat);
-                              setShowChatList(false);
-                              setMessages(messages.filter(m => m.chatId === chat.id));
+                              if (window.innerWidth < 768) {
+                                setShowChatList(false);
+                              }
                             }}
-                            onRightClick={(e) => handleRightClick(e, chat)}
-                          />
+                            onContextMenu={(e) => handleRightClick(e, chat)}
+                          >
+                            <div className="flex items-center gap-2">
+                              <div className="relative">
+                                {chat.type === 'group' ? (
+                                  <div className="w-8 h-8 bg-gradient-to-br from-accent to-primary rounded-full flex items-center justify-center text-accent-foreground font-semibold">
+                                    <Users className="w-4 h-4" />
+                                  </div>
+                                ) : (
+                                  renderAvatar(chat.name, true)
+                                )}
+                                {chat.unreadCount > 0 && (
+                                  <div className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-xs rounded-full h-4 w-4 flex items-center justify-center font-medium">
+                                    {chat.unreadCount > 9 ? '9+' : chat.unreadCount}
+                                  </div>
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between mb-0.5">
+                                  <h3 className="font-medium text-card-foreground truncate text-sm">{chat.name}</h3>
+                                  <span className="text-xs text-muted-foreground flex-shrink-0">
+                                    {chat.lastMessage?.timestamp}
+                                  </span>
+                                </div>
+                                {chat.lastMessage && (
+                                  <p className="text-xs text-muted-foreground truncate">
+                                    {chat.type === 'group' && `${chat.lastMessage.senderName}: `}
+                                    {chat.lastMessage.content}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          </div>
                         ))}
                       </div>
                     </div>
@@ -1796,32 +1814,50 @@ const ChatPage = () => {
                       {showArchived && (
                         <div className="mt-2 space-y-1">
                           {archivedChats.map(chat => (
-                            <ChatListItem 
-                              key={chat.id} 
-                              chat={chat} 
-                              activeChat={activeChat}
-                              onChatClick={() => {
+                            <div
+                              key={chat.id}
+                              className={`p-3 rounded-lg cursor-pointer transition-colors ${
+                                activeChat?.id === chat.id 
+                                  ? 'bg-accent border border-accent-foreground/20' 
+                                  : 'hover:bg-muted'
+                              } opacity-70`}
+                              onClick={() => {
                                 setActiveChat(chat);
-                                setShowChatList(false);
-                                setMessages(messages.filter(m => m.chatId === chat.id));
+                                if (window.innerWidth < 768) {
+                                  setShowChatList(false);
+                                }
                               }}
-                              onRightClick={(e) => handleRightClick(e, chat)}
-                              isArchived
-                            />
+                              onContextMenu={(e) => handleRightClick(e, chat)}
+                            >
+                              <div className="flex items-center gap-2">
+                                <div className="relative">
+                                  {chat.type === 'group' ? (
+                                    <div className="w-8 h-8 bg-gradient-to-br from-accent to-primary rounded-full flex items-center justify-center text-accent-foreground font-semibold">
+                                      <Users className="w-4 h-4" />
+                                    </div>
+                                  ) : (
+                                    renderAvatar(chat.name, true)
+                                  )}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center justify-between mb-0.5">
+                                    <h3 className="font-medium text-card-foreground truncate text-sm">{chat.name}</h3>
+                                    <span className="text-xs text-muted-foreground flex-shrink-0">
+                                      {chat.lastMessage?.timestamp}
+                                    </span>
+                                  </div>
+                                  {chat.lastMessage && (
+                                    <p className="text-xs text-muted-foreground truncate">
+                                      {chat.type === 'group' && `${chat.lastMessage.senderName}: `}
+                                      {chat.lastMessage.content}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
                           ))}
                         </div>
                       )}
-                    </div>
-                  )}
-
-                  {/* Підказка про архів */}
-                  {showArchiveHint && archivedChats.length > 0 && !showArchived && (
-                    <div className="absolute bottom-2 left-0 right-0 px-2">
-                      <div className="bg-accent/10 border border-accent/20 rounded-lg p-2 text-center">
-                        <p className="text-xs text-accent-foreground">
-                          Прокрутіть вниз для доступу до архіву
-                        </p>
-                      </div>
                     </div>
                   )}
                 </div>
@@ -1845,9 +1881,9 @@ const ChatPage = () => {
                   </p>
                   <button
                     onClick={() => setShowChatList(true)}
-                    className="md:hidden px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg font-medium transition-colors text-sm"
+                    className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg font-medium transition-colors text-sm"
                   >
-                    Переглянути чати
+                    {window.innerWidth >= 768 ? 'Показати чати' : 'Переглянути чати'}
                   </button>
                 </div>
               </div>
@@ -1862,9 +1898,17 @@ const ChatPage = () => {
                           setActiveChat(null);
                           setShowChatList(true);
                         }}
-                        className="md:hidden p-1 hover:bg-muted rounded-md transition-colors"
+                        className="p-1 hover:bg-muted rounded-md transition-colors md:hidden"
+                        title="Назад до чатів"
                       >
                         <ArrowLeft className="w-4 h-4 text-muted-foreground" />
+                      </button>
+                      <button
+                        onClick={() => setShowChatList(true)}
+                        className="p-1 hover:bg-muted rounded-md transition-colors hidden md:block"
+                        title="Показати чати"
+                      >
+                        <Menu className="w-4 h-4 text-muted-foreground" />
                       </button>
                       
                       {activeChat.type === 'group' ? (
@@ -1897,12 +1941,14 @@ const ChatPage = () => {
                       <button 
                         onClick={() => handleStartCall('audio')}
                         className="p-2 hover:bg-muted rounded-md transition-colors"
+                        title="Аудіодзвінок"
                       >
                         <Phone className="w-4 h-4 text-muted-foreground" />
                       </button>
                       <button 
                         onClick={() => handleStartCall('video')}
                         className="p-2 hover:bg-muted rounded-md transition-colors"
+                        title="Відеодзвінок"
                       >
                         <Video className="w-4 h-4 text-muted-foreground" />
                       </button>
@@ -1950,7 +1996,7 @@ const ChatPage = () => {
                               {message.reactions && (
                                 <div className="flex items-center gap-1 mt-1">
                                   {Object.entries(message.reactions).map(([reaction, count]) => (
-                                                                        <div key={reaction} className={`px-1 py-0.5 rounded-full flex items-center text-xs ${
+                                    <div key={reaction} className={`px-1 py-0.5 rounded-full flex items-center text-xs ${
                                       message.senderId === currentUser?.id 
                                         ? 'bg-primary-foreground/20 text-primary-foreground' 
                                         : 'bg-muted text-muted-foreground'
@@ -2051,7 +2097,7 @@ const ChatPage = () => {
                   <div className="px-4 py-2 bg-accent/10 border-t border-accent/20">
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
-                        <p className="text-xs font-medium text-accent-foreground">
+                                                <p className="text-xs font-medium text-accent-foreground">
                           Відповідь {replyingTo.senderId === currentUser?.id ? 'собі' : replyingTo.senderName}
                         </p>
                         <p className="text-xs text-muted-foreground truncate">{replyingTo.content}</p>
@@ -2200,6 +2246,7 @@ const ChatPage = () => {
                       <button 
                         onClick={stopRecording}
                         className="p-2 bg-destructive text-destructive-foreground rounded-md"
+                        title="Зупинити запис"
                       >
                         <StopCircle className="h-4 w-4" />
                       </button>
@@ -2218,10 +2265,11 @@ const ChatPage = () => {
                       <button 
                         onClick={() => fileInputRef.current?.click()}
                         className="p-2 hover:bg-muted rounded-md transition-colors"
+                        title="Прикріпити файл"
                       >
                         <Paperclip className="w-4 h-4 text-muted-foreground" />
                       </button>
-                      <button className="p-2 hover:bg-muted rounded-md transition-colors">
+                      <button className="p-2 hover:bg-muted rounded-md transition-colors" title="Емоції">
                         <Smile className="w-4 h-4 text-muted-foreground" />
                       </button>
                       <button 
@@ -2271,6 +2319,7 @@ const ChatPage = () => {
                           <button 
                             onClick={() => setFile(null)}
                             className="p-0.5 hover:bg-accent rounded-md transition-colors"
+                            title="Видалити файл"
                           >
                             <X className="w-3 h-3 text-muted-foreground" />
                           </button>
@@ -2282,6 +2331,7 @@ const ChatPage = () => {
                       onClick={editingMessage ? handleEditMessage : handleSendMessage} 
                       disabled={!newMessage.trim() && !file}
                       className="p-2 bg-primary hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground text-primary-foreground rounded-md transition-colors"
+                      title={editingMessage ? "Зберегти зміни" : "Надіслати повідомлення"}
                     >
                       {editingMessage ? <Check className="w-4 h-4" /> : <Send className="w-4 h-4" />}
                     </button>
