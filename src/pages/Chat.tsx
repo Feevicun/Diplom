@@ -6,7 +6,7 @@ import {
   Image as ImageIcon, File, Download, ThumbsUp, Smile,
   Mic, VideoOff, PhoneOff, UserPlus, BellOff,
   Archive, BellRing, ChevronDown, ChevronUp,
-  Play, Pause, StopCircle
+  Play, Pause, StopCircle, AlertCircle, Info
 } from 'lucide-react';
 
 // Import components
@@ -14,6 +14,14 @@ import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
 
 // Типи даних
+type Attachment = {
+  name: string;
+  url?: string;
+  type: 'image' | 'file' | 'audio' | 'video';
+  size?: string;
+  blob?: Blob;
+};
+
 type Message = {
   id: number;
   senderId: number;
@@ -21,12 +29,7 @@ type Message = {
   senderEmail: string;
   content: string;
   timestamp: string;
-  attachment?: { 
-    name: string; 
-    url?: string; 
-    type: 'image' | 'file' | 'audio' | 'video';
-    size?: string;
-  };
+  attachment?: Attachment;
   chatId: number;
   isEdited?: boolean;
   reactions?: { [key: string]: number };
@@ -95,13 +98,26 @@ const ChatPage = () => {
   const [activeCall, setActiveCall] = useState<Call | null>(null);
   const [typingUsers, setTypingUsers] = useState<number[]>([]);
 
-  // Нові стани для голосових повідомлень
+  // Стани для голосових повідомлень
   const [isRecording, setIsRecording] = useState(false);
   const [recordedAudio, setRecordedAudio] = useState<Blob | null>(null);
   const [audioUrl, setAudioUrl] = useState<string>('');
   const [isPlaying, setIsPlaying] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [recordingTimer, setRecordingTimer] = useState<NodeJS.Timeout | null>(null);
+  const [recordingError, setRecordingError] = useState<string | null>(null);
+  const [hasAudioSupport, setHasAudioSupport] = useState(true);
+  const [currentlyPlaying, setCurrentlyPlaying] = useState<number | null>(null);
+  const [usingAudioWorkaround, setUsingAudioWorkaround] = useState(false);
+  const [browserInfo, setBrowserInfo] = useState<{
+    isSafari: boolean;
+    isIOS: boolean;
+    version: number;
+  }>({
+    isSafari: false,
+    isIOS: false,
+    version: 0
+  });
 
   // Стани для контекстного меню та архіву
   const [contextMenu, setContextMenu] = useState<{
@@ -127,6 +143,9 @@ const ChatPage = () => {
   const contextMenuRef = useRef<HTMLDivElement>(null);
   const chatListRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const audioProcessorRef = useRef<ScriptProcessorNode | null>(null);
+  const audioDataRef = useRef<Float32Array[]>([]);
 
   // Мокові дані
   useEffect(() => {
@@ -318,7 +337,74 @@ const ChatPage = () => {
     setChats(initialChats);
     setMessages(initialMessages);
     setOnlineUsers([1, 2, 5, 6]);
+
+    // Виявлення браузера
+    detectBrowser();
   }, []);
+
+  // Виявлення браузера
+  const detectBrowser = () => {
+    const userAgent = navigator.userAgent;
+    const isSafari = /^((?!chrome|android).)*safari/i.test(userAgent);
+    const isIOS = /iPad|iPhone|iPod/.test(userAgent);
+    const versionMatch = userAgent.match(/Version\/(\d+)/);
+    const version = versionMatch ? parseInt(versionMatch[1]) : 0;
+    
+    setBrowserInfo({ isSafari, isIOS, version });
+    
+    // Перевірка підтримки аудіо
+    checkAudioSupport(isSafari, version);
+  };
+
+  // Перевірка підтримки аудіо
+  const checkAudioSupport = (isSafari: boolean, version: number) => {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      setHasAudioSupport(false);
+      setRecordingError("Ваш браузер не підтримує запис аудіо");
+      return;
+    }
+    
+    // Спеціальна перевірка для Safari
+    if (isSafari) {
+      if (version < 14.1) {
+        setHasAudioSupport(false);
+        setRecordingError("Ваша версія Safari не підтримує запис аудіо. Оновіть браузер до версії 14.1 або новішої");
+        return;
+      }
+      
+      const safariMimeTypes = [
+        'audio/mp4',
+        'audio/mpeg',
+        'audio/aac',
+        'audio/wav'
+      ];
+      
+      const hasSafariSupport = safariMimeTypes.some(mimeType => 
+        MediaRecorder.isTypeSupported(mimeType)
+      );
+      
+      setHasAudioSupport(hasSafariSupport);
+      
+      if (!hasSafariSupport) {
+        setRecordingError("Safari не підтримує запис аудіо в цьому форматі");
+      }
+      return;
+    }
+    
+    // Для інших браузерів
+    const hasSupport = [
+      'audio/webm',
+      'audio/webm;codecs=opus',
+      'audio/mp4',
+      'audio/mpeg',
+      'audio/wav'
+    ].some(mimeType => MediaRecorder.isTypeSupported(mimeType));
+    
+    setHasAudioSupport(hasSupport);
+    if (!hasSupport) {
+      setRecordingError("Браузер не підтримує запис аудіо");
+    }
+  };
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -401,8 +487,14 @@ const ChatPage = () => {
       if (audioUrl) {
         URL.revokeObjectURL(audioUrl);
       }
+      // Очистити всі аудіо URL
+      messages.forEach(msg => {
+        if (msg.attachment?.type === 'audio' && msg.attachment.url) {
+          URL.revokeObjectURL(msg.attachment.url);
+        }
+      });
     };
-  }, [audioUrl]);
+  }, [audioUrl, messages]);
 
   const filteredUsers = users.filter(user => 
     user.id !== currentUser?.id && 
@@ -501,25 +593,127 @@ const ChatPage = () => {
     ));
   };
 
+  // Функція для відкриття налаштувань браузера
+  const openBrowserSettings = () => {
+    if (browserInfo.isIOS) {
+      // Для iOS
+      window.open('app-settings:');
+    } else {
+      // Інструкції для десктопних браузерів
+      setRecordingError(
+        "Будь ласка, дозвольте доступ до мікрофона в налаштуваннях браузера. " +
+        "Зазвичай це можна знайти в налаштуваннях приватності або дозволів сайту."
+      );
+    }
+  };
+
   // Функція для початку запису
   const startRecording = async () => {
     try {
+      setRecordingError(null);
+      
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        alert("Ваш браузер не підтримує запис аудіо");
+        setRecordingError("Ваш браузер не підтримує запис аудіо");
+        setHasAudioSupport(false);
         return;
       }
+
+      // Спеціальні налаштування для Safari
+      let mimeTypes;
+      if (browserInfo.isSafari) {
+        mimeTypes = [
+          'audio/mp4',
+          'audio/mpeg', 
+          'audio/aac',
+          'audio/wav'
+        ];
+      } else {
+        mimeTypes = [
+          'audio/webm',
+          'audio/webm;codecs=opus',
+          'audio/mp4',
+          'audio/mpeg',
+          'audio/wav'
+        ];
+      }
       
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream);
+      let supportedMimeType = '';
+      for (const mimeType of mimeTypes) {
+        if (MediaRecorder.isTypeSupported(mimeType)) {
+          supportedMimeType = mimeType;
+          break;
+        }
+      }
+      
+      if (!supportedMimeType) {
+        setRecordingError("Браузер не підтримує жоден з доступних аудіо форматів");
+        setHasAudioSupport(false);
+        return;
+      }
+
+      // Особливі налаштування для Safari
+      const constraints = browserInfo.isSafari ? {
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          sampleRate: 44100,
+          channelCount: 1
+        }
+      } : {
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          sampleRate: 44100
+        }
+      };
+
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      
+      const options = { mimeType: supportedMimeType };
+      
+      // Обробка помилок для Safari
+      let recorder;
+      try {
+        recorder = new MediaRecorder(stream, options);
+      } catch (error) {
+        console.error('Помилка створення MediaRecorder:', error);
+        
+        // Спробувати без options для Safari
+        if (browserInfo.isSafari) {
+          try {
+            recorder = new MediaRecorder(stream);
+          } catch (fallbackError) {
+            throw new Error('Не вдається створити записувач аудіо');
+          }
+        } else {
+          throw error;
+        }
+      }
+      
       audioRecorderRef.current = recorder;
       audioChunksRef.current = [];
       
       recorder.ondataavailable = (e) => {
-        audioChunksRef.current.push(e.data);
+        if (e.data && e.data.size > 0) {
+          audioChunksRef.current.push(e.data);
+        }
       };
       
       recorder.onstop = () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        if (audioChunksRef.current.length === 0) {
+          setRecordingError("Не вдалося записати аудіо");
+          return;
+        }
+        
+        const audioBlob = new Blob(audioChunksRef.current, { 
+          type: supportedMimeType || 'audio/mp4'
+        });
+        
+        if (audioBlob.size > 10 * 1024 * 1024) {
+          setRecordingError("Розмір голосового повідомлення занадто великий");
+          return;
+        }
+        
         setRecordedAudio(audioBlob);
         const url = URL.createObjectURL(audioBlob);
         setAudioUrl(url);
@@ -527,10 +721,87 @@ const ChatPage = () => {
         stream.getTracks().forEach(track => track.stop());
       };
       
-      recorder.start();
-      setIsRecording(true);
+      recorder.onerror = (event) => {
+        console.error('Помилка запису:', event);
+        setRecordingError("Сталася помилка під час запису");
+        stopRecording();
+      };
       
-      // Таймер для відображення часу запису
+      try {
+        recorder.start(1000);
+        setIsRecording(true);
+        
+        let time = 0;
+        const timer = setInterval(() => {
+          time += 1;
+          setRecordingTime(time);
+        }, 1000);
+        
+        setRecordingTimer(timer);
+        
+        setTimeout(() => {
+          if (isRecording) {
+            stopRecording();
+          }
+        }, 120000);
+        
+      } catch (error) {
+        console.error('Помилка запуску запису:', error);
+        setRecordingError("Не вдалося запустити запис");
+        stopRecording();
+      }
+      
+    } catch (error) {
+      console.error('Помилка доступу до мікрофона:', error);
+      
+      if (error instanceof DOMException) {
+        switch (error.name) {
+          case 'NotAllowedError':
+            setRecordingError("Доступ до мікрофона заборонено. Дозвольте доступ у налаштуваннях браузера");
+            break;
+          case 'NotFoundError':
+            setRecordingError("Мікрофон не знайдено");
+            break;
+          case 'NotReadableError':
+            setRecordingError("Не вдається отримати доступ до мікрофона");
+            break;
+          case 'NotSupportedError':
+            setRecordingError("Функція не підтримується вашим браузером");
+            break;
+          default:
+            setRecordingError("Помилка доступу до мікрофона: " + error.message);
+        }
+      } else {
+        setRecordingError("Не вдалося отримати доступ до мікрофона");
+      }
+      
+      setHasAudioSupport(false);
+    }
+  };
+
+  // Альтернативний спосіб запису для Safari
+  const startRecordingFallback = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const source = audioContext.createMediaStreamSource(stream);
+      const processor = audioContext.createScriptProcessor(4096, 1, 1);
+      
+      audioDataRef.current = [];
+      
+      source.connect(processor);
+      processor.connect(audioContext.destination);
+      
+      processor.onaudioprocess = (e) => {
+        audioDataRef.current.push(new Float32Array(e.inputBuffer.getChannelData(0)));
+      };
+      
+      audioContextRef.current = audioContext;
+      audioProcessorRef.current = processor;
+      
+      setIsRecording(true);
+      setUsingAudioWorkaround(true);
+      
       let time = 0;
       const timer = setInterval(() => {
         time += 1;
@@ -539,22 +810,96 @@ const ChatPage = () => {
       
       setRecordingTimer(timer);
       
-      // Автоматично зупинити запис через 60 секунд
+      // Зупинити запис через 60 секунд
       setTimeout(() => {
         if (isRecording) {
-          stopRecording();
+          stopRecordingFallback();
         }
       }, 60000);
+      
     } catch (error) {
-      console.error('Помилка доступу до мікрофона:', error);
-      alert("Не вдалося отримати доступ до мікрофона");
+      console.error('Помилка fallback запису:', error);
+      setRecordingError("Не вдалося запустити запис");
     }
+  };
+
+  // Зупинка fallback запису
+  const stopRecordingFallback = () => {
+    if (audioContextRef.current && audioProcessorRef.current) {
+      audioProcessorRef.current.disconnect();
+      audioContextRef.current.close();
+      
+      // Конвертувати дані в WAV
+      const wavBlob = convertToWav(audioDataRef.current, 44100);
+      setRecordedAudio(wavBlob);
+      setAudioUrl(URL.createObjectURL(wavBlob));
+      
+      setIsRecording(false);
+      setUsingAudioWorkaround(false);
+      
+      if (recordingTimer) {
+        clearInterval(recordingTimer);
+        setRecordingTimer(null);
+      }
+      setRecordingTime(0);
+    }
+  };
+
+  // Функція конвертації в WAV
+  const convertToWav = (audioData: Float32Array[], sampleRate: number): Blob => {
+    const buffer = new ArrayBuffer(44 + audioData.length * 2);
+    const view = new DataView(buffer);
+    
+    // WAV header
+    const writeString = (offset: number, string: string) => {
+      for (let i = 0; i < string.length; i++) {
+        view.setUint8(offset + i, string.charCodeAt(i));
+      }
+    };
+    
+    writeString(0, 'RIFF');
+    view.setUint32(4, 36 + audioData.length * 2, true);
+    writeString(8, 'WAVE');
+    writeString(12, 'fmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);
+    view.setUint16(22, 1, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * 2, true);
+    view.setUint16(32, 2, true);
+    view.setUint16(34, 16, true);
+    writeString(36, 'data');
+    view.setUint32(40, audioData.length * 2, true);
+    
+    // Audio data
+    let offset = 44;
+    for (let i = 0; i < audioData.length; i++) {
+      const samples = audioData[i];
+      for (let j = 0; j < samples.length; j++) {
+        const sample = Math.max(-1, Math.min(1, samples[j]));
+        view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true);
+        offset += 2;
+      }
+    }
+    
+    return new Blob([buffer], { type: 'audio/wav' });
   };
 
   // Функція для зупинки запису
   const stopRecording = () => {
+    if (usingAudioWorkaround) {
+      stopRecordingFallback();
+      return;
+    }
+
     if (audioRecorderRef.current && isRecording) {
-      audioRecorderRef.current.stop();
+      try {
+        if (audioRecorderRef.current.state === 'recording') {
+          audioRecorderRef.current.stop();
+        }
+      } catch (error) {
+        console.error('Помилка зупинки запису:', error);
+      }
       setIsRecording(false);
       
       if (recordingTimer) {
@@ -567,9 +912,27 @@ const ChatPage = () => {
 
   // Функція для відтворення записаного аудіо
   const playRecordedAudio = () => {
-    if (audioUrl && audioRef.current) {
-      audioRef.current.play();
-      setIsPlaying(true);
+    if (recordedAudio) {
+      const url = URL.createObjectURL(recordedAudio);
+      const audio = new Audio(url);
+      
+      audio.onended = () => {
+        setIsPlaying(false);
+        URL.revokeObjectURL(url);
+      };
+      
+      audio.onerror = () => {
+        setIsPlaying(false);
+        URL.revokeObjectURL(url);
+      };
+      
+      audio.play().then(() => {
+        setIsPlaying(true);
+      }).catch(error => {
+        console.error('Помилка відтворення аудіо:', error);
+        setIsPlaying(false);
+        URL.revokeObjectURL(url);
+      });
     }
   };
 
@@ -593,10 +956,10 @@ const ChatPage = () => {
       content: "Голосове повідомлення",
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       attachment: { 
-        name: "voice-message.webm",
+        name: usingAudioWorkaround ? "voice-message.wav" : "voice-message.webm",
         type: "audio",
         size: `${(recordedAudio.size / 1024).toFixed(1)} KB`,
-        url: audioUrl
+        blob: recordedAudio
       },
       chatId: activeChat.id,
       readBy: [currentUser.id]
@@ -606,6 +969,7 @@ const ChatPage = () => {
     setRecordedAudio(null);
     setAudioUrl('');
     setIsPlaying(false);
+    setUsingAudioWorkaround(false);
     
     setChats(prev => prev.map(chat => 
       chat.id === activeChat.id 
@@ -619,6 +983,49 @@ const ChatPage = () => {
     stopRecording();
     setRecordedAudio(null);
     setAudioUrl('');
+    setRecordingError(null);
+    setUsingAudioWorkaround(false);
+  };
+
+  // Функція для відтворення аудіо повідомлення
+  const playAudioMessage = (messageId: number, blob: Blob) => {
+    if (currentlyPlaying === messageId) {
+      // Якщо вже відтворюється це повідомлення - зупинити
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+      setCurrentlyPlaying(null);
+      return;
+    }
+    
+    // Зупинити поточне відтворення
+    if (audioRef.current) {
+      audioRef.current.pause();
+    }
+    
+    // Створити нове аудіо
+    const url = URL.createObjectURL(blob);
+    const audio = new Audio(url);
+    audioRef.current = audio;
+    
+    audio.onended = () => {
+      setCurrentlyPlaying(null);
+      URL.revokeObjectURL(url);
+    };
+    
+    audio.onerror = () => {
+      setCurrentlyPlaying(null);
+      URL.revokeObjectURL(url);
+    };
+    
+    audio.play().catch(error => {
+      console.error('Помилка відтворення аудіо:', error);
+      setCurrentlyPlaying(null);
+      URL.revokeObjectURL(url);
+    });
+    
+    setCurrentlyPlaying(messageId);
   };
 
   const handleCreateDirectChat = (userId: number) => {
@@ -803,6 +1210,118 @@ const ChatPage = () => {
     setShowArchived(!showArchived);
   };
 
+  // Компонент для відображення інструкцій Safari
+  const renderSafariInstructions = () => {
+    if (!browserInfo.isSafari) return null;
+
+    return (
+      <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg mb-3">
+        <div className="flex items-start gap-2">
+          <Info className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+          <div className="flex-1">
+            <p className="text-xs font-medium text-blue-800 mb-1">
+              Інструкція для Safari:
+            </p>
+            <ol className="text-xs text-blue-700 space-y-1">
+              <li>1. Натисніть "Safari" в меню → "Налаштування"</li>
+              <li>2. Перейдіть в "Вебсайти" → "Мікрофон"</li>
+              <li>3. Знайдіть цей сайт і встановіть "Дозволити"</li>
+              <li>4. Перезавантажте сторінку</li>
+            </ol>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderAttachment = (attachment: Message['attachment'], messageId: number) => {
+    if (!attachment) return null;
+
+    if (attachment.type === 'image') {
+      return (
+        <div className="mt-2 rounded-lg overflow-hidden bg-muted max-w-xs">
+          <div className="h-32 bg-gradient-to-br from-muted to-muted/80 flex items-center justify-center">
+            <ImageIcon className="h-8 w-8 text-muted-foreground" />
+          </div>
+          <div className="p-2">
+            <p className="text-xs font-medium truncate text-foreground">{attachment.name}</p>
+            <p className="text-xs text-muted-foreground">{attachment.size}</p>
+          </div>
+        </div>
+      );
+    }
+
+    if (attachment.type === 'audio') {
+      const isPlaying = currentlyPlaying === messageId;
+      
+      return (
+        <div className="mt-2 p-2 bg-muted rounded-lg border border-border flex items-center gap-2 max-w-xs">
+          <button 
+            onClick={() => {
+              if (attachment.blob) {
+                playAudioMessage(messageId, attachment.blob);
+              }
+            }}
+            className={`p-1.5 rounded-full flex-shrink-0 ${
+              isPlaying ? 'bg-destructive text-destructive-foreground' : 'bg-primary text-primary-foreground'
+            }`}
+          >
+            {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+          </button>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-medium truncate text-foreground">{attachment.name}</p>
+            <p className="text-xs text-muted-foreground">{attachment.size}</p>
+          </div>
+          <div className="w-16 h-1 bg-muted-foreground/20 rounded-full overflow-hidden">
+            <div className="h-full bg-primary w-1/2"></div>
+          </div>
+          <button 
+            className="p-1 hover:bg-accent rounded-md flex-shrink-0 transition-colors"
+            onClick={() => {
+              if (attachment.blob) {
+                const url = URL.createObjectURL(attachment.blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = attachment.name;
+                a.click();
+                setTimeout(() => URL.revokeObjectURL(url), 100);
+              }
+            }}
+          >
+            <Download className="h-3 w-3 text-muted-foreground" />
+          </button>
+        </div>
+      );
+    }
+
+    if (attachment.type === 'video') {
+      return (
+        <div className="mt-2 rounded-lg overflow-hidden bg-muted max-w-xs">
+          <div className="h-32 bg-gradient-to-br from-muted to-muted/80 flex items-center justify-center">
+            <Video className="h-8 w-8 text-muted-foreground" />
+          </div>
+          <div className="p-2">
+            <p className="text-xs font-medium truncate text-foreground">{attachment.name}</p>
+            <p className="text-xs text-muted-foreground">{attachment.size}</p>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="mt-2 p-2 bg-muted rounded-lg border border-border flex items-center gap-2 max-w-xs">
+        <File className="h-6 w-6 text-primary flex-shrink-0" />
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-medium truncate text-foreground">{attachment.name}</p>
+          <p className="text-xs text-muted-foreground">{attachment.size}</p>
+        </div>
+        <button className="p-1 hover:bg-accent rounded-md flex-shrink-0 transition-colors">
+          <Download className="h-3 w-3 text-muted-foreground" />
+        </button>
+      </div>
+    );
+  };
+
   const renderNewChatDialog = () => (
     <div className={`fixed inset-0 z-50 ${showNewChatDialog ? '' : 'hidden'}`}>
       <div className="fixed inset-0 bg-black/20 backdrop-blur-sm" onClick={() => setShowNewChatDialog(false)} />
@@ -887,10 +1406,7 @@ const ChatPage = () => {
           <div>
             <label className="block text-xs font-medium mb-1 text-foreground">Учасники</label>
             <div className="relative mb-2">
-              Ось повний код з продовженням:
-
-```jsx
-<Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
               <input
                 type="text"
                 placeholder="Пошук користувачів..."
@@ -969,87 +1485,6 @@ const ChatPage = () => {
       </div>
     </div>
   );
-
-  const renderAttachment = (attachment: Message['attachment']) => {
-    if (!attachment) return null;
-
-    if (attachment.type === 'image') {
-      return (
-        <div className="mt-2 rounded-lg overflow-hidden bg-muted max-w-xs">
-          <div className="h-32 bg-gradient-to-br from-muted to-muted/80 flex items-center justify-center">
-            <ImageIcon className="h-8 w-8 text-muted-foreground" />
-          </div>
-          <div className="p-2">
-            <p className="text-xs font-medium truncate text-foreground">{attachment.name}</p>
-            <p className="text-xs text-muted-foreground">{attachment.size}</p>
-          </div>
-        </div>
-      );
-    }
-
-    if (attachment.type === 'audio') {
-      return (
-        <div className="mt-2 p-2 bg-muted rounded-lg border border-border flex items-center gap-2 max-w-xs">
-          <button 
-            onClick={() => {
-              if (audioRef.current?.src === attachment.url) {
-                if (audioRef.current.paused) {
-                  audioRef.current.play();
-                } else {
-                  audioRef.current.pause();
-                }
-              } else {
-                if (audioRef.current) {
-                  audioRef.current.src = attachment.url || '';
-                  audioRef.current.play();
-                }
-              }
-            }}
-            className="p-1.5 bg-primary text-primary-foreground rounded-full flex-shrink-0"
-          >
-            <Play className="h-4 w-4" />
-          </button>
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium truncate text-foreground">{attachment.name}</p>
-            <p className="text-xs text-muted-foreground">{attachment.size}</p>
-          </div>
-          <div className="w-16 h-1 bg-muted-foreground/20 rounded-full overflow-hidden">
-            <div className="h-full bg-primary w-1/2"></div>
-          </div>
-          <button className="p-1 hover:bg-accent rounded-md flex-shrink-0 transition-colors">
-            <Download className="h-3 w-3 text-muted-foreground" />
-          </button>
-        </div>
-      );
-    }
-
-    if (attachment.type === 'video') {
-      return (
-        <div className="mt-2 rounded-lg overflow-hidden bg-muted max-w-xs">
-          <div className="h-32 bg-gradient-to-br from-muted to-muted/80 flex items-center justify-center">
-            <Video className="h-8 w-8 text-muted-foreground" />
-          </div>
-          <div className="p-2">
-            <p className="text-xs font-medium truncate text-foreground">{attachment.name}</p>
-            <p className="text-xs text-muted-foreground">{attachment.size}</p>
-          </div>
-        </div>
-      );
-    }
-
-    return (
-      <div className="mt-2 p-2 bg-muted rounded-lg border border-border flex items-center gap-2 max-w-xs">
-        <File className="h-6 w-6 text-primary flex-shrink-0" />
-        <div className="flex-1 min-w-0">
-          <p className="text-xs font-medium truncate text-foreground">{attachment.name}</p>
-          <p className="text-xs text-muted-foreground">{attachment.size}</p>
-        </div>
-        <button className="p-1 hover:bg-accent rounded-md flex-shrink-0 transition-colors">
-          <Download className="h-3 w-3 text-muted-foreground" />
-        </button>
-      </div>
-    );
-  };
 
   // Компонент контекстного меню
   const renderContextMenu = () => {
@@ -1434,8 +1869,8 @@ const ChatPage = () => {
                       
                       {activeChat.type === 'group' ? (
                         <div className="w-8 h-8 bg-gradient-to-br from-accent to-primary rounded-full flex items-center justify-center text-accent-foreground font-semibold">
-  <Users className="w-4 h-4" />
-</div>
+                          <Users className="w-4 h-4" />
+                        </div>
                       ) : (
                         renderAvatar(activeChat.name, true, 'default')
                       )}
@@ -1511,11 +1946,11 @@ const ChatPage = () => {
                                 </div>
                               )}
                               <p className="text-sm leading-relaxed">{message.content}</p>
-                              {message.attachment && renderAttachment(message.attachment)}
+                              {message.attachment && renderAttachment(message.attachment, message.id)}
                               {message.reactions && (
                                 <div className="flex items-center gap-1 mt-1">
                                   {Object.entries(message.reactions).map(([reaction, count]) => (
-                                    <div key={reaction} className={`px-1 py-0.5 rounded-full flex items-center text-xs ${
+                                                                        <div key={reaction} className={`px-1 py-0.5 rounded-full flex items-center text-xs ${
                                       message.senderId === currentUser?.id 
                                         ? 'bg-primary-foreground/20 text-primary-foreground' 
                                         : 'bg-muted text-muted-foreground'
@@ -1657,11 +2092,56 @@ const ChatPage = () => {
                   {/* Аудіо елемент для відтворення */}
                   <audio 
                     ref={audioRef}
-                    onEnded={() => setIsPlaying(false)}
-                    onPause={() => setIsPlaying(false)}
                     className="hidden"
                   />
                   
+                  {/* Помилки запису */}
+                  {recordingError && (
+                    <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg mb-3">
+                      <div className="flex items-start gap-2">
+                        <AlertCircle className="w-4 h-4 text-destructive mt-0.5 flex-shrink-0" />
+                        <div className="flex-1">
+                          <p className="text-xs text-destructive mb-2">{recordingError}</p>
+                          {recordingError.includes("заборонено") && (
+                            <button 
+                              onClick={openBrowserSettings}
+                              className="text-xs bg-destructive text-destructive-foreground px-3 py-1 rounded-md hover:bg-destructive/90 transition-colors"
+                            >
+                              Відкрити налаштування
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {renderSafariInstructions()}
+
+                  {!hasAudioSupport && browserInfo.isSafari && browserInfo.version < 14.1 && (
+                    <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg mb-3">
+                      <div className="flex items-start gap-2">
+                        <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                        <div className="flex-1">
+                          <p className="text-xs font-medium text-amber-800 mb-1">
+                            Оновіть Safari
+                          </p>
+                          <p className="text-xs text-amber-700">
+                            Ваша версія Safari ({browserInfo.version}) не підтримує запис аудіо. 
+                            Оновіть до версії 14.1 або новішої.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {!hasAudioSupport && !browserInfo.isSafari && (
+                    <div className="p-3 bg-muted rounded-lg mb-3">
+                      <p className="text-xs text-muted-foreground">
+                        Голосові повідомлення не підтримуються у вашому браузері
+                      </p>
+                    </div>
+                  )}
+
                   {recordedAudio ? (
                     // Відображення записаного аудіо перед відправкою
                     <div className="flex items-center gap-3 p-3 bg-muted rounded-lg mb-3">
@@ -1745,8 +2225,18 @@ const ChatPage = () => {
                         <Smile className="w-4 h-4 text-muted-foreground" />
                       </button>
                       <button 
-                        onClick={startRecording}
-                        className="p-2 hover:bg-muted rounded-md transition-colors"
+                        onClick={() => {
+                          if (browserInfo.isSafari && !hasAudioSupport) {
+                            startRecordingFallback();
+                          } else if (hasAudioSupport) {
+                            startRecording();
+                          }
+                        }}
+                        disabled={!hasAudioSupport && !browserInfo.isSafari}
+                        className="p-2 hover:bg-muted rounded-md transition-colors disabled:opacity-50"
+                        title={hasAudioSupport || browserInfo.isSafari ? 
+                          "Записати голосове повідомлення" : 
+                          "Голосові повідомлення не підтримуються"}
                       >
                         <Mic className="w-4 h-4 text-muted-foreground" />
                       </button>
