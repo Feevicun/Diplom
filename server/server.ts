@@ -804,6 +804,136 @@ Only output valid JSON array as described above. Do not include any explanation 
 
 
 
+// GET всіх ресурсів
+app.get("/api/resources", async (req: Request, res: Response) => {
+  try {
+    const result = await pool.query(
+      "SELECT r.*, u.name as created_by_name FROM resources r LEFT JOIN users u ON r.created_by = u.id ORDER BY r.created_at DESC"
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error("Error fetching resources:", err);
+    res.status(500).json({ message: "Database error fetching resources" });
+  }
+});
+
+// POST новий ресурс
+app.post("/api/resources", authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const { title, description, link, category } = req.body;
+    
+    // Type guard for req.user
+    if (!req.user) {
+      return res.status(401).json({ message: "User not authenticated" });
+    }
+    
+    // Перевірка, що користувач - викладач
+    if (req.user.role !== 'teacher') {
+      return res.status(403).json({ message: "Доступ заборонено" });
+    }
+    
+    // Валідація даних
+    if (!title || !link) {
+      return res.status(400).json({ message: "Назва та посилання обов'язкові" });
+    }
+
+    // Додаткова перевірка userId
+    if (!req.user.userId) {
+      return res.status(400).json({ message: "User ID not found in token" });
+    }
+
+    const result = await pool.query(
+      `INSERT INTO resources (title, description, link, category, created_by)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING *`,
+      [title, description, link, category || 'other', req.user.userId]
+    );
+
+    res.status(201).json({
+      message: "Ресурс додано успішно",
+      resource: result.rows[0]
+    });
+  } catch (err) {
+    console.error("Error adding resource:", err);
+    res.status(500).json({ message: "Помилка бази даних" });
+  }
+});
+
+// PUT оновлення ресурсу
+app.put("/api/resources/:id", authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { title, description, link, category } = req.body;
+    
+    // Type guard for req.user
+    if (!req.user) {
+      return res.status(401).json({ message: "User not authenticated" });
+    }
+    
+    // Перевірка прав власності
+    const resourceCheck = await pool.query(
+      "SELECT created_by FROM resources WHERE id = $1",
+      [id]
+    );
+    
+    if (resourceCheck.rows.length === 0) {
+      return res.status(404).json({ message: "Ресурс не знайдено" });
+    }
+    
+    if (resourceCheck.rows[0].created_by !== req.user.userId && req.user.role !== 'admin') {
+      return res.status(403).json({ message: "Доступ заборонено" });
+    }
+
+    const result = await pool.query(
+      `UPDATE resources
+       SET title = $1, description = $2, link = $3, category = $4, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $5
+       RETURNING *`,
+      [title, description, link, category, id]
+    );
+
+    res.json({
+      message: "Ресурс оновлено успішно",
+      resource: result.rows[0]
+    });
+  } catch (err) {
+    console.error("Error updating resource:", err);
+    res.status(500).json({ message: "Помилка бази даних" });
+  }
+});
+
+// DELETE видалення ресурсу
+app.delete("/api/resources/:id", authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    
+    // Type guard for req.user
+    if (!req.user) {
+      return res.status(401).json({ message: "User not authenticated" });
+    }
+    
+    // Перевірка прав власності
+    const resourceCheck = await pool.query(
+      "SELECT created_by FROM resources WHERE id = $1",
+      [id]
+    );
+    
+    if (resourceCheck.rows.length === 0) {
+      return res.status(404).json({ message: "Ресурс не знайдено" });
+    }
+    
+    if (resourceCheck.rows[0].created_by !== req.user.userId && req.user.role !== 'admin') {
+      return res.status(403).json({ message: "Доступ заборонено" });
+    }
+
+    await pool.query("DELETE FROM resources WHERE id = $1", [id]);
+    res.json({ message: "Ресурс видалено успішно" });
+  } catch (err) {
+    console.error("Error deleting resource:", err);
+    res.status(500).json({ message: "Помилка мережі" });
+  }
+});
+
 
 // ===== Serve frontend =====
 const frontendPath = path.join(__dirname, "../dist");
