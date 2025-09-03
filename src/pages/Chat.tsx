@@ -93,8 +93,8 @@ const ChatPage = () => {
   const [showChatList, setShowChatList] = useState(true);
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [editingMessage, setEditingMessage] = useState<Message | null>(null);
-  const [onlineUsers, setOnlineUsers] = useState<number[]>([]);
-  const [calls, setCalls] = useState<Call[]>([]);
+  const [, setOnlineUsers] = useState<number[]>([]);
+  const [, setCalls] = useState<Call[]>([]);
   const [activeCall, setActiveCall] = useState<Call | null>(null);
   const [typingUsers, setTypingUsers] = useState<number[]>([]);
 
@@ -588,18 +588,18 @@ const ChatPage = () => {
   };
 
   const handleEndCall = () => {
-    if (!activeCall) return;
-    
-    const endedCall = {
-      ...activeCall,
-      status: 'ended',
-      endTime: new Date().toISOString(),
-      duration: Math.floor((new Date().getTime() - new Date(activeCall.startTime).getTime()) / 1000)
-    };
-    
-    setCalls(prev => prev.map(call => call.id === activeCall.id ? endedCall : call));
-    setActiveCall(null);
+  if (!activeCall) return;
+  
+  const endedCall: Call = {
+    ...activeCall,
+    status: 'ended', // This matches the union type
+    endTime: new Date().toISOString(),
+    duration: Math.floor((new Date().getTime() - new Date(activeCall.startTime).getTime()) / 1000)
   };
+  
+  setCalls(prev => prev.map(call => call.id === activeCall.id ? endedCall : call));
+  setActiveCall(null);
+};
 
   const handleAddToContacts = (userId: number) => {
     setUsers(prev => prev.map(user => 
@@ -1147,24 +1147,24 @@ const ChatPage = () => {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const renderAvatar = (name: string, isOnline?: boolean, size = 'default') => {
-    const sizeClasses = {
-      small: 'w-6 h-6 text-xs',
-      default: 'w-8 h-8 text-xs',
-      large: 'w-10 h-10 text-sm'
-    };
-    
-    return (
-      <div className="relative">
-        <div className={`${sizeClasses[size]} bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center text-primary-foreground font-semibold`}>
-          {getInitials(name)}
-        </div>
-        {isOnline && (
-          <div className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-green-500 rounded-full border border-card"></div>
-        )}
+  const renderAvatar = (name: string, isOnline?: boolean, size: 'small' | 'default' | 'large' = 'default') => {
+  const sizeClasses = {
+    small: 'w-6 h-6 text-xs',
+    default: 'w-8 h-8 text-xs',
+    large: 'w-10 h-10 text-sm'
+  } as const; // Add 'as const' for type safety
+  
+  return (
+    <div className="relative">
+      <div className={`${sizeClasses[size]} bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center text-primary-foreground font-semibold`}>
+        {getInitials(name)}
       </div>
-    );
-  };
+      {isOnline && (
+        <div className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-green-500 rounded-full border border-card"></div>
+      )}
+    </div>
+  );
+};
 
   // Обробник правого кліку миші
   const handleRightClick = (e: React.MouseEvent, chat: Chat) => {
@@ -1420,7 +1420,6 @@ const ChatPage = () => {
           <div>
             <label className="block text-xs font-medium mb-1 text-foreground">Учасники</label>
             <div className="relative mb-2">
-              ```tsx
               <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
               <input
                 type="text"
