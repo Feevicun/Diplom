@@ -26,12 +26,11 @@ import {
   Plus,
   Trash2,
   Loader2,
-  Heart,
-  BookmarkPlus,
+  Bookmark,
   BookmarkCheck,
   Link as LinkIcon,
   Folder,
-  X
+  ExternalLink
 } from 'lucide-react';
 import {
   Card,
@@ -50,9 +49,18 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  DialogClose
+  DialogClose,
+  DialogFooter
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
@@ -336,8 +344,9 @@ const Resources = () => {
   });
 
   const [search, setSearch] = useState<string>('');
-  const [favorites, setFavorites] = useState<string[]>([]);
-  const [showOnlyFavorites, setShowOnlyFavorites] = useState<boolean>(false);
+  const [savedResources, setSavedResources] = useState<string[]>([]);
+  const [showOnlySaved, setShowOnlySaved] = useState<boolean>(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Отримання користувача при завантаженні компонента
   useEffect(() => {
@@ -378,29 +387,29 @@ const Resources = () => {
     fetchResources();
   }, []);
 
-  // Завантаження улюблених ресурсів після отримання користувача
+  // Завантаження збережених ресурсів після отримання користувача
   useEffect(() => {
     if (user?.id) {
-      const userFavoritesKey = `favoriteResources_${user.id}`;
-      const saved = localStorage.getItem(userFavoritesKey);
+      const userSavedKey = `savedResources_${user.id}`;
+      const saved = localStorage.getItem(userSavedKey);
       if (saved) {
         try {
-          setFavorites(JSON.parse(saved));
+          setSavedResources(JSON.parse(saved));
         } catch (error) {
-          console.error('Помилка завантаження улюблених ресурсів:', error);
-          setFavorites([]);
+          console.error('Помилка завантаження збережених ресурсів:', error);
+          setSavedResources([]);
         }
       }
     }
   }, [user]);
 
-  // Збереження улюблених ресурсів при зміні
+  // Збереження збережених ресурсів при зміні
   useEffect(() => {
     if (user?.id) {
-      const userFavoritesKey = `favoriteResources_${user.id}`;
-      localStorage.setItem(userFavoritesKey, JSON.stringify(favorites));
+      const userSavedKey = `savedResources_${user.id}`;
+      localStorage.setItem(userSavedKey, JSON.stringify(savedResources));
     }
-  }, [favorites, user]);
+  }, [savedResources, user]);
 
   // Функція для отримання іконки за категорією
   const getIconByCategory = (category: string) => {
@@ -449,19 +458,20 @@ const Resources = () => {
     ...staticResources
   ];
 
-  const toggleFavorite = (id: string): void => {
+  const toggleSaved = (id: string): void => {
     if (!user?.id) {
       console.warn('Користувач не авторизований');
       return;
     }
     
-    setFavorites(prev =>
-      prev.includes(id) ? prev.filter(fav => fav !== id) : [...prev, id]
+    setSavedResources(prev =>
+      prev.includes(id) ? prev.filter(saved => saved !== id) : [...prev, id]
     );
   };
 
   const handleAddResource = async (): Promise<void> => {
     try {
+      setIsSubmitting(true);
       const token = localStorage.getItem('token');
       if (!token) {
         alert('Потрібна авторизація');
@@ -474,13 +484,22 @@ const Resources = () => {
         return;
       }
 
+      // Додаємо https:// якщо немає
+      let formattedLink = newResource.link;
+      if (!formattedLink.startsWith('http://') && !formattedLink.startsWith('https://')) {
+        formattedLink = 'https://' + formattedLink;
+      }
+
       const response = await fetch('http://localhost:4000/api/resources', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify(newResource)
+        body: JSON.stringify({
+          ...newResource,
+          link: formattedLink
+        })
       });
 
       if (!response.ok) {
@@ -505,6 +524,8 @@ const Resources = () => {
     } catch (error) {
       console.error('Помилка додавання ресурсу:', error);
       alert('Помилка мережі. Спробуйте пізніше.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -525,6 +546,8 @@ const Resources = () => {
       if (response.ok) {
         // Видаляємо ресурс зі списку
         setDbResources(prev => prev.filter(res => res.id !== dbId));
+        // Видаляємо зі збережених, якщо він там був
+        setSavedResources(prev => prev.filter(id => id !== `db-${dbId}`));
         alert('Ресурс видалено успішно');
       } else {
         const data = await response.json();
@@ -541,9 +564,9 @@ const Resources = () => {
       res.title.toLowerCase().includes(search.toLowerCase()) ||
       (res.description && res.description.toLowerCase().includes(search.toLowerCase()));
 
-    const isFavorite = favorites.includes(res.id);
+    const isSaved = savedResources.includes(res.id);
 
-    return matchesSearch && (!showOnlyFavorites || isFavorite);
+    return matchesSearch && (!showOnlySaved || isSaved);
   });
 
   if (isLoading) {
@@ -596,15 +619,12 @@ const Resources = () => {
                     {t('resources.addResource')}
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-[500px]">
-                  <DialogHeader className="flex flex-row items-center justify-between">
+                <DialogContent className="sm:max-w-[550px]">
+                  <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
-                      <BookmarkPlus size={20} />
+                      <Bookmark size={20} />
                       Додати новий ресурс
                     </DialogTitle>
-                    <DialogClose className="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none">
-                      <X className="h-4 w-4" />
-                    </DialogClose>
                   </DialogHeader>
                   <div className="space-y-4 py-4">
                     <div className="space-y-2">
@@ -617,6 +637,7 @@ const Resources = () => {
                         value={newResource.title}
                         onChange={(e) => setNewResource({...newResource, title: e.target.value})}
                         placeholder="Введіть назву ресурсу"
+                        className="w-full"
                       />
                     </div>
                     <div className="space-y-2">
@@ -624,11 +645,13 @@ const Resources = () => {
                         <BookOpenCheck size={14} />
                         Опис
                       </Label>
-                      <Input
+                      <Textarea
                         id="description"
                         value={newResource.description}
                         onChange={(e) => setNewResource({...newResource, description: e.target.value})}
                         placeholder="Введіть опис ресурсу"
+                        rows={3}
+                        className="w-full"
                       />
                     </div>
                     <div className="space-y-2">
@@ -641,6 +664,7 @@ const Resources = () => {
                         value={newResource.link}
                         onChange={(e) => setNewResource({...newResource, link: e.target.value})}
                         placeholder="https://example.com"
+                        className="w-full"
                       />
                     </div>
                     <div className="space-y-2">
@@ -648,36 +672,61 @@ const Resources = () => {
                         <Folder size={14} />
                         Категорія
                       </Label>
-                      <select
-                        id="category"
+                      <Select
                         value={newResource.category}
-                        onChange={(e) => setNewResource({...newResource, category: e.target.value})}
-                        className="w-full p-2 border rounded-md"
+                        onValueChange={(value) => setNewResource({...newResource, category: value})}
                       >
-                        <option value="templates">Шаблони</option>
-                        <option value="examples">Приклади</option>
-                        <option value="guidelines">Інструкції</option>
-                        <option value="literature">Література</option>
-                        <option value="other">Інше</option>
-                      </select>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Оберіть категорію" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="templates">Шаблони</SelectItem>
+                          <SelectItem value="examples">Приклади</SelectItem>
+                          <SelectItem value="guidelines">Інструкції</SelectItem>
+                          <SelectItem value="literature">Література</SelectItem>
+                          <SelectItem value="faq">FAQ</SelectItem>
+                          <SelectItem value="defense">Захист робіт</SelectItem>
+                          <SelectItem value="other">Інше</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
-                    <Button onClick={handleAddResource} className="w-full gap-2">
-                      <BookmarkCheck size={16} />
-                      Зберегти ресурс
-                    </Button>
                   </div>
+                  <DialogFooter className="flex gap-2 sm:gap-0">
+                    <DialogClose asChild>
+                      <Button variant="outline" type="button">
+                        Скасувати
+                      </Button>
+                    </DialogClose>
+                    <Button 
+                      onClick={handleAddResource} 
+                      className="gap-2"
+                      disabled={isSubmitting}
+                    >
+                      {isSubmitting ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Додавання...
+                        </>
+                      ) : (
+                        <>
+                          <BookmarkCheck size={16} />
+                          Зберегти ресурс
+                        </>
+                      )}
+                    </Button>
+                  </DialogFooter>
                 </DialogContent>
               </Dialog>
             )}
             
             <Button
-              variant={showOnlyFavorites ? "default" : "outline"}
-              onClick={() => setShowOnlyFavorites(prev => !prev)}
+              variant={showOnlySaved ? "default" : "outline"}
+              onClick={() => setShowOnlySaved(prev => !prev)}
               className="sm:ml-auto gap-2"
               disabled={!user?.id}
             >
-              <Heart size={16} className={showOnlyFavorites ? "fill-white" : ""} />
-              {showOnlyFavorites ? 'Показати всі' : 'Тільки обране'}
+              <Bookmark size={16} className={showOnlySaved ? "fill-white" : ""} />
+              {showOnlySaved ? 'Показати всі' : 'Тільки збережені'}
               {!user?.id && ' (потрібна авторизація)'}
             </Button>
           </div>
@@ -689,14 +738,14 @@ const Resources = () => {
               return (
                 <Card
                   key={id}
-                  className="hover:shadow-lg transition-shadow duration-300 rounded-xl p-4 flex flex-col h-full relative group"
+                  className="hover:shadow-lg transition-shadow duration-300 rounded-xl p-4 flex flex-col h-full relative group border"
                 >
                   {/* Кнопки редагування для власних ресурсів викладачів */}
                   {isCustom && user?.role === 'teacher' && user.id && createdBy && Number(user.id) === createdBy && (
-                    <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="absolute top-3 right-12 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button
                         onClick={() => dbId && handleDeleteResource(dbId)}
-                        className="p-1 text-destructive hover:bg-destructive/10 rounded"
+                        className="p-1.5 text-destructive hover:bg-destructive/10 rounded-md transition-colors"
                         title="Видалити ресурс"
                       >
                         <Trash2 size={16} />
@@ -704,49 +753,54 @@ const Resources = () => {
                     </div>
                   )}
 
-                  <CardHeader className="p-0 mb-3 flex items-start justify-between gap-3">
+                  {/* Кнопка збереження */}
+                  <button
+                    onClick={() => toggleSaved(id)}
+                    className={`absolute top-3 right-3 transition-all ${
+                      !user?.id 
+                        ? 'opacity-50 cursor-not-allowed text-gray-400' 
+                        : savedResources.includes(id) 
+                          ? 'text-primary hover:text-primary/80' 
+                          : 'text-gray-400 hover:text-primary'
+                    }`}
+                    title={
+                      !user?.id 
+                        ? 'Увійдіть для збереження ресурсів'
+                        : savedResources.includes(id) 
+                          ? 'Видалити зі збережених' 
+                          : 'Зберегти ресурс'
+                    }
+                    disabled={!user?.id}
+                  >
+                    {savedResources.includes(id) ? (
+                      <BookmarkCheck size={20} fill="currentColor" />
+                    ) : (
+                      <Bookmark size={20} />
+                    )}
+                  </button>
+
+                  <CardHeader className="p-0 mb-3 flex items-start gap-3">
                     <div className="flex items-center gap-3">
-                      <Icon className="text-primary flex-shrink-0" size={18} />
-                      <div>
-                        <CardTitle className="text-base">{title}</CardTitle>
-                        <CardDescription className="text-sm text-muted-foreground">
+                      <div className="p-2 bg-primary/10 rounded-lg flex-shrink-0">
+                        <Icon className="text-primary" size={20} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <CardTitle className="text-base font-medium line-clamp-2">{title}</CardTitle>
+                        <CardDescription className="text-sm text-muted-foreground line-clamp-2 mt-1">
                           {description}
                         </CardDescription>
                       </div>
                     </div>
-                    <button
-                      onClick={() => toggleFavorite(id)}
-                      className={`mt-1 flex-shrink-0 transition-all ${
-                        !user?.id 
-                          ? 'opacity-50 cursor-not-allowed text-gray-400' 
-                          : favorites.includes(id) 
-                            ? 'text-rose-500 hover:text-rose-600' 
-                            : 'text-gray-400 hover:text-primary'
-                      }`}
-                      title={
-                        !user?.id 
-                          ? 'Увійдіть для збереження ресурсів'
-                          : favorites.includes(id) 
-                            ? 'Видалити з обраного' 
-                            : 'Додати в обране'
-                      }
-                      disabled={!user?.id}
-                    >
-                      {favorites.includes(id) ? (
-                        <Heart size={18} fill="currentColor" />
-                      ) : (
-                        <Heart size={18} />
-                      )}
-                    </button>
                   </CardHeader>
                   <CardContent className="p-0 mt-auto">
                     {link.startsWith('http') ? (
                       <Button
                         variant="outline"
-                        className="w-full text-sm"
-                        onClick={() => window.open(link, '_blank')}
+                        className="w-full text-sm gap-2"
+                        onClick={() => window.open(link, '_blank', 'noopener,noreferrer')}
                       >
                         {action}
+                        <ExternalLink size={14} />
                       </Button>
                     ) : (
                       <Link to={link}>
@@ -763,7 +817,16 @@ const Resources = () => {
 
           {filteredResources.length === 0 && (
             <div className="text-center py-12 text-muted-foreground">
-              <p>Ресурси не знайдено. Спробуйте змінити пошуковий запит.</p>
+              <Bookmark size={48} className="mx-auto mb-4 opacity-50" />
+              <p className="text-lg font-medium mb-2">
+                {showOnlySaved ? 'Немає збережених ресурсів' : 'Ресурси не знайдено'}
+              </p>
+              <p className="text-sm">
+                {showOnlySaved 
+                  ? 'Зберігайте ресурси, натискаючи на іконку закладки' 
+                  : 'Спробуйте змінити пошуковий запит або очистіть фільтри'
+                }
+              </p>
             </div>
           )}
         </main>
