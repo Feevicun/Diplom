@@ -436,14 +436,14 @@ const Dashboard = () => {
       label: t('index.stats.overallProgress'),
       value: `${currentWork.progress}%`,
       icon: Target,
-      change: currentWork.uploadedChapters > 0 ? `+${currentWork.uploadedChapters} розділів` : projectType ? 'Розпочніть завантаження' : 'Оберіть проект',
+      change: currentWork.uploadedChapters > 0 ? `+${currentWork.uploadedChapters} розділів` : projectType ? t('index.stats.progressChange1') : t('index.stats.progressChange'),
       trend: currentWork.uploadedChapters > 0 ? 'up' : 'neutral',
     },
     {
       label: t('index.stats.chaptersReady'),
       value: chaptersStats.displayText,
       icon: BookOpen,
-      change: currentWork.uploadedChapters > 0 ? t('index.stats.chaptersChange') : projectType ? 'Почніть завантажувати розділи' : 'Створіть проект',
+      change: currentWork.uploadedChapters > 0 ? t('index.stats.chaptersChange') : projectType ? t('index.stats.noChaptersYet') : t('index.stats.chaptersChange'),
       trend: currentWork.uploadedChapters > 0 ? 'up' : 'neutral',
     },
     {
@@ -561,7 +561,7 @@ const Dashboard = () => {
                         {projectType === 'diploma' ? 'Дипломний проєкт' : 
                          projectType === 'coursework' ? 'Курсова робота' : 
                          projectType === 'practice' ? 'Звіт з практики' :
-                         'Оберіть тип роботи'}
+                         t('welcome.heading')}
                       </span>
                     </div>
                       <h1 className="text-2xl md:text-4xl font-bold mb-4 text-foreground">
@@ -632,12 +632,12 @@ const Dashboard = () => {
                               {projectType === 'diploma' ? 'Дипломний проєкт' :
                                projectType === 'coursework' ? 'Курсова робота' :
                                projectType === 'practice' ? 'Звіт з практики' :
-                               'Ваш проект'}
+                               t('index.proj')}
                             </span>
                           </div>
                           <CardTitle className="text-xl md:text-2xl font-bold mb-2">{t('index.projectProgress')}</CardTitle>
                           <CardDescription className="text-base">
-                            {projectType ? currentWork.title : 'Оберіть тип роботи для початку'}
+                            {projectType ? currentWork.title : t('index.projType')}
                           </CardDescription>
                         </div>
                         {projectType && (
@@ -706,22 +706,22 @@ const Dashboard = () => {
                             <Plus className="w-10 h-10 text-muted-foreground" />
                           </div>
                           <h3 className="text-lg font-semibold text-foreground mb-2">
-                            Почніть свою роботу
+                            {t('index.projstart')}
                           </h3>
                           <p className="text-muted-foreground mb-6 max-w-md">
-                            Оберіть тип академічної роботи, щоб розпочати відстеження прогресу та отримувати допомогу від AI асистента.
+                            {t('index.projDesc')}
                           </p>
                           <div className="flex flex-col sm:flex-row gap-3 w-full max-w-md">
                             <Button asChild className="flex-1">
                               <Link to="/tracker">
                                 <Settings className="mr-2 h-4 w-4" />
-                                Створити проект
+                                {t('index.createButton')}
                               </Link>
                             </Button>
                             <Button variant="outline" asChild className="flex-1">
                               <Link to="/ai-assistant">
                                 <Lightbulb className="mr-2 h-4 w-4" />
-                                AI допомога
+                                {t('index.AIhelp')}
                               </Link>
                             </Button>
                           </div>
