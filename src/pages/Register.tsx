@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { GlassButton } from "@/components/GlassButton";
-import { GraduationCap, Eye, EyeOff } from "lucide-react"; // додано Eye, EyeOff
+import { GraduationCap, Eye, EyeOff } from "lucide-react"; 
 import { useNavigate } from "react-router-dom";
 
 const RegisterPage = () => {
@@ -30,7 +30,7 @@ const RegisterPage = () => {
   const [selectedFaculty, setSelectedFaculty] = useState<number | null>(null);
   const [selectedDepartment, setSelectedDepartment] = useState<number | null>(null);
 
-  const [showPassword, setShowPassword] = useState(false); // додано
+  const [showPassword, setShowPassword] = useState(false); 
 
   const navigate = useNavigate();
 
