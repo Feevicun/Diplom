@@ -15,7 +15,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = process.env.PORT || 4000;
+const port = Number(process.env.PORT) || 4000;
 
 
 
@@ -24,7 +24,8 @@ const JWT_SECRET = "super_secret_key_change_this";
 
 // Middleware
 app.use(cors({
-  origin: "*"
+  origin: "*",
+  credentials: true
 }));
 
 app.use(express.json());
@@ -65,8 +66,11 @@ const PROJECT_STRUCTURES = {
   ]
 };
 
+// Тип ключів структури
+type ProjectType = keyof typeof PROJECT_STRUCTURES; // "diploma" | "coursework" | "practice"
+
 // Функція для ініціалізації структури проекту
-async function initializeProjectStructure(userId, projectType) {
+async function initializeProjectStructure(userId: number, projectType: ProjectType) {
   const structure = PROJECT_STRUCTURES[projectType];
   if (!structure) {
     throw new Error(`Unknown project type: ${projectType}`);
@@ -566,19 +570,19 @@ app.get("/api/user-chapters", authenticateToken, async (req: Request, res: Respo
     );
 
     // Форматуємо дані для фронтенду
-    const chapters = result.rows.map(row => ({
-      id: row.id,
-      key: row.key,
-      progress: row.progress,
-      status: row.status,
-      studentNote: row.student_note || '',
-      uploadedFile: row.uploaded_file_name ? {
-        name: row.uploaded_file_name,
-        uploadDate: row.uploaded_file_date ? new Date(row.uploaded_file_date).toLocaleDateString('uk-UA') : '',
-        size: row.uploaded_file_size || ''
-      } : undefined,
-      teacherComments: [] // Поки що порожній масив, можна розширити пізніше
-    }));
+    const chapters = result.rows.map((row: any) => ({
+  id: row.id,
+  key: row.key,
+  progress: row.progress,
+  status: row.status,
+  studentNote: row.student_note || '',
+  uploadedFile: row.uploaded_file_name ? {
+    name: row.uploaded_file_name,
+    uploadDate: row.uploaded_file_date ? new Date(row.uploaded_file_date).toLocaleDateString('uk-UA') : '',
+    size: row.uploaded_file_size || ''
+  } : undefined,
+  teacherComments: []
+}));
 
     res.json(chapters);
   } catch (err) {
@@ -935,6 +939,7 @@ app.delete("/api/resources/:id", authenticateToken, async (req: Request, res: Re
 });
 
 
+
 // ===== Serve frontend =====
 const frontendPath = path.join(__dirname, "../dist");
 
@@ -947,6 +952,6 @@ if (fs.existsSync(frontendPath)) {
 }
 
 // ===== Start server =====
-app.listen(PORT, () => {
-  console.log(`✅ Server running at http://localhost:${PORT}`);
+app.listen(port, '0.0.0.0', () => {
+  console.log(`✅ Server running at http://localhost:${port}`);
 });

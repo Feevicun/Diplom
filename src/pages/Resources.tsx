@@ -370,7 +370,7 @@ const Resources = () => {
     const fetchResources = async (): Promise<void> => {
       try {
         setIsLoading(true);
-        const response = await fetch('http://localhost:4000/api/resources');
+        const response = await fetch('/api/resources');
         if (response.ok) {
           const data = await response.json();
           setDbResources(data);
@@ -490,7 +490,7 @@ const Resources = () => {
         formattedLink = 'https://' + formattedLink;
       }
 
-      const response = await fetch('http://localhost:4000/api/resources', {
+      const response = await fetch('/api/resources', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -536,7 +536,7 @@ const Resources = () => {
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:4000/api/resources/${dbId}`, {
+      const response = await fetch(`/api/resources/${dbId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`

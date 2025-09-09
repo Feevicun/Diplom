@@ -38,7 +38,7 @@ const RegisterPage = () => {
   useEffect(() => {
     async function fetchFaculties() {
       try {
-        const res = await fetch("http://localhost:4000/api/faculties");
+        const res = await fetch("/api/faculties");
         if (!res.ok) throw new Error("Failed to load faculties");
         const data = await res.json();
         setFaculties(data);
@@ -60,7 +60,7 @@ const RegisterPage = () => {
 
     async function fetchDepartments() {
       try {
-        const res = await fetch(`http://localhost:4000/api/faculties/${selectedFaculty}/departments`);
+        const res = await fetch(`/api/faculties/${selectedFaculty}/departments`);
         if (!res.ok) throw new Error("Failed to load departments");
         const data = await res.json();
         setDepartments(data);
@@ -89,7 +89,7 @@ const RegisterPage = () => {
     };
 
     try {
-      const res = await fetch("http://localhost:4000/api/register", {
+      const res = await fetch("/api/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
@@ -102,7 +102,7 @@ const RegisterPage = () => {
       }
 
       // Auto-login after registration
-      const loginRes = await fetch("http://localhost:4000/api/login", {
+      const loginRes = await fetch("/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

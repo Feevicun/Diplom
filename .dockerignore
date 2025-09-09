@@ -1,0 +1,11 @@
+cat > .dockerignore << 'EOF'
+node_modules
+dist
+.git
+.gitignore
+README.md
+*.md
+Dockerfile*
+docker-compose.yml
+nginx.conf
+EOF
