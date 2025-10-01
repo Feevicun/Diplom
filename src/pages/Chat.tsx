@@ -48,6 +48,11 @@ type User = {
   lastSeen?: string;
   isContact?: boolean;
   phone?: string;
+  lastloginat?: string;
+  lastlogoutat?: string;
+  faculty_id?: number;
+  department_id?: number;
+  registeredat?: string;
 };
 
 type Chat = {
@@ -97,6 +102,8 @@ const ChatPage = () => {
   const [, setCalls] = useState<Call[]>([]);
   const [activeCall, setActiveCall] = useState<Call | null>(null);
   const [typingUsers, setTypingUsers] = useState<number[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Стани для голосових повідомлень
   const [isRecording, setIsRecording] = useState(false);
@@ -147,199 +154,294 @@ const ChatPage = () => {
   const audioProcessorRef = useRef<ScriptProcessorNode | null>(null);
   const audioDataRef = useRef<Float32Array[]>([]);
 
-  // Мокові дані
-  useEffect(() => {
-    const initialCurrentUser: User = {
-      id: 1,
-      name: "Ваше Ім'я",
-      email: "you@example.com",
-      role: "Користувач",
-      status: "online",
-      phone: "+380991234567"
-    };
-    
-    const initialUsers: User[] = [
-      { id: 2, name: "Олексій Петренко", email: "alex@example.com", role: "Викладач", status: "online", lastSeen: new Date().toISOString(), isContact: true, phone: "+380991234568" },
-      { id: 3, name: "Марія Коваленко", email: "maria@example.com", role: "Студент", status: "away", lastSeen: new Date().toISOString(), isContact: true, phone: "+380991234569" },
-      { id: 4, name: "Анна Сидорова", email: "anna@example.com", role: "Адмін", status: "offline", lastSeen: new Date().toISOString(), isContact: false, phone: "+380991234570" },
-      { id: 5, name: "Іван Іваненко", email: "ivan@example.com", role: "Студент", status: "online", lastSeen: new Date().toISOString(), isContact: true, phone: "+380991234571" },
-      { id: 6, name: "Катерина Мельник", email: "kate@example.com", role: "Викладач", status: "online", lastSeen: new Date().toISOString(), isContact: true, phone: "+380991234572" }
-    ];
-    
-    const initialChats: Chat[] = [
-      {
-        id: 1,
-        name: "Олексій Петренко",
-        type: 'direct',
-        participants: [initialCurrentUser, initialUsers[0]],
-        unreadCount: 3,
-        lastMessage: {
+  // Функції для роботи з API
+  const fetchCurrentUser = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        // Якщо токен відсутній, створюємо тестового користувача
+        const testUser: User = {
           id: 1,
-          senderId: 2,
-          senderName: "Олексій Петренко",
-          senderEmail: "alex@example.com",
-          content: "Привіт! Як справи з проектом?",
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          chatId: 1,
-          readBy: [1, 2]
+          name: "Тестовий Користувач",
+          email: "test@lnu.edu.ua",
+          role: "student",
+          status: 'online'
+        };
+        setCurrentUser(testUser);
+        return testUser;
+      }
+
+      const response = await fetch('/api/current-user', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
         },
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        isPinned: true
-      },
-      {
-        id: 2,
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch current user');
+      }
+
+      const data = await response.json();
+      
+      // Створюємо currentUser з даних API
+      const currentUserData: User = {
+        id: data.user.id || 1,
+        name: `${data.user.firstName} ${data.user.lastName}`,
+        email: data.user.email,
+        role: data.user.role,
+        status: 'online'
+      };
+      
+      setCurrentUser(currentUserData);
+      return currentUserData;
+    } catch (err) {
+      console.error('Error fetching current user:', err);
+      // Створюємо тестового користувача у разі помилки
+      const testUser: User = {
+        id: 1,
+        name: "Тестовий Користувач",
+        email: "test@lnu.edu.ua",
+        role: "student",
+        status: 'online'
+      };
+      setCurrentUser(testUser);
+      return testUser;
+    }
+  };
+
+  const fetchUsers = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      let response;
+
+      if (token) {
+        response = await fetch('/api/users', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+      } else {
+        // Якщо токен відсутній, використовуємо тестових користувачів
+        const testUsers: User[] = [
+          { id: 2, name: "Олексій Петренко", email: "alex@lnu.edu.ua", role: "student", status: "online", lastSeen: new Date().toISOString(), isContact: true },
+          { id: 3, name: "Марія Коваленко", email: "maria@lnu.edu.ua", role: "student", status: "away", lastSeen: new Date().toISOString(), isContact: true },
+          { id: 4, name: "Анна Сидорова", email: "anna@lnu.edu.ua", role: "teacher", status: "offline", lastSeen: new Date().toISOString(), isContact: false },
+          { id: 5, name: "Іван Іваненко", email: "ivan@lnu.edu.ua", role: "student", status: "online", lastSeen: new Date().toISOString(), isContact: true },
+          { id: 6, name: "Катерина Мельник", email: "kate@lnu.edu.ua", role: "teacher", status: "online", lastSeen: new Date().toISOString(), isContact: true }
+        ];
+        setUsers(testUsers);
+        setOnlineUsers([2, 5, 6]);
+        return testUsers;
+      }
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch users');
+      }
+
+      const usersData = await response.json();
+      
+      // Трансформуємо дані з API в наш формат User
+      const transformedUsers: User[] = usersData.map((user: any) => ({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        status: determineUserStatus(user.lastloginat, user.lastlogoutat),
+        lastSeen: user.lastlogoutat || user.lastloginat,
+        isContact: true,
+        faculty_id: user.faculty_id,
+        department_id: user.department_id,
+        lastloginat: user.lastloginat,
+        lastlogoutat: user.lastlogoutat
+      }));
+
+      setUsers(transformedUsers);
+      
+      // Визначаємо онлайн користувачів
+      const onlineUserIds = transformedUsers
+        .filter(user => user.status === 'online')
+        .map(user => user.id);
+      setOnlineUsers(onlineUserIds);
+      
+      return transformedUsers;
+    } catch (err) {
+      console.error('Error fetching users:', err);
+      // Використовуємо тестових користувачів у разі помилки
+      const testUsers: User[] = [
+        { id: 2, name: "Олексій Петренко", email: "alex@lnu.edu.ua", role: "student", status: "online", lastSeen: new Date().toISOString(), isContact: true },
+        { id: 3, name: "Марія Коваленко", email: "maria@lnu.edu.ua", role: "student", status: "away", lastSeen: new Date().toISOString(), isContact: true },
+        { id: 4, name: "Анна Сидорова", email: "anna@lnu.edu.ua", role: "teacher", status: "offline", lastSeen: new Date().toISOString(), isContact: false },
+        { id: 5, name: "Іван Іваненко", email: "ivan@lnu.edu.ua", role: "student", status: "online", lastSeen: new Date().toISOString(), isContact: true },
+        { id: 6, name: "Катерина Мельник", email: "kate@lnu.edu.ua", role: "teacher", status: "online", lastSeen: new Date().toISOString(), isContact: true }
+      ];
+      setUsers(testUsers);
+      setOnlineUsers([2, 5, 6]);
+      return testUsers;
+    }
+  };
+
+  // Функція для визначення статусу користувача
+  const determineUserStatus = (lastLogin: string, lastLogout: string): 'online' | 'offline' | 'away' => {
+    if (!lastLogin) return 'offline';
+    
+    const loginTime = new Date(lastLogin).getTime();
+    const logoutTime = lastLogout ? new Date(lastLogout).getTime() : null;
+    const now = new Date().getTime();
+    
+    // Якщо немає logoutTime або logoutTime пізніше за loginTime, вважаємо що користувач онлайн
+    if (!logoutTime || logoutTime < loginTime) {
+      // Перевіряємо чи не пройшло занадто багато часу з останнього логіну
+      const timeSinceLastAction = now - loginTime;
+      const fifteenMinutes = 15 * 60 * 1000;
+      
+      if (timeSinceLastAction < fifteenMinutes) {
+        return 'online';
+      } else {
+        return 'away';
+      }
+    }
+    
+    return 'offline';
+  };
+
+  // Функція для створення початкових чатів на основі реальних користувачів
+  const createInitialChats = (users: User[], currentUser: User) => {
+    const initialChats: Chat[] = [];
+    
+    // Створюємо прямі чати з деякими користувачами
+    const directChatUsers = users.slice(0, 3); // Беремо перших 3 користувачів для прикладу
+    
+    directChatUsers.forEach((user, index) => {
+      if (user.id !== currentUser.id) {
+        const chat: Chat = {
+          id: index + 1,
+          name: user.name,
+          type: 'direct',
+          participants: [currentUser, user],
+          unreadCount: index === 0 ? 3 : 0, // Перший чат має непрочитані повідомлення
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          isPinned: index === 0 // Перший чат закріплений
+        };
+        initialChats.push(chat);
+      }
+    });
+    
+    // Створюємо груповий чат
+    if (users.length >= 3) {
+      const groupParticipants = [currentUser, ...users.slice(0, 3)];
+      const groupChat: Chat = {
+        id: initialChats.length + 1,
         name: "Команда розробки",
         type: 'group',
-        participants: [initialCurrentUser, initialUsers[0], initialUsers[1], initialUsers[4]],
+        participants: groupParticipants,
         unreadCount: 0,
-        lastMessage: {
-          id: 2,
-          senderId: 3,
-          senderName: "Марія Коваленко",
-          senderEmail: "maria@example.com",
-          content: "Завтра о 10:00 зустріч",
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          chatId: 2,
-          readBy: [1, 3, 4]
-        },
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         description: "Чат для обговорення проектів",
-        admins: [1, 3]
-      },
-      {
-        id: 3,
-        name: "Анна Сидорова",
-        type: 'direct',
-        participants: [initialCurrentUser, initialUsers[2]],
-        unreadCount: 0,
-        lastMessage: {
-          id: 3,
-          senderId: 4,
-          senderName: "Анна Сидорова",
-          senderEmail: "anna@example.com",
-          content: "Дякую за допомогу! 👍",
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          chatId: 3,
-          readBy: [1, 4]
-        },
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      },
-      {
-        id: 4,
-        name: "Навчальний чат",
-        type: 'group',
-        participants: [initialCurrentUser, initialUsers[0], initialUsers[3], initialUsers[4]],
-        unreadCount: 12,
-        lastMessage: {
-          id: 4,
-          senderId: 5,
-          senderName: "Іван Іваненко",
-          senderEmail: "ivan@example.com",
-          content: "Хто буде на лекції?",
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          chatId: 4,
-          readBy: [5, 6, 7]
-        },
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        description: "Загальний чат для навчання",
-        admins: [1],
-        isPinned: true,
-        isMuted: true
-      },
-      {
-        id: 5,
-        name: "Старий чат",
-        type: 'direct',
-        participants: [initialCurrentUser, initialUsers[3]],
-        unreadCount: 0,
-        lastMessage: {
-          id: 5,
-          senderId: 5,
-          senderName: "Іван Іваненко",
-          senderEmail: "ivan@example.com",
-          content: "До зустрічі!",
-          timestamp: new Date(Date.now() - 86400000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          chatId: 5,
-          readBy: [1, 5]
-        },
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        isArchived: true
-      }
-    ];
+        admins: [currentUser.id]
+      };
+      initialChats.push(groupChat);
+    }
     
-    const initialMessages: Message[] = [
-      {
-        id: 1,
-        senderId: 2,
-        senderName: "Олексій Петренко",
-        senderEmail: "alex@example.com",
-        content: "Привіт! Як справи з проектом?",
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        chatId: 1,
-        readBy: [1, 2]
-      },
-      {
-        id: 2,
-        senderId: 1,
-        senderName: "Ви",
-        senderEmail: "you@example.com",
-        content: "Привіт! Все йде добре. Сьогодні закінчив основний функціонал.",
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        chatId: 1,
-        readBy: [1, 2]
-      },
-      {
-        id: 3,
-        senderId: 2,
-        senderName: "Олексій Петренко",
-        senderEmail: "alex@example.com",
-        content: "Чудово! Можеш показати результат завтра?",
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        chatId: 1,
-        readBy: [1, 2]
-      },
-      {
-        id: 4,
-        senderId: 1,
-        senderName: "Ви",
-        senderEmail: "you@example.com",
-        content: "Так, звісно. Ось скріншоти інтерфейсу:",
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        chatId: 1,
-        readBy: [1, 2],
-        attachment: {
-          name: "interface-preview.png",
-          url: "#",
-          type: "image",
-          size: "2.4 MB"
-        }
-      },
-      {
-        id: 5,
-        senderId: 2,
-        senderName: "Олексій Петренко",
-        senderEmail: "alex@example.com",
-        content: "Виглядає дуже добре! 👍",
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        chatId: 1,
-        readBy: [1, 2],
-        reactions: { "👍": 1 }
-      }
-    ];
-    
-    setCurrentUser(initialCurrentUser);
-    setUsers(initialUsers);
-    setChats(initialChats);
-    setMessages(initialMessages);
-    setOnlineUsers([1, 2, 5, 6]);
+    return initialChats;
+  };
 
-    // Виявлення браузера
-    detectBrowser();
+  // Функція для створення початкових повідомлень
+  const createInitialMessages = (chats: Chat[], currentUser: User) => {
+    const initialMessages: Message[] = [];
+    
+    chats.forEach(chat => {
+      if (chat.type === 'direct') {
+        const otherUser = chat.participants.find(p => p.id !== currentUser.id);
+        if (otherUser) {
+          const messages: Message[] = [
+            {
+              id: chat.id * 10 + 1,
+              senderId: otherUser.id,
+              senderName: otherUser.name,
+              senderEmail: otherUser.email,
+              content: "Привіт! Як справи?",
+              timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              chatId: chat.id,
+              readBy: [currentUser.id, otherUser.id]
+            },
+            {
+              id: chat.id * 10 + 2,
+              senderId: currentUser.id,
+              senderName: currentUser.name,
+              senderEmail: currentUser.email,
+              content: "Привіт! Все добре, дякую!",
+              timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              chatId: chat.id,
+              readBy: [currentUser.id, otherUser.id]
+            }
+          ];
+          initialMessages.push(...messages);
+        }
+      } else if (chat.type === 'group') {
+        const groupMessages: Message[] = [
+          {
+            id: chat.id * 10 + 1,
+            senderId: chat.participants[1].id,
+            senderName: chat.participants[1].name,
+            senderEmail: chat.participants[1].email,
+            content: "Привіт всім!",
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            chatId: chat.id,
+            readBy: chat.participants.map(p => p.id)
+          },
+          {
+            id: chat.id * 10 + 2,
+            senderId: currentUser.id,
+            senderName: currentUser.name,
+            senderEmail: currentUser.email,
+            content: "Вітаю в груповому чаті!",
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            chatId: chat.id,
+            readBy: chat.participants.map(p => p.id)
+          }
+        ];
+        initialMessages.push(...groupMessages);
+      }
+    });
+    
+    return initialMessages;
+  };
+
+  // Завантаження даних при монтуванні компонента
+  useEffect(() => {
+    const loadData = async () => {
+      setLoading(true);
+      try {
+        const currentUserData = await fetchCurrentUser();
+        if (!currentUserData) {
+          setError('Не вдалося завантажити дані поточного користувача');
+          setLoading(false);
+          return;
+        }
+
+        const usersData = await fetchUsers();
+        const initialChats = createInitialChats(usersData, currentUserData);
+        const initialMessages = createInitialMessages(initialChats, currentUserData);
+
+        setChats(initialChats);
+        setMessages(initialMessages);
+        
+        // Виявлення браузера
+        detectBrowser();
+
+      } catch (err) {
+        console.error('Error loading data:', err);
+        setError('Не вдалося завантажити дані');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
 
     // Встановити початковий стан для мобільних пристроїв
     const handleResize = () => {
@@ -588,18 +690,18 @@ const ChatPage = () => {
   };
 
   const handleEndCall = () => {
-  if (!activeCall) return;
-  
-  const endedCall: Call = {
-    ...activeCall,
-    status: 'ended', // This matches the union type
-    endTime: new Date().toISOString(),
-    duration: Math.floor((new Date().getTime() - new Date(activeCall.startTime).getTime()) / 1000)
+    if (!activeCall) return;
+    
+    const endedCall: Call = {
+      ...activeCall,
+      status: 'ended',
+      endTime: new Date().toISOString(),
+      duration: Math.floor((new Date().getTime() - new Date(activeCall.startTime).getTime()) / 1000)
+    };
+    
+    setCalls(prev => prev.map(call => call.id === activeCall.id ? endedCall : call));
+    setActiveCall(null);
   };
-  
-  setCalls(prev => prev.map(call => call.id === activeCall.id ? endedCall : call));
-  setActiveCall(null);
-};
 
   const handleAddToContacts = (userId: number) => {
     setUsers(prev => prev.map(user => 
@@ -1148,23 +1250,23 @@ const ChatPage = () => {
   };
 
   const renderAvatar = (name: string, isOnline?: boolean, size: 'small' | 'default' | 'large' = 'default') => {
-  const sizeClasses = {
-    small: 'w-6 h-6 text-xs',
-    default: 'w-8 h-8 text-xs',
-    large: 'w-10 h-10 text-sm'
-  } as const; // Add 'as const' for type safety
-  
-  return (
-    <div className="relative">
-      <div className={`${sizeClasses[size]} bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center text-primary-foreground font-semibold`}>
-        {getInitials(name)}
+    const sizeClasses = {
+      small: 'w-6 h-6 text-xs',
+      default: 'w-8 h-8 text-xs',
+      large: 'w-10 h-10 text-sm'
+    };
+    
+    return (
+      <div className="relative">
+        <div className={`${sizeClasses[size]} bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center text-primary-foreground font-semibold`}>
+          {getInitials(name)}
+        </div>
+        {isOnline && (
+          <div className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-green-500 rounded-full border border-card"></div>
+        )}
       </div>
-      {isOnline && (
-        <div className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-green-500 rounded-full border border-card"></div>
-      )}
-    </div>
-  );
-};
+    );
+  };
 
   // Обробник правого кліку миші
   const handleRightClick = (e: React.MouseEvent, chat: Chat) => {
@@ -1613,6 +1715,36 @@ const ChatPage = () => {
       </div>
     );
   };
+
+  // Додамо обробку стану завантаження та помилок
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Завантаження чату...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <AlertCircle className="w-12 h-12 text-destructive mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-foreground mb-2">Помилка</h2>
+          <p className="text-muted-foreground mb-4">{error}</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+          >
+            Спробувати знову
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -2096,7 +2228,7 @@ const ChatPage = () => {
                   <div className="px-4 py-2 bg-accent/10 border-t border-accent/20">
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
-                                                <p className="text-xs font-medium text-accent-foreground">
+                        <p className="text-xs font-medium text-accent-foreground">
                           Відповідь {replyingTo.senderId === currentUser?.id ? 'собі' : replyingTo.senderName}
                         </p>
                         <p className="text-xs text-muted-foreground truncate">{replyingTo.content}</p>
