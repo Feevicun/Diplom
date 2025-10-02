@@ -159,7 +159,6 @@ const ChatPage = () => {
     try {
       const token = localStorage.getItem('token');
       if (!token) {
-        // Якщо токен відсутній, створюємо тестового користувача
         const testUser: User = {
           id: 1,
           name: "Тестовий Користувач",
@@ -184,7 +183,6 @@ const ChatPage = () => {
 
       const data = await response.json();
       
-      // Створюємо currentUser з даних API
       const currentUserData: User = {
         id: data.user.id || 1,
         name: `${data.user.firstName} ${data.user.lastName}`,
@@ -197,7 +195,6 @@ const ChatPage = () => {
       return currentUserData;
     } catch (err) {
       console.error('Error fetching current user:', err);
-      // Створюємо тестового користувача у разі помилки
       const testUser: User = {
         id: 1,
         name: "Тестовий Користувач",
@@ -223,16 +220,14 @@ const ChatPage = () => {
           },
         });
       } else {
-        // Якщо токен відсутній, використовуємо тестових користувачів
         const testUsers: User[] = [
           { id: 2, name: "Олексій Петренко", email: "alex@lnu.edu.ua", role: "student", status: "online", lastSeen: new Date().toISOString(), isContact: true },
           { id: 3, name: "Марія Коваленко", email: "maria@lnu.edu.ua", role: "student", status: "away", lastSeen: new Date().toISOString(), isContact: true },
           { id: 4, name: "Анна Сидорова", email: "anna@lnu.edu.ua", role: "teacher", status: "offline", lastSeen: new Date().toISOString(), isContact: false },
           { id: 5, name: "Іван Іваненко", email: "ivan@lnu.edu.ua", role: "student", status: "online", lastSeen: new Date().toISOString(), isContact: true },
-          { id: 6, name: "Катерина Мельник", email: "kate@lnu.edu.ua", role: "teacher", status: "online", lastSeen: new Date().toISOString(), isContact: true }
         ];
         setUsers(testUsers);
-        setOnlineUsers([2, 5, 6]);
+        setOnlineUsers([2, 5]);
         return testUsers;
       }
 
@@ -242,7 +237,6 @@ const ChatPage = () => {
 
       const usersData = await response.json();
       
-      // Трансформуємо дані з API в наш формат User
       const transformedUsers: User[] = usersData.map((user: any) => ({
         id: user.id,
         name: user.name,
@@ -259,7 +253,6 @@ const ChatPage = () => {
 
       setUsers(transformedUsers);
       
-      // Визначаємо онлайн користувачів
       const onlineUserIds = transformedUsers
         .filter(user => user.status === 'online')
         .map(user => user.id);
@@ -268,17 +261,176 @@ const ChatPage = () => {
       return transformedUsers;
     } catch (err) {
       console.error('Error fetching users:', err);
-      // Використовуємо тестових користувачів у разі помилки
       const testUsers: User[] = [
         { id: 2, name: "Олексій Петренко", email: "alex@lnu.edu.ua", role: "student", status: "online", lastSeen: new Date().toISOString(), isContact: true },
         { id: 3, name: "Марія Коваленко", email: "maria@lnu.edu.ua", role: "student", status: "away", lastSeen: new Date().toISOString(), isContact: true },
         { id: 4, name: "Анна Сидорова", email: "anna@lnu.edu.ua", role: "teacher", status: "offline", lastSeen: new Date().toISOString(), isContact: false },
         { id: 5, name: "Іван Іваненко", email: "ivan@lnu.edu.ua", role: "student", status: "online", lastSeen: new Date().toISOString(), isContact: true },
-        { id: 6, name: "Катерина Мельник", email: "kate@lnu.edu.ua", role: "teacher", status: "online", lastSeen: new Date().toISOString(), isContact: true }
       ];
       setUsers(testUsers);
-      setOnlineUsers([2, 5, 6]);
+      setOnlineUsers([2, 5]);
       return testUsers;
+    }
+  };
+
+  // Отримання чатів з бекенду
+  const fetchChats = async (currentUser: User) => {
+    try {
+      const token = localStorage.getItem('token');
+      
+      if (!token) {
+        const testChats = createInitialChats(users, currentUser);
+        return testChats;
+      }
+
+      const response = await fetch('/api/chats', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch chats');
+      }
+
+      const chatsData = await response.json();
+      
+      const transformedChats: Chat[] = chatsData.map((chat: any) => ({
+        id: chat.id,
+        name: chat.name,
+        type: chat.type,
+        participants: chat.participants,
+        unreadCount: 0,
+        createdAt: chat.created_at,
+        updatedAt: chat.updated_at,
+        isPinned: chat.is_pinned,
+        isArchived: chat.is_archived,
+        isMuted: chat.is_muted,
+        description: chat.description,
+        admins: chat.admins,
+        image: chat.image
+      }));
+
+      return transformedChats;
+    } catch (err) {
+      console.error('Error fetching chats:', err);
+      const testChats = createInitialChats(users, currentUser);
+      return testChats;
+    }
+  };
+
+  // Отримання повідомлень для активного чату
+  const fetchMessages = async (chatId: number) => {
+    try {
+      const token = localStorage.getItem('token');
+      
+      if (!token) {
+        return [];
+      }
+
+      const response = await fetch(`/api/chats/${chatId}/messages`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch messages');
+      }
+
+      const messagesData = await response.json();
+      
+      const transformedMessages: Message[] = messagesData.map((msg: any) => ({
+        id: msg.id,
+        senderId: msg.senderId,
+        senderName: msg.senderName,
+        senderEmail: msg.senderEmail,
+        content: msg.content,
+        timestamp: new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        attachment: msg.attachment,
+        chatId: chatId,
+        isEdited: msg.isEdited,
+        reactions: msg.reactions,
+        replyTo: msg.replyTo,
+        readBy: msg.readBy,
+        isDeleted: msg.isDeleted
+      }));
+
+      return transformedMessages;
+    } catch (err) {
+      console.error('Error fetching messages:', err);
+      return [];
+    }
+  };
+
+  // Створення чату через API
+  const createChat = async (chatData: {
+    name: string;
+    type: 'direct' | 'group';
+    participantIds: number[];
+    description?: string;
+  }) => {
+    try {
+      const token = localStorage.getItem('token');
+      
+      if (!token) {
+        return { id: Date.now() };
+      }
+
+      const response = await fetch('/api/chats', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(chatData),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create chat');
+      }
+
+      const newChat = await response.json();
+      return newChat;
+    } catch (err) {
+      console.error('Error creating chat:', err);
+      return { id: Date.now() };
+    }
+  };
+
+  // Відправка повідомлення через API
+  const sendMessageToAPI = async (messageData: {
+    chatId: number;
+    senderId: number;
+    content: string;
+    attachment?: any;
+  }) => {
+    try {
+      const token = localStorage.getItem('token');
+      
+      if (!token) {
+        return { success: true };
+      }
+
+      const response = await fetch(`/api/chats/${messageData.chatId}/messages`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(messageData),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to send message');
+      }
+
+      return await response.json();
+    } catch (err) {
+      console.error('Error sending message:', err);
+      return { success: false };
     }
   };
 
@@ -290,9 +442,7 @@ const ChatPage = () => {
     const logoutTime = lastLogout ? new Date(lastLogout).getTime() : null;
     const now = new Date().getTime();
     
-    // Якщо немає logoutTime або logoutTime пізніше за loginTime, вважаємо що користувач онлайн
     if (!logoutTime || logoutTime < loginTime) {
-      // Перевіряємо чи не пройшло занадто багато часу з останнього логіну
       const timeSinceLastAction = now - loginTime;
       const fifteenMinutes = 15 * 60 * 1000;
       
@@ -306,12 +456,11 @@ const ChatPage = () => {
     return 'offline';
   };
 
-  // Функція для створення початкових чатів на основі реальних користувачів
+  // Функція для створення початкових чатів (для тестових даних)
   const createInitialChats = (users: User[], currentUser: User) => {
     const initialChats: Chat[] = [];
     
-    // Створюємо прямі чати з деякими користувачами
-    const directChatUsers = users.slice(0, 3); // Беремо перших 3 користувачів для прикладу
+    const directChatUsers = users.slice(0, 2);
     
     directChatUsers.forEach((user, index) => {
       if (user.id !== currentUser.id) {
@@ -320,95 +469,16 @@ const ChatPage = () => {
           name: user.name,
           type: 'direct',
           participants: [currentUser, user],
-          unreadCount: index === 0 ? 3 : 0, // Перший чат має непрочитані повідомлення
+          unreadCount: index === 0 ? 1 : 0,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
-          isPinned: index === 0 // Перший чат закріплений
+          isPinned: index === 0
         };
         initialChats.push(chat);
       }
     });
     
-    // Створюємо груповий чат
-    if (users.length >= 3) {
-      const groupParticipants = [currentUser, ...users.slice(0, 3)];
-      const groupChat: Chat = {
-        id: initialChats.length + 1,
-        name: "Команда розробки",
-        type: 'group',
-        participants: groupParticipants,
-        unreadCount: 0,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        description: "Чат для обговорення проектів",
-        admins: [currentUser.id]
-      };
-      initialChats.push(groupChat);
-    }
-    
     return initialChats;
-  };
-
-  // Функція для створення початкових повідомлень
-  const createInitialMessages = (chats: Chat[], currentUser: User) => {
-    const initialMessages: Message[] = [];
-    
-    chats.forEach(chat => {
-      if (chat.type === 'direct') {
-        const otherUser = chat.participants.find(p => p.id !== currentUser.id);
-        if (otherUser) {
-          const messages: Message[] = [
-            {
-              id: chat.id * 10 + 1,
-              senderId: otherUser.id,
-              senderName: otherUser.name,
-              senderEmail: otherUser.email,
-              content: "Привіт! Як справи?",
-              timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-              chatId: chat.id,
-              readBy: [currentUser.id, otherUser.id]
-            },
-            {
-              id: chat.id * 10 + 2,
-              senderId: currentUser.id,
-              senderName: currentUser.name,
-              senderEmail: currentUser.email,
-              content: "Привіт! Все добре, дякую!",
-              timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-              chatId: chat.id,
-              readBy: [currentUser.id, otherUser.id]
-            }
-          ];
-          initialMessages.push(...messages);
-        }
-      } else if (chat.type === 'group') {
-        const groupMessages: Message[] = [
-          {
-            id: chat.id * 10 + 1,
-            senderId: chat.participants[1].id,
-            senderName: chat.participants[1].name,
-            senderEmail: chat.participants[1].email,
-            content: "Привіт всім!",
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            chatId: chat.id,
-            readBy: chat.participants.map(p => p.id)
-          },
-          {
-            id: chat.id * 10 + 2,
-            senderId: currentUser.id,
-            senderName: currentUser.name,
-            senderEmail: currentUser.email,
-            content: "Вітаю в груповому чаті!",
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            chatId: chat.id,
-            readBy: chat.participants.map(p => p.id)
-          }
-        ];
-        initialMessages.push(...groupMessages);
-      }
-    });
-    
-    return initialMessages;
   };
 
   // Завантаження даних при монтуванні компонента
@@ -423,12 +493,10 @@ const ChatPage = () => {
           return;
         }
 
-        const usersData = await fetchUsers();
-        const initialChats = createInitialChats(usersData, currentUserData);
-        const initialMessages = createInitialMessages(initialChats, currentUserData);
+        await fetchUsers();
+        const chatsData = await fetchChats(currentUserData);
 
-        setChats(initialChats);
-        setMessages(initialMessages);
+        setChats(chatsData);
         
         // Виявлення браузера
         detectBrowser();
@@ -443,7 +511,6 @@ const ChatPage = () => {
 
     loadData();
 
-    // Встановити початковий стан для мобільних пристроїв
     const handleResize = () => {
       if (window.innerWidth >= 768) {
         setShowChatList(true);
@@ -458,6 +525,18 @@ const ChatPage = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // Завантаження повідомлень при зміні активного чату
+  useEffect(() => {
+    const loadMessages = async () => {
+      if (activeChat) {
+        const messagesData = await fetchMessages(activeChat.id);
+        setMessages(messagesData);
+      }
+    };
+
+    loadMessages();
+  }, [activeChat]);
+
   // Виявлення браузера
   const detectBrowser = () => {
     const userAgent = navigator.userAgent;
@@ -468,7 +547,6 @@ const ChatPage = () => {
     
     setBrowserInfo({ isSafari, isIOS, version });
     
-    // Перевірка підтримки аудіо
     checkAudioSupport(isSafari, version);
   };
 
@@ -480,7 +558,6 @@ const ChatPage = () => {
       return;
     }
     
-    // Спеціальна перевірка для Safari
     if (isSafari) {
       if (version < 14.1) {
         setHasAudioSupport(false);
@@ -507,7 +584,6 @@ const ChatPage = () => {
       return;
     }
     
-    // Для інших браузерів
     const hasSupport = [
       'audio/webm',
       'audio/webm;codecs=opus',
@@ -603,7 +679,6 @@ const ChatPage = () => {
       if (audioUrl) {
         URL.revokeObjectURL(audioUrl);
       }
-      // Очистити всі аудіо URL
       messages.forEach(msg => {
         if (msg.attachment?.type === 'audio' && msg.attachment.url) {
           URL.revokeObjectURL(msg.attachment.url);
@@ -623,7 +698,7 @@ const ChatPage = () => {
   const unpinnedChats = chats.filter(chat => !chat.isPinned && !chat.isArchived);
   const archivedChats = chats.filter(chat => chat.isArchived);
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if ((!newMessage.trim() && !file) || !activeChat || !currentUser) return;
 
     const message: Message = {
@@ -645,17 +720,37 @@ const ChatPage = () => {
       replyTo: replyingTo?.id
     };
 
+    // Додаємо повідомлення локально
     setMessages(prev => [...prev, message]);
     setNewMessage('');
     setFile(null);
     setReplyingTo(null);
     setTypingUsers([]);
     
+    // Оновлюємо список чатів
     setChats(prev => prev.map(chat => 
       chat.id === activeChat.id 
         ? { ...chat, lastMessage: message, updatedAt: new Date().toISOString(), unreadCount: 0 }
         : chat
     ));
+
+    // Відправляємо повідомлення на бекенд
+    try {
+      await sendMessageToAPI({
+        chatId: activeChat.id,
+        senderId: currentUser.id,
+        content: newMessage,
+        attachment: file ? {
+          name: file.name,
+          type: file.type.startsWith('image/') ? 'image' : 
+                file.type.startsWith('video/') ? 'video' : 
+                file.type.startsWith('audio/') ? 'audio' : 'file',
+          size: `${(file.size / 1024 / 1024).toFixed(1)} MB`
+        } : undefined
+      });
+    } catch (err) {
+      console.error('Failed to send message to server:', err);
+    }
   };
 
   const handleDeleteMessage = (messageId: number) => {
@@ -680,7 +775,6 @@ const ChatPage = () => {
     setActiveCall(call);
     setCalls(prev => [...prev, call]);
     
-    // Імітація відповіді на дзвінок через 5 секунд
     setTimeout(() => {
       if (activeCall?.id === call.id) {
         setActiveCall(prev => prev ? { ...prev, status: 'ongoing' } : null);
@@ -709,13 +803,155 @@ const ChatPage = () => {
     ));
   };
 
+  const handleCreateDirectChat = async (userId: number) => {
+    const user = users.find(u => u.id === userId);
+    if (!user || !currentUser) return;
+
+    const existingChat = chats.find(chat => 
+      chat.type === 'direct' && chat.participants.some(p => p.id === userId)
+    );
+
+    if (existingChat) {
+      setActiveChat(existingChat);
+      setShowNewChatDialog(false);
+      return;
+    }
+
+    try {
+      const newChatData = await createChat({
+        name: user.name,
+        type: 'direct',
+        participantIds: [userId],
+        description: `Особистий чат з ${user.name}`
+      });
+
+      const newChat: Chat = {
+        id: newChatData.id,
+        name: user.name,
+        type: 'direct',
+        participants: [currentUser, user],
+        unreadCount: 0,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+
+      setChats(prev => [...prev, newChat]);
+      setActiveChat(newChat);
+      setShowNewChatDialog(false);
+    } catch (err) {
+      console.error('Failed to create chat:', err);
+    }
+  };
+
+  const handleCreateGroupChat = async () => {
+    if (!groupChatName.trim() || selectedUsers.length === 0 || !currentUser) return;
+
+    try {
+      const newChatData = await createChat({
+        name: groupChatName,
+        type: 'group',
+        participantIds: selectedUsers,
+        description: `Груповий чат: ${groupChatName}`
+      });
+
+      const participants = [currentUser, ...users.filter(u => selectedUsers.includes(u.id))];
+
+      const newChat: Chat = {
+        id: newChatData.id,
+        name: groupChatName,
+        type: 'group',
+        participants,
+        unreadCount: 0,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        admins: [currentUser.id],
+        description: `Груповий чат: ${groupChatName}`
+      };
+
+      setChats(prev => [...prev, newChat]);
+      setActiveChat(newChat);
+      setShowNewGroupDialog(false);
+      setGroupChatName('');
+      setSelectedUsers([]);
+      setSearchTerm('');
+    } catch (err) {
+      console.error('Failed to create group chat:', err);
+    }
+  };
+
+  const handleReaction = (messageId: number, reaction: string) => {
+    setMessages(prev => prev.map(msg => {
+      if (msg.id === messageId) {
+        const reactions = { ...msg.reactions };
+        if (reactions[reaction]) {
+          reactions[reaction] += 1;
+        } else {
+          reactions[reaction] = 1;
+        }
+        return { ...msg, reactions };
+      }
+      return msg;
+    }));
+  };
+
+  const handleEditMessage = () => {
+    if (!editingMessage || !newMessage.trim()) return;
+
+    setMessages(prev => prev.map(msg => 
+      msg.id === editingMessage.id 
+        ? { ...msg, content: newMessage, isEdited: true }
+        : msg
+    ));
+    
+    setEditingMessage(null);
+    setNewMessage('');
+  };
+
+  const getInitials = (name: string) => {
+    return name.split(' ').map(n => n[0]?.toUpperCase()).join('');
+  };
+
+  const formatLastSeen = (lastSeen: string) => {
+    const now = new Date();
+    const seenDate = new Date(lastSeen);
+    const diffMinutes = Math.floor((now.getTime() - seenDate.getTime()) / 60000);
+    
+    if (diffMinutes < 1) return 'щойно';
+    if (diffMinutes < 60) return `${diffMinutes} хв тому`;
+    if (diffMinutes < 1440) return `${Math.floor(diffMinutes / 60)} год тому`;
+    return `${Math.floor(diffMinutes / 1440)} дн тому`;
+  };
+
+  const formatCallDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const renderAvatar = (name: string, isOnline?: boolean, size: 'small' | 'default' | 'large' = 'default') => {
+    const sizeClasses = {
+      small: 'w-6 h-6 text-xs',
+      default: 'w-8 h-8 text-xs',
+      large: 'w-10 h-10 text-sm'
+    };
+    
+    return (
+      <div className="relative">
+        <div className={`${sizeClasses[size]} bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center text-primary-foreground font-semibold`}>
+          {getInitials(name)}
+        </div>
+        {isOnline && (
+          <div className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-green-500 rounded-full border border-card"></div>
+        )}
+      </div>
+    );
+  };
+
   // Функція для відкриття налаштувань браузера
   const openBrowserSettings = () => {
     if (browserInfo.isIOS) {
-      // Для iOS
       window.open('app-settings:');
     } else {
-      // Інструкції для десктопних браузерів
       setRecordingError(
         "Будь ласка, дозвольте доступ до мікрофона в налаштуваннях браузера. " +
         "Зазвичай це можна знайти в налаштуваннях приватності або дозволів сайту."
@@ -734,7 +970,6 @@ const ChatPage = () => {
         return;
       }
 
-      // Спеціальні налаштування для Safari
       let mimeTypes;
       if (browserInfo.isSafari) {
         mimeTypes = [
@@ -767,7 +1002,6 @@ const ChatPage = () => {
         return;
       }
 
-      // Особливі налаштування для Safari
       const constraints = browserInfo.isSafari ? {
         audio: {
           echoCancellation: true,
@@ -787,14 +1021,12 @@ const ChatPage = () => {
       
       const options = { mimeType: supportedMimeType };
       
-      // Обробка помилок для Safari
       let recorder;
       try {
         recorder = new MediaRecorder(stream, options);
       } catch (error) {
         console.error('Помилка створення MediaRecorder:', error);
         
-        // Спробувати без options для Safari
         if (browserInfo.isSafari) {
           try {
             recorder = new MediaRecorder(stream);
@@ -926,7 +1158,6 @@ const ChatPage = () => {
       
       setRecordingTimer(timer);
       
-      // Зупинити запис через 60 секунд
       setTimeout(() => {
         if (isRecording) {
           stopRecordingFallback();
@@ -945,7 +1176,6 @@ const ChatPage = () => {
       audioProcessorRef.current.disconnect();
       audioContextRef.current.close();
       
-      // Конвертувати дані в WAV
       const wavBlob = convertToWav(audioDataRef.current, 44100);
       setRecordedAudio(wavBlob);
       setAudioUrl(URL.createObjectURL(wavBlob));
@@ -966,7 +1196,6 @@ const ChatPage = () => {
     const buffer = new ArrayBuffer(44 + audioData.length * 2);
     const view = new DataView(buffer);
     
-    // WAV header
     const writeString = (offset: number, string: string) => {
       for (let i = 0; i < string.length; i++) {
         view.setUint8(offset + i, string.charCodeAt(i));
@@ -987,7 +1216,6 @@ const ChatPage = () => {
     writeString(36, 'data');
     view.setUint32(40, audioData.length * 2, true);
     
-    // Audio data
     let offset = 44;
     for (let i = 0; i < audioData.length; i++) {
       const samples = audioData[i];
@@ -1061,7 +1289,7 @@ const ChatPage = () => {
   };
 
   // Функція для відправки голосового повідомлення
-  const sendVoiceMessage = () => {
+  const sendVoiceMessage = async () => {
     if (!recordedAudio || !activeChat || !currentUser) return;
 
     const message: Message = {
@@ -1092,6 +1320,22 @@ const ChatPage = () => {
         ? { ...chat, lastMessage: message, updatedAt: new Date().toISOString(), unreadCount: 0 }
         : chat
     ));
+
+    // Відправляємо голосове повідомлення на бекенд
+    try {
+      await sendMessageToAPI({
+        chatId: activeChat.id,
+        senderId: currentUser.id,
+        content: "Голосове повідомлення",
+        attachment: {
+          name: usingAudioWorkaround ? "voice-message.wav" : "voice-message.webm",
+          type: "audio",
+          size: `${(recordedAudio.size / 1024).toFixed(1)} KB`
+        }
+      });
+    } catch (err) {
+      console.error('Failed to send voice message to server:', err);
+    }
   };
 
   // Функція для скасування запису
@@ -1106,7 +1350,6 @@ const ChatPage = () => {
   // Функція для відтворення аудіо повідомлення
   const playAudioMessage = (messageId: number, blob: Blob) => {
     if (currentlyPlaying === messageId) {
-      // Якщо вже відтворюється це повідомлення - зупинити
       if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current = null;
@@ -1115,12 +1358,10 @@ const ChatPage = () => {
       return;
     }
     
-    // Зупинити поточне відтворення
     if (audioRef.current) {
       audioRef.current.pause();
     }
     
-    // Створити нове аудіо
     const url = URL.createObjectURL(blob);
     const audio = new Audio(url);
     audioRef.current = audio;
@@ -1142,130 +1383,6 @@ const ChatPage = () => {
     });
     
     setCurrentlyPlaying(messageId);
-  };
-
-  const handleCreateDirectChat = (userId: number) => {
-    const user = users.find(u => u.id === userId);
-    if (!user || !currentUser) return;
-
-    const existingChat = chats.find(chat => 
-      chat.type === 'direct' && chat.participants.some(p => p.id === userId)
-    );
-
-    if (existingChat) {
-      setActiveChat(existingChat);
-      setShowNewChatDialog(false);
-      setMessages(messages.filter(m => m.chatId === existingChat.id));
-      return;
-    }
-
-    const newChat: Chat = {
-      id: Date.now(),
-      name: user.name,
-      type: 'direct',
-      participants: [currentUser, user],
-      unreadCount: 0,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-
-    setChats(prev => [...prev, newChat]);
-    setActiveChat(newChat);
-    setMessages([]);
-    setShowNewChatDialog(false);
-  };
-
-  const handleCreateGroupChat = () => {
-    if (!groupChatName.trim() || selectedUsers.length === 0 || !currentUser) return;
-
-    const participants = [currentUser, ...users.filter(u => selectedUsers.includes(u.id))];
-
-    const newChat: Chat = {
-      id: Date.now(),
-      name: groupChatName,
-      type: 'group',
-      participants,
-      unreadCount: 0,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      admins: [currentUser.id]
-    };
-
-    setChats(prev => [...prev, newChat]);
-    setActiveChat(newChat);
-    setMessages([]);
-    setShowNewGroupDialog(false);
-    setGroupChatName('');
-    setSelectedUsers([]);
-    setSearchTerm('');
-  };
-
-  const handleReaction = (messageId: number, reaction: string) => {
-    setMessages(prev => prev.map(msg => {
-      if (msg.id === messageId) {
-        const reactions = { ...msg.reactions };
-        if (reactions[reaction]) {
-          reactions[reaction] += 1;
-        } else {
-          reactions[reaction] = 1;
-        }
-        return { ...msg, reactions };
-      }
-      return msg;
-    }));
-  };
-
-  const handleEditMessage = () => {
-    if (!editingMessage || !newMessage.trim()) return;
-
-    setMessages(prev => prev.map(msg => 
-      msg.id === editingMessage.id 
-        ? { ...msg, content: newMessage, isEdited: true }
-        : msg
-    ));
-    
-    setEditingMessage(null);
-    setNewMessage('');
-  };
-
-  const getInitials = (name: string) => {
-    return name.split(' ').map(n => n[0]?.toUpperCase()).join('');
-  };
-
-  const formatLastSeen = (lastSeen: string) => {
-    const now = new Date();
-    const seenDate = new Date(lastSeen);
-    const diffMinutes = Math.floor((now.getTime() - seenDate.getTime()) / 60000);
-    
-    if (diffMinutes < 1) return 'щойно';
-    if (diffMinutes < 60) return `${diffMinutes} хв тому`;
-    if (diffMinutes < 1440) return `${Math.floor(diffMinutes / 60)} год тому`;
-    return `${Math.floor(diffMinutes / 1440)} дн тому`;
-  };
-
-  const formatCallDuration = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  const renderAvatar = (name: string, isOnline?: boolean, size: 'small' | 'default' | 'large' = 'default') => {
-    const sizeClasses = {
-      small: 'w-6 h-6 text-xs',
-      default: 'w-8 h-8 text-xs',
-      large: 'w-10 h-10 text-sm'
-    };
-    
-    return (
-      <div className="relative">
-        <div className={`${sizeClasses[size]} bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center text-primary-foreground font-semibold`}>
-          {getInitials(name)}
-        </div>
-        {isOnline && (
-          <div className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-green-500 rounded-full border border-card"></div>
-        )}
-      </div>
-    );
   };
 
   // Обробник правого кліку миші
