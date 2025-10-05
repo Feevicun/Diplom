@@ -11,7 +11,6 @@ import {
 import { Progress } from '@/components/ui/progress';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Calendar,
   FileText,
@@ -518,7 +517,7 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background flex">
+    <div className="min-h-screen flex bg-[var(--background)]">
       {/* Desktop Sidebar - показується тільки на великих екранах */}
       <div className="hidden md:block">
         <Sidebar />
@@ -548,8 +547,7 @@ const Dashboard = () => {
       <div className="flex-1 flex flex-col">
         {/* Header завжди присутній */}
         <Header />
-        <main className="flex-1">
-          <ScrollArea className="h-[calc(100vh-4rem)]">
+        <main className="flex-1 overflow-y-auto bg-[var(--background)]">
             {/* Контент з відступом зліва тільки на мобільних для бургер кнопки */}
             <div className="p-8 lg:p-8 space-y-8 pb-20 max-w-7xl mx-auto">
               <div className="rounded-2xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-8 border">
@@ -885,7 +883,6 @@ const Dashboard = () => {
                 </CardContent>
               </Card>
             </div>
-          </ScrollArea>
         </main>
       </div>
     </div>

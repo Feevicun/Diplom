@@ -15,9 +15,10 @@ import {
   LogOut,
   ChevronRight,
   Search,
-  Book
+  Book,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 // Імпортуємо типи
 import type { User, MenuItemType } from '../types/types';
@@ -141,8 +142,8 @@ const Sidebar = () => {
 
   return (
     <div className="w-72 h-screen bg-[--sidebar] text-[--sidebar-foreground] border-r flex flex-col">
-      {/* Logo Section */}
-      <div className="p-6 border-b">
+      {/* Header */}
+      <div className="p-6 border-b flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
             <Search className="h-4 w-4 text-primary-foreground" />
@@ -154,43 +155,45 @@ const Sidebar = () => {
         </div>
       </div>
 
-      {/* Navigation */}
-      <div className="flex-1 px-4 py-6 space-y-8">
-        <div className="space-y-2">
-          <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-3 mb-3">
-            {t('sidebar.sectionMain')}
-          </h2>
-          <nav className="space-y-1">
-            {mainMenuItems.map((item) => (
-              <MenuItem
-                key={item.href}
-                item={item}
-                isActive={location.pathname === item.href}
-              />
-            ))}
-          </nav>
-        </div>
+      {/* Navigation з ScrollArea */}
+      <ScrollArea className="flex-1">
+        <div className="px-4 py-6 space-y-8">
+          <div className="space-y-2">
+            <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-3 mb-3">
+              {t('sidebar.sectionMain')}
+            </h2>
+            <nav className="space-y-1">
+              {mainMenuItems.map((item) => (
+                <MenuItem
+                  key={item.href}
+                  item={item}
+                  isActive={location.pathname === item.href}
+                />
+              ))}
+            </nav>
+          </div>
 
-        <Separator />
+          <Separator />
 
-        <div className="space-y-2">
-          <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-3 mb-3">
-            {t('sidebar.sectionTools')}
-          </h2>
-          <nav className="space-y-1">
-            {toolsItems.map((item) => (
-              <MenuItem
-                key={item.href}
-                item={item}
-                isActive={location.pathname === item.href}
-              />
-            ))}
-          </nav>
+          <div className="space-y-2">
+            <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-3 mb-3">
+              {t('sidebar.sectionTools')}
+            </h2>
+            <nav className="space-y-1">
+              {toolsItems.map((item) => (
+                <MenuItem
+                  key={item.href}
+                  item={item}
+                  isActive={location.pathname === item.href}
+                />
+              ))}
+            </nav>
+          </div>
         </div>
-      </div>
+      </ScrollArea>
 
       {/* Profile Section */}
-      <div className="p-4 border-t">
+      <div className="p-4 border-t flex-shrink-0">
         <div
           onClick={handleLogout}
           className="flex items-center gap-3 p-3 rounded-xl bg-muted/50 hover:bg-muted transition-colors cursor-pointer"

@@ -60,12 +60,12 @@ export const VoiceAssistantInterface: React.FC<VoiceAssistantInterfaceProps> = (
   ];
 
   return (
-    <div className="absolute bottom-20 right-0 w-96 bg-white border border-gray-200 rounded-xl shadow-2xl z-50">
+    <div className="absolute bottom-20 right-0 w-96 bg-background border border-border rounded-xl shadow-2xl z-50">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b">
-        <h3 className="font-semibold text-gray-800">Голосовий помічник</h3>
+      <div className="flex items-center justify-between p-4 border-b border-border">
+        <h3 className="font-semibold text-foreground">Голосовий помічник</h3>
         <Button variant="ghost" size="icon" onClick={onClose}>
-          <X className="h-4 w-4" />
+          <X className="h-4 w-4 text-muted-foreground" />
         </Button>
       </div>
 
@@ -73,29 +73,29 @@ export const VoiceAssistantInterface: React.FC<VoiceAssistantInterfaceProps> = (
       <div className="p-4 space-y-4 max-h-96 overflow-y-auto">
         {/* Listening indicator */}
         {isListening && (
-          <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg">
+          <div className="flex items-center gap-2 p-3 bg-primary/10 rounded-lg">
             <div className="flex space-x-1">
-              <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"></div>
-              <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-              <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+              <div className="w-2 h-2 bg-primary rounded-full animate-bounce"></div>
+              <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+              <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
             </div>
-            <span className="text-sm text-blue-700">Слухаю...</span>
+            <span className="text-sm text-primary">Слухаю...</span>
           </div>
         )}
 
         {/* Transcript */}
         {transcript && (
-          <div className="p-3 bg-gray-50 rounded-lg">
-            <div className="text-xs text-gray-500 mb-1">Ви сказали:</div>
-            <div className="text-sm text-gray-800">{transcript}</div>
+          <div className="p-3 bg-muted rounded-lg">
+            <div className="text-xs text-muted-foreground mb-1">Ви сказали:</div>
+            <div className="text-sm text-foreground">{transcript}</div>
           </div>
         )}
 
         {/* Response */}
         {response && (
-          <div className="p-3 bg-green-50 rounded-lg">
-            <div className="text-xs text-green-600 mb-1">Помічник:</div>
-            <div className="text-sm text-green-800">{response}</div>
+          <div className="p-3 bg-accent/10 rounded-lg">
+            <div className="text-xs text-accent mb-1">Помічник:</div>
+            <div className="text-sm text-accent-foreground">{response}</div>
           </div>
         )}
 
@@ -106,7 +106,11 @@ export const VoiceAssistantInterface: React.FC<VoiceAssistantInterfaceProps> = (
             variant={isListening ? "destructive" : "default"}
             onClick={onListenToggle}
           >
-            {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+            {isListening ? (
+              <MicOff className="h-4 w-4 text-destructive-foreground" />
+            ) : (
+              <Mic className="h-4 w-4 text-primary" />
+            )}
             {isListening ? 'Стоп' : 'Говорити'}
           </Button>
           
@@ -116,7 +120,7 @@ export const VoiceAssistantInterface: React.FC<VoiceAssistantInterfaceProps> = (
             onClick={() => setShowThemes(!showThemes)}
             title="Швидкі теми"
           >
-            <Palette className="h-4 w-4" />
+            <Palette className="h-4 w-4 text-muted-foreground" />
           </Button>
 
           <Button 
@@ -125,7 +129,7 @@ export const VoiceAssistantInterface: React.FC<VoiceAssistantInterfaceProps> = (
             onClick={() => setShowLanguages(!showLanguages)}
             title="Швидкі мови"
           >
-            <Languages className="h-4 w-4" />
+            <Languages className="h-4 w-4 text-muted-foreground" />
           </Button>
           
           {response && (
@@ -134,7 +138,7 @@ export const VoiceAssistantInterface: React.FC<VoiceAssistantInterfaceProps> = (
               size="icon"
               onClick={handleSpeak}
             >
-              <Volume2 className="h-4 w-4" />
+              <Volume2 className="h-4 w-4 text-muted-foreground" />
             </Button>
           )}
           
@@ -143,21 +147,21 @@ export const VoiceAssistantInterface: React.FC<VoiceAssistantInterfaceProps> = (
             size="icon"
             onClick={() => setShowHelp(!showHelp)}
           >
-            <HelpCircle className="h-4 w-4" />
+            <HelpCircle className="h-4 w-4 text-muted-foreground" />
           </Button>
         </div>
 
         {/* Quick Themes */}
         {showThemes && (
-          <div className="p-3 bg-purple-50 rounded-lg">
-            <div className="font-medium mb-2 text-sm">Швидкі теми:</div>
+          <div className="p-3 bg-secondary/20 rounded-lg">
+            <div className="font-medium mb-2 text-sm text-foreground">Швидкі теми:</div>
             <div className="grid grid-cols-2 gap-2">
               {availableThemes.map((theme, index) => (
                 <Button
                   key={index}
                   variant="outline"
                   size="sm"
-                  className="text-xs h-8"
+                  className="text-xs h-8 text-foreground border-border"
                   onClick={() => onListenToggle()}
                 >
                   {theme.name}
@@ -169,15 +173,15 @@ export const VoiceAssistantInterface: React.FC<VoiceAssistantInterfaceProps> = (
 
         {/* Quick Languages */}
         {showLanguages && (
-          <div className="p-3 bg-blue-50 rounded-lg">
-            <div className="font-medium mb-2 text-sm">Швидкі мови:</div>
+          <div className="p-3 bg-primary/10 rounded-lg">
+            <div className="font-medium mb-2 text-sm text-foreground">Швидкі мови:</div>
             <div className="grid grid-cols-2 gap-2">
               {availableLanguages.map((lang, index) => (
                 <Button
                   key={index}
                   variant="outline"
                   size="sm"
-                  className="text-xs h-8"
+                  className="text-xs h-8 text-foreground border-border"
                   onClick={() => onListenToggle()}
                 >
                   {lang.name}
@@ -189,13 +193,13 @@ export const VoiceAssistantInterface: React.FC<VoiceAssistantInterfaceProps> = (
 
         {/* Help */}
         {showHelp && (
-          <div className="p-3 bg-yellow-50 rounded-lg text-sm">
-            <div className="font-medium mb-2">Доступні команди:</div>
+          <div className="p-3 bg-accent/10 rounded-lg text-sm">
+            <div className="font-medium mb-2 text-foreground">Доступні команди:</div>
             <div className="space-y-2 max-h-40 overflow-y-auto">
               {availableCommands.map((item, index) => (
                 <div key={index} className="flex justify-between items-start">
-                  <div className="font-medium text-xs">{item.command}</div>
-                  <div className="text-xs text-gray-600 text-right ml-2">{item.description}</div>
+                  <div className="font-medium text-xs text-foreground">{item.command}</div>
+                  <div className="text-xs text-muted-foreground text-right ml-2">{item.description}</div>
                 </div>
               ))}
             </div>

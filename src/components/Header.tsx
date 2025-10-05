@@ -1,6 +1,6 @@
 // Header.tsx
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useEffect, useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,7 +13,15 @@ import {
   User,
   BookOpen,
   GraduationCap,
-  Briefcase
+  Briefcase,
+  Home,
+  FileText,
+  MessageSquare,
+  Calendar,
+  TrendingUp,
+  Zap,
+  LogOut,
+  Book
 } from 'lucide-react';
 import { useTheme } from '@/context/ThemeContext';
 import {
@@ -23,12 +31,13 @@ import {
   SelectContent,
   SelectItem,
 } from '@/components/ui/select';
-import Sidebar from './Sidebar';
+import { cn } from '@/lib/utils';
 
 type ThemeType = 'light' | 'dark' | 'rose' | 'mint';
 
 const Header = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { t, i18n } = useTranslation();
   const { theme, setTheme } = useTheme();
 
@@ -39,6 +48,7 @@ const Header = () => {
   const [isClosing, setIsClosing] = useState(false);
 
   const menuRef = useRef<HTMLDivElement>(null);
+  const overlayRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const storedUser = localStorage.getItem('currentUser');
@@ -90,10 +100,14 @@ const Header = () => {
     localStorage.setItem('userStatus', newStatus ? 'online' : 'offline');
   };
 
-
   const handleCreateSelect = (type: string) => {
     setIsCreateMenuOpen(false);
     navigate(`/tracker?type=${type}`);
+  };
+
+  const openMobileMenu = () => {
+    setIsMobileMenuOpen(true);
+    setIsClosing(false);
   };
 
   const closeMobileMenu = () => {
@@ -101,8 +115,24 @@ const Header = () => {
     setTimeout(() => {
       setIsMobileMenuOpen(false);
       setIsClosing(false);
-    }, 400);
+    }, 300);
   };
+
+  const handleOverlayClick = (e: React.MouseEvent) => {
+    if (e.target === overlayRef.current) {
+      closeMobileMenu();
+    }
+  };
+
+  const menuItems = [
+    { title: t('sidebar.dashboard'), href: '/dashboard', icon: Home },
+    { title: t('sidebar.projects'), href: '/tracker', icon: FileText },
+    { title: t('sidebar.tasks'), href: '/chat', icon: MessageSquare },
+    { title: t('sidebar.calendar'), href: '/calendar', icon: Calendar },
+    { title: t('sidebar.aiAssistant'), href: '/ai-assistant', icon: Zap, badge: 'BETA' },
+    { title: t('sidebar.analytics'), href: '/analytics', icon: TrendingUp },
+    { title: t('sidebar.resources'), href: '/resources', icon: Book }
+  ];
 
   return (
     <>
@@ -112,11 +142,10 @@ const Header = () => {
             <Button
               variant="ghost"
               size="icon"
-              className="md:hidden relative overflow-hidden group"
-              onClick={() => setIsMobileMenuOpen(true)}
+              className="md:hidden"
+              onClick={openMobileMenu}
             >
-              <Menu className="h-5 w-5 transition-transform group-hover:scale-110" />
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-500/0 via-blue-500/20 to-blue-500/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
+              <Menu className="h-5 w-5" />
             </Button>
             <div className="relative max-w-md w-full">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
@@ -129,19 +158,14 @@ const Header = () => {
           </div>
 
           <div className="hidden md:flex items-center gap-6 relative">
-
             <div ref={menuRef} className="relative">
               <Button
                 variant="outline"
                 size="sm"
-                className="gap-2 w-[110px] justify-center transition-all duration-200 hover:scale-105"
+                className="gap-2 w-[110px] justify-center"
                 onClick={() => setIsCreateMenuOpen(!isCreateMenuOpen)}
               >
-                <Plus
-                  className={`h-4 w-4 transition-transform duration-300 ${
-                    isCreateMenuOpen ? 'rotate-45' : ''
-                  }`}
-                />
+                <Plus className="h-4 w-4" />
                 {t('header.create')}
               </Button>
 
@@ -176,7 +200,7 @@ const Header = () => {
               value={theme}
               onValueChange={(value) => setTheme(value as ThemeType)}
             >
-              <SelectTrigger className="w-[110px] transition-all duration-200 hover:scale-105">
+              <SelectTrigger className="w-[110px]">
                 <SelectValue placeholder={t('header.theme')} />
               </SelectTrigger>
               <SelectContent>
@@ -191,17 +215,16 @@ const Header = () => {
               variant="ghost"
               size="sm"
               onClick={toggleLanguage}
-              className="rounded-full text-sm px-3 py-1 transition-all duration-200 hover:scale-110 relative overflow-hidden group"
+              className="rounded-full text-sm px-3 py-1"
             >
               {i18n.language === 'ua' ? 'UA' : 'EN'}
-              <div className="absolute inset-0 bg-gradient-to-r from-green-500/0 via-green-500/20 to-green-500/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
             </Button>
 
             <Button
               variant="ghost"
               size="icon"
               onClick={() => navigate('/profile')}
-              className="rounded-full transition-all duration-200 hover:scale-110 hover:rotate-12"
+              className="rounded-full"
             >
               <Settings className="h-4 w-4" />
             </Button>
@@ -220,7 +243,7 @@ const Header = () => {
               </div>
               <div
                 className={`w-2 h-2 rounded-full ${
-                  isOnline ? 'bg-green-500 shadow-green-500/50 shadow-lg' : 'bg-gray-400'
+                  isOnline ? 'bg-green-500' : 'bg-gray-400'
                 }`}
               />
             </div>
@@ -228,146 +251,172 @@ const Header = () => {
         </div>
       </header>
 
+      {/* Мінімалістичне бургер-меню з анімаціями */}
       {isMobileMenuOpen && (
-        <div
-          className={`fixed inset-0 z-50 bg-black/50 backdrop-blur-sm md:hidden transition-opacity duration-300 ${
-            isClosing ? 'opacity-0' : 'opacity-100'
-          }`}
+        <div 
+          ref={overlayRef}
+          className="fixed inset-0 z-50 md:hidden"
+          onClick={handleOverlayClick}
         >
-          <div
-            className={`fixed top-0 left-0 w-77 h-full bg-background border-r border-border text-foreground shadow-2xl flex flex-col ${
-              isClosing ? 'menu-animation-exit' : 'menu-animation-enter'
-            }`}
+          {/* Overlay з анімацією */}
+          <div 
+            className={cn(
+              "absolute inset-0 bg-black/20 backdrop-blur-sm transition-all duration-300",
+              isClosing ? "opacity-0" : "opacity-100"
+            )}
+          />
+          
+          {/* Меню панель з анімацією слайду */}
+          <div 
+            className={cn(
+              "absolute top-0 left-0 h-full w-80 bg-background border-r shadow-xl transform transition-transform duration-300 ease-out",
+              isClosing ? "-translate-x-full" : "translate-x-0"
+            )}
           >
-            <div className="relative py-2 px-3 bg-muted/30 border-b border-border">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center border">
-                    <User className="h-3 w-3 text-primary" />
+            {/* Заголовок з анімацією появи */}
+            <div 
+              className={cn(
+                "flex items-center justify-between p-6 border-b transition-all duration-300",
+                isClosing ? "opacity-0 translate-y-2" : "opacity-100 translate-y-0"
+              )}
+              style={{ transitionDelay: isClosing ? '0ms' : '100ms' }}
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+                  <User className="h-4 w-4 text-primary-foreground" />
+                </div>
+                <div>
+                  <h2 className="font-semibold">{firstName || 'User'}</h2>
+                  <div className="flex items-center gap-2 mt-1">
+                    <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-green-500' : 'bg-gray-400'}`} />
+                    <span className="text-sm text-muted-foreground">
+                      {isOnline ? t('header.online') : t('header.offline')}
+                    </span>
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <h2 className="text-sm font-semibold truncate">{firstName || 'User'}</h2>
-                    <div className="flex items-center gap-1">
-                      <div className={`w-1 h-1 rounded-full ${isOnline ? 'bg-green-500' : 'bg-gray-400'}`} />
-                      <span
-                        onClick={toggleOnlineStatus}
-                        className="text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
-                      >
-                        {isOnline ? t('header.online') : t('header.offline')}
+                </div>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={closeMobileMenu}
+                className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+
+            {/* Навігація з послідовною анімацією елементів */}
+            <div className="p-4 space-y-1">
+              {menuItems.map((item, index) => {
+                const Icon = item.icon;
+                const isActive = location.pathname === item.href;
+                const delay = index * 50;
+                
+                return (
+                  <button
+                    key={item.href}
+                    onClick={() => {
+                      navigate(item.href);
+                      closeMobileMenu();
+                    }}
+                    className={cn(
+                      "w-full flex items-center gap-3 px-3 py-3 rounded-xl text-left transition-all duration-300 transform",
+                      isActive 
+                        ? "bg-primary text-primary-foreground" 
+                        : "hover:bg-accent hover:text-accent-foreground",
+                      isClosing ? "opacity-0 -translate-x-4" : "opacity-100 translate-x-0"
+                    )}
+                    style={{
+                      transitionDelay: isClosing ? '0ms' : `${delay}ms`,
+                      animationDelay: isClosing ? '0ms' : `${delay}ms`
+                    }}
+                  >
+                    <Icon className="h-4 w-4" />
+                    <span className="flex-1 font-medium">{item.title}</span>
+                    {item.badge && (
+                      <span className="px-2 py-1 text-xs bg-primary/20 text-primary rounded-md">
+                        {item.badge}
                       </span>
-                    </div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Нижня частина з анімацією */}
+            <div 
+              className={cn(
+                "absolute bottom-0 left-0 right-0 p-4 border-t transition-all duration-300",
+                isClosing ? "opacity-0 translate-y-4" : "opacity-100 translate-y-0"
+              )}
+              style={{ transitionDelay: isClosing ? '0ms' : '200ms' }}
+            >
+              <div className="space-y-3">
+                {/* Мова */}
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Мова</span>
+                  <div className="flex gap-1">
+                    <Button
+                      variant={i18n.language === 'ua' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => {
+                        i18n.changeLanguage('ua');
+                        localStorage.setItem('i18nextLng', 'ua');
+                      }}
+                      className="h-8 px-3 text-xs transition-all hover:scale-105"
+                    >
+                      UA
+                    </Button>
+                    <Button
+                      variant={i18n.language === 'en' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => {
+                        i18n.changeLanguage('en');
+                        localStorage.setItem('i18nextLng', 'en');
+                      }}
+                      className="h-8 px-3 text-xs transition-all hover:scale-105"
+                    >
+                      EN
+                    </Button>
                   </div>
                 </div>
+
+                {/* Тема */}
+                <div>
+                  <span className="text-sm font-medium block mb-2">Тема</span>
+                  <div className="grid grid-cols-2 gap-2">
+                    {(['light', 'dark', 'rose', 'mint'] as ThemeType[]).map((t) => (
+                      <Button
+                        key={t}
+                        variant={theme === t ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setTheme(t)}
+                        className="h-8 capitalize text-xs transition-all hover:scale-105"
+                      >
+                        {t}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Вийти */}
                 <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={closeMobileMenu}
-                  className="rounded-full hover:bg-destructive/10 hover:text-destructive transition-all duration-200 h-6 w-6"
+                  variant="outline"
+                  className="w-full gap-2 transition-all hover:scale-105 hover:border-destructive/50 hover:text-destructive"
+                  onClick={() => {
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('currentUser');
+                    navigate('/');
+                  }}
                 >
-                  <X className="h-3 w-3" />
+                  <LogOut className="h-4 w-4" />
+                  Вийти
                 </Button>
-              </div>
-            </div>
-
-            <div className="flex-1 overflow-y-auto menu-item-animate">
-              <div className="p-2">
-                <Sidebar />
-              </div>
-            </div>
-
-            {/* Redesigned Footer */}
-            <div className="p-3 border-t border-border space-y-3">
-              {/* Голосовий помічник у мобільному меню */}
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-muted-foreground">
-                  Голосовий помічник
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-muted-foreground">Language</span>
-                <div className="flex gap-1">
-                  {['ua', 'en'].map((lang) => (
-                    <Button
-                      key={lang}
-                      onClick={() => {
-                        i18n.changeLanguage(lang);
-                        localStorage.setItem('i18nextLng', lang);
-                      }}
-                      variant={i18n.language === lang ? 'default' : 'outline'}
-                      size="sm"
-                      className="h-6 px-2 text-xs"
-                    >
-                      {lang.toUpperCase()}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <span className="text-xs font-semibold text-muted-foreground block mb-1">Theme</span>
-                <div className="grid grid-cols-4 gap-1">
-                  {(['light', 'dark', 'rose', 'mint'] as ThemeType[]).map((t) => (
-                    <Button
-                      key={t}
-                      variant={theme === t ? 'default' : 'ghost'}
-                      size="sm"
-                      onClick={() => setTheme(t)}
-                      className="flex flex-col items-center justify-center h-10 px-1 text-[10px] leading-tight"
-                    >
-                      <span className="capitalize">{t}</span>
-                    </Button>
-                  ))}
-                </div>
               </div>
             </div>
           </div>
         </div>
       )}
-
-      <style>
-        {`
-          @keyframes menuEnter {
-            from {
-              opacity: 0;
-              transform: translateX(-20px) scale(0.98);
-            }
-            to {
-              opacity: 1;
-              transform: translateX(0) scale(1);
-            }
-          }
-          @keyframes menuExit {
-            from {
-              opacity: 1;
-              transform: translateX(0) scale(1);
-            }
-            to {
-              opacity: 0;
-              transform: translateX(-20px) scale(0.98);
-            }
-          }
-          .menu-animation-enter {
-            animation: menuEnter 0.4s ease-out forwards;
-          }
-          .menu-animation-exit {
-            animation: menuExit 0.4s ease-in forwards;
-          }
-          @keyframes menuItemFade {
-            from {
-              opacity: 0;
-              transform: translateY(5px);
-            }
-            to {
-              opacity: 1;
-              transform: translateY(0);
-            }
-          }
-          .menu-item-animate {
-            animation: menuItemFade 0.5s ease-out forwards;
-          }
-        `}
-      </style>
     </>
   );
 };
