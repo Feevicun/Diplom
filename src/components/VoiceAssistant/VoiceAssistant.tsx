@@ -34,13 +34,16 @@ declare global {
   interface Window {
     SpeechRecognition: new () => SpeechRecognition;
     webkitSpeechRecognition: new () => SpeechRecognition;
+    voiceAssistantSearch?: (query: string) => void;
+    voiceAssistantToggleSaved?: () => void;
+    voiceAssistantAddResource?: () => void;
   }
 }
 
 export const VoiceAssistant = () => {
   const navigate = useNavigate();
-  const {setTheme } = useTheme();
-  const {i18n } = useTranslation();
+  const { setTheme } = useTheme();
+  const { i18n } = useTranslation();
   
   const [isActive, setIsActive] = useState(false);
   const [isListening, setIsListening] = useState(false);
@@ -81,6 +84,8 @@ export const VoiceAssistant = () => {
       'ресурси': '/resources',
       'матеріали': '/resources',
       'книги': '/resources',
+      'бібліотека': '/resources',
+      'джерела': '/resources',
       
       // Профіль та інше
       'профіль': '/profile',
@@ -196,6 +201,31 @@ export const VoiceAssistant = () => {
     return `Не розпізнав тип проекту "${projectType}". Доступні: курсова, диплом, практика`;
   };
 
+  // Функції для роботи з ресурсами
+  const handleResourcesSearch = (query: string): string => {
+    if (window.voiceAssistantSearch) {
+      window.voiceAssistantSearch(query);
+      return `Шукаю ресурси за запитом: ${query}`;
+    }
+    return 'Функція пошуку ресурсів недоступна';
+  };
+
+  const handleToggleSaved = (): string => {
+    if (window.voiceAssistantToggleSaved) {
+      window.voiceAssistantToggleSaved();
+      return 'Перемикаю відображення збережених ресурсів';
+    }
+    return 'Функція збереження ресурсів недоступна';
+  };
+
+  const handleAddResource = (): string => {
+    if (window.voiceAssistantAddResource) {
+      window.voiceAssistantAddResource();
+      return 'Відкриваю додавання нового ресурсу';
+    }
+    return 'Функція додавання ресурсів недоступна';
+  };
+
   const processVoiceCommand = useCallback((command: string) => {
     const lowerCommand = command.toLowerCase().trim();
     console.log('Розпізнана команда:', command);
@@ -204,7 +234,7 @@ export const VoiceAssistant = () => {
 
     // Спеціальні команди
     if (lowerCommand.includes('допомога') || lowerCommand.includes('команди')) {
-      commandResponse = 'Доступні команди: "головна", "проекти", "чати", "календар", "ai помічник", "аналітика", "ресурси", "профіль", "створи проект", "світла тема", "темна тема", "українська мова", "англійська мова"';
+      commandResponse = 'Доступні команди: "головна", "проекти", "чати", "календар", "ai помічник", "аналітика", "ресурси", "профіль", "створи проект", "світла тема", "темна тема", "українська мова", "англійська мова", "знайди ресурси [запит]", "збережені ресурси", "додати ресурс"';
     }
     // Команди тем
     else if (lowerCommand.includes('тема') || lowerCommand.includes('режим')) {
@@ -221,6 +251,21 @@ export const VoiceAssistant = () => {
       } else {
         commandResponse = 'Що саме створити? Скажіть "створи проект", "нова курсова", "новий диплом" або "нова практика"';
       }
+    }
+    // Команди для ресурсів
+    else if (lowerCommand.includes('знайди') || lowerCommand.includes('шукай') || lowerCommand.includes('пошук')) {
+      const searchQuery = command.replace(/знайди|шукай|пошук|ресурси/gi, '').trim();
+      if (searchQuery) {
+        commandResponse = handleResourcesSearch(searchQuery);
+      } else {
+        commandResponse = 'Що саме знайти? Скажіть "знайди ресурси [запит]"';
+      }
+    }
+    else if (lowerCommand.includes('збережені') || lowerCommand.includes('закладки')) {
+      commandResponse = handleToggleSaved();
+    }
+    else if (lowerCommand.includes('додати ресурс') || lowerCommand.includes('новий ресурс')) {
+      commandResponse = handleAddResource();
     }
     // Статус онлайн
     else if (lowerCommand.includes('статус') || lowerCommand.includes('онлайн') || lowerCommand.includes('офлайн')) {
