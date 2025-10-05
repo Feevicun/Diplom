@@ -13,7 +13,7 @@ import {
   User,
   BookOpen,
   GraduationCap,
-  Briefcase,
+  Briefcase
 } from 'lucide-react';
 import { useTheme } from '@/context/ThemeContext';
 import {
@@ -41,29 +41,26 @@ const Header = () => {
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-  const storedUser = localStorage.getItem('currentUser');
-  if (storedUser) {
-    const user = JSON.parse(storedUser);
-    if (user.firstName) {
-      setFirstName(user.firstName);
-    } else if (user.name) {
-      // Розбиваємо повне ім'я на firstName і lastName
-      const [firstName] = user.name.split(' ');
-      setFirstName(firstName || '');
-      // За потреби можна зберегти в localStorage оновлений об'єкт з firstName
-      localStorage.setItem(
-        'currentUser',
-        JSON.stringify({ ...user, firstName })
-      );
-    } else {
-      setFirstName('');
+    const storedUser = localStorage.getItem('currentUser');
+    if (storedUser) {
+      const user = JSON.parse(storedUser);
+      if (user.firstName) {
+        setFirstName(user.firstName);
+      } else if (user.name) {
+        const [firstName] = user.name.split(' ');
+        setFirstName(firstName || '');
+        localStorage.setItem(
+          'currentUser',
+          JSON.stringify({ ...user, firstName })
+        );
+      } else {
+        setFirstName('');
+      }
     }
-  }
-  
-  const storedStatus = localStorage.getItem('userStatus');
-  setIsOnline(storedStatus === null ? true : storedStatus === 'online');
-}, []);
-
+    
+    const storedStatus = localStorage.getItem('userStatus');
+    setIsOnline(storedStatus === null ? true : storedStatus === 'online');
+  }, []);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -92,6 +89,7 @@ const Header = () => {
     setIsOnline(newStatus);
     localStorage.setItem('userStatus', newStatus ? 'online' : 'offline');
   };
+
 
   const handleCreateSelect = (type: string) => {
     setIsCreateMenuOpen(false);
@@ -131,6 +129,7 @@ const Header = () => {
           </div>
 
           <div className="hidden md:flex items-center gap-6 relative">
+
             <div ref={menuRef} className="relative">
               <Button
                 variant="outline"
@@ -278,6 +277,13 @@ const Header = () => {
 
             {/* Redesigned Footer */}
             <div className="p-3 border-t border-border space-y-3">
+              {/* Голосовий помічник у мобільному меню */}
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-muted-foreground">
+                  Голосовий помічник
+                </span>
+              </div>
+
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-muted-foreground">Language</span>
                 <div className="flex gap-1">

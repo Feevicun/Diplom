@@ -1,2601 +1,2381 @@
 import { useState, useEffect, useRef } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
-  Send, Users, Plus, Search, MessageCircle, 
-  Check, X, ArrowLeft, Paperclip, Phone, 
-  Video, Pin, Trash2, Edit, Reply,
-  Image as ImageIcon, File, Download, ThumbsUp, Smile,
-  Mic, VideoOff, PhoneOff, UserPlus, BellOff,
-  Archive, BellRing, ChevronDown, ChevronUp,
-  Play, Pause, StopCircle, AlertCircle, Info, Menu
+  FileText, 
+  Send, 
+  Paperclip, 
+  Mic, 
+  Square, 
+  Smile,
+  Search,
+  Phone,
+  Video,
+  Info,
+  MoreVertical,
+  Users,
+  Plus,
+  Archive,
+  Trash2,
+  Bell,
+  BellOff,
+  LogOut,
+  UserPlus,
+  Pin,
+  MessageCircle,
+  Reply,
+  X,
+  Eye,
+  EyeOff,
+  Lock,
+  Unlock,
+  Key,
+  Mail,
+  Shield,
+  ShieldCheck,
+  ShieldAlert,
+  Copy
 } from 'lucide-react';
-
-// Import components
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+  DialogDescription,
+} from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
 
-// Типи даних
-type Attachment = {
-  name: string;
-  url?: string;
-  type: 'image' | 'file' | 'audio' | 'video';
-  size?: string;
-  blob?: Blob;
-};
-
+// Типи
 type Message = {
-  id: number;
-  senderId: number;
-  senderName: string;
-  senderEmail: string;
+  id: string;
+  sender: string;
+  name: string;
   content: string;
   timestamp: string;
-  attachment?: Attachment;
-  chatId: number;
-  isEdited?: boolean;
-  reactions?: { [key: string]: number };
-  replyTo?: number;
-  readBy?: number[];
-  isDeleted?: boolean;
-};
-
-type User = {
-  id: number;
-  name: string;
-  email: string;
-  role: string;
-  status?: 'online' | 'offline' | 'away' | 'dnd';
-  avatar?: string;
-  lastSeen?: string;
-  isContact?: boolean;
-  phone?: string;
-  lastloginat?: string;
-  lastlogoutat?: string;
-  faculty_id?: number;
-  department_id?: number;
-  registeredat?: string;
-};
-
-type Chat = {
-  id: number;
-  name: string;
-  type: 'direct' | 'group';
-  participants: User[];
-  lastMessage?: Message;
-  unreadCount: number;
-  createdAt: string;
-  updatedAt: string;
+  type: 'text' | 'voice' | 'file';
   isPinned?: boolean;
-  isArchived?: boolean;
-  isMuted?: boolean;
-  description?: string;
-  admins?: number[];
-  image?: string;
+  replyTo?: {
+    id: string;
+    sender: string;
+    name: string;
+    content: string;
+  };
+  attachment?: {
+    name: string;
+    url: string;
+    type: string;
+    size?: number;
+  };
+  voiceMessage?: {
+    url: string;
+    duration: number;
+  };
 };
 
-type Call = {
-  id: number;
-  type: 'audio' | 'video';
-  participants: number[];
-  status: 'ringing' | 'ongoing' | 'ended' | 'missed';
-  startTime: string;
-  endTime?: string;
-  duration?: number;
+type ChatUser = {
+  id: string;
+  name: string;
+  avatar: string;
+  email?: string;
+  type: 'student' | 'supervisor' | 'group';
+  isOnline: boolean;
+  lastSeen?: string;
+  unreadCount?: number;
+  lastMessage?: string;
+  isMuted?: boolean;
+  isArchived?: boolean;
+  members?: ChatUser[];
+  createdAt?: string;
+  privacySettings?: {
+    isPublic: boolean;
+    allowInvites: boolean;
+    showMembers: boolean;
+    password?: string;
+    requirePassword?: boolean;
+    encrypted?: boolean;
+  };
+  securityLevel?: 'low' | 'medium' | 'high';
+};
+
+type CreateGroupData = {
+  name: string;
+  members: string[];
+  description?: string;
+  isPublic: boolean;
+  allowInvites: boolean;
+  showMembers: boolean;
+  password?: string;
+  requirePassword: boolean;
+  securityLevel: 'low' | 'medium' | 'high';
+};
+
+type PasswordDialogType = 'join' | 'set' | 'change' | 'remove';
+
+// Кастомний Switch компонент
+const Switch = ({ 
+  checked, 
+  onCheckedChange,
+  id 
+}: { 
+  checked: boolean; 
+  onCheckedChange: (checked: boolean) => void;
+  id?: string;
+}) => {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      id={id}
+      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+        checked ? 'bg-blue-600' : 'bg-gray-200'
+      }`}
+      onClick={() => onCheckedChange(!checked)}
+    >
+      <span
+        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+          checked ? 'translate-x-6' : 'translate-x-1'
+        }`}
+      />
+    </button>
+  );
+};
+
+// Кастомна toast функція
+const toast = {
+  success: (message: string) => {
+    console.log(`✅ ${message}`);
+  },
+  error: (message: string) => {
+    console.log(`❌ ${message}`);
+  }
 };
 
 const ChatPage = () => {
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [chats, setChats] = useState<Chat[]>([]);
-  const [activeChat, setActiveChat] = useState<Chat | null>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
-  const [file, setFile] = useState<File | null>(null);
-  const [users, setUsers] = useState<User[]>([]);
-  const [showNewChatDialog, setShowNewChatDialog] = useState(false);
-  const [showNewGroupDialog, setShowNewGroupDialog] = useState(false);
-  const [selectedUsers, setSelectedUsers] = useState<number[]>([]);
-  const [groupChatName, setGroupChatName] = useState('');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [showChatList, setShowChatList] = useState(true);
-  const [replyingTo, setReplyingTo] = useState<Message | null>(null);
-  const [editingMessage, setEditingMessage] = useState<Message | null>(null);
-  const [, setOnlineUsers] = useState<number[]>([]);
-  const [, setCalls] = useState<Call[]>([]);
-  const [activeCall, setActiveCall] = useState<Call | null>(null);
-  const [typingUsers, setTypingUsers] = useState<number[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  // Стани для голосових повідомлень
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [isConnected, setIsConnected] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
+  const [typingUser, setTypingUser] = useState<string>('');
+  const [users, setUsers] = useState<ChatUser[]>([]);
+  const [allUsers, setAllUsers] = useState<ChatUser[]>([]);
+  const [selectedUser, setSelectedUser] = useState<ChatUser | null>(null);
+  const [attachment, setAttachment] = useState<File | null>(null);
   const [isRecording, setIsRecording] = useState(false);
-  const [recordedAudio, setRecordedAudio] = useState<Blob | null>(null);
-  const [audioUrl, setAudioUrl] = useState<string>('');
-  const [isPlaying, setIsPlaying] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
-  const [recordingTimer, setRecordingTimer] = useState<NodeJS.Timeout | null>(null);
-  const [recordingError, setRecordingError] = useState<string | null>(null);
-  const [hasAudioSupport, setHasAudioSupport] = useState(true);
-  const [currentlyPlaying, setCurrentlyPlaying] = useState<number | null>(null);
-  const [usingAudioWorkaround, setUsingAudioWorkaround] = useState(false);
-  const [browserInfo, setBrowserInfo] = useState<{
-    isSafari: boolean;
-    isIOS: boolean;
-    version: number;
-  }>({
-    isSafari: false,
-    isIOS: false,
-    version: 0
+  const [searchTerm, setSearchTerm] = useState('');
+  const [activeTab, setActiveTab] = useState<'all' | 'groups' | 'archived'>('all');
+  const [showCreateGroup, setShowCreateGroup] = useState(false);
+  const [showGroupMembers, setShowGroupMembers] = useState(false);
+  const [replyingTo, setReplyingTo] = useState<Message | null>(null);
+  const [sidebarWidth, setSidebarWidth] = useState(320);
+  const [isResizing, setIsResizing] = useState(false);
+  const [newGroupData, setNewGroupData] = useState<CreateGroupData>({
+    name: '',
+    members: [],
+    description: '',
+    isPublic: true,
+    allowInvites: true,
+    showMembers: true,
+    requirePassword: false,
+    securityLevel: 'medium'
   });
-
-  // Стани для контекстного меню та архіву
-  const [contextMenu, setContextMenu] = useState<{
-    visible: boolean;
-    x: number;
-    y: number;
-    chat: Chat | null;
+  const [passwordDialog, setPasswordDialog] = useState<{
+    isOpen: boolean;
+    type: PasswordDialogType;
+    chatId?: string;
   }>({
-    visible: false,
-    x: 0,
-    y: 0,
-    chat: null
+    isOpen: false,
+    type: 'join'
   });
+  const [passwordData, setPasswordData] = useState({
+    password: '',
+    confirmPassword: '',
+    currentPassword: ''
+  });
+  const [newMemberEmail, setNewMemberEmail] = useState('');
+  const [showSecuritySettings, setShowSecuritySettings] = useState(false);
 
-  const [showArchived, setShowArchived] = useState(false);
-  const [showArchiveHint, setShowArchiveHint] = useState(true);
-
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const audioRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
+  const ws = useRef<WebSocket | null>(null);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const contextMenuRef = useRef<HTMLDivElement>(null);
-  const chatListRef = useRef<HTMLDivElement>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const audioProcessorRef = useRef<ScriptProcessorNode | null>(null);
-  const audioDataRef = useRef<Float32Array[]>([]);
+  const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const sidebarRef = useRef<HTMLDivElement>(null);
 
-  // Функції для роботи з API
-  const fetchCurrentUser = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        const testUser: User = {
-          id: 1,
-          name: "Тестовий Користувач",
-          email: "test@lnu.edu.ua",
-          role: "student",
-          status: 'online'
-        };
-        setCurrentUser(testUser);
-        return testUser;
-      }
+  // Current user info
+  const currentUser = {
+    id: 'student-1',
+    name: 'Ви',
+    email: 'you@university.edu',
+    type: 'student' as const,
+  };
 
-      const response = await fetch('/api/current-user', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
+  // Mock users data with enhanced privacy settings
+  const mockUsers: ChatUser[] = [
+    {
+      id: 'supervisor-1',
+      name: 'проф. Іваненко І.І.',
+      avatar: 'ІІ',
+      email: 'ivanenko@university.edu',
+      type: 'supervisor',
+      isOnline: true,
+      unreadCount: 2,
+      lastMessage: 'Переглянув ваші правки, добре!',
+      securityLevel: 'high'
+    },
+    {
+      id: 'supervisor-2',
+      name: 'доц. Петренко П.П.',
+      avatar: 'ПП',
+      email: 'petrenko@university.edu',
+      type: 'supervisor',
+      isOnline: false,
+      lastMessage: 'Надішліть оновлений план',
+      securityLevel: 'medium'
+    },
+    {
+      id: 'student-2',
+      name: 'Марія Коваль',
+      avatar: 'МК',
+      email: 'koval@university.edu',
+      type: 'student',
+      isOnline: true,
+      lastMessage: 'Ти вже здав лабу?',
+      securityLevel: 'medium'
+    },
+    {
+      id: 'student-3',
+      name: 'Олексій Шевченко',
+      avatar: 'ОШ',
+      email: 'shevchenko@university.edu',
+      type: 'student',
+      isOnline: true,
+      lastMessage: 'Коли зустрічаємось?',
+      securityLevel: 'medium'
+    },
+    {
+      id: 'group-1',
+      name: 'Дипломна група',
+      avatar: 'ГР',
+      type: 'group',
+      isOnline: true,
+      unreadCount: 5,
+      lastMessage: 'Олексій: Зустріч о 14:00',
+      members: [
+        {
+          id: 'student-1',
+          name: 'Ви',
+          avatar: 'В',
+          type: 'student',
+          isOnline: true,
+          securityLevel: 'medium'
         },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch current user');
-      }
-
-      const data = await response.json();
-      
-      const currentUserData: User = {
-        id: data.user.id || 1,
-        name: `${data.user.firstName} ${data.user.lastName}`,
-        email: data.user.email,
-        role: data.user.role,
-        status: 'online'
-      };
-      
-      setCurrentUser(currentUserData);
-      return currentUserData;
-    } catch (err) {
-      console.error('Error fetching current user:', err);
-      const testUser: User = {
-        id: 1,
-        name: "Тестовий Користувач",
-        email: "test@lnu.edu.ua",
-        role: "student",
-        status: 'online'
-      };
-      setCurrentUser(testUser);
-      return testUser;
-    }
-  };
-
-  const fetchUsers = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      let response;
-
-      if (token) {
-        response = await fetch('/api/users', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        });
-      } else {
-        const testUsers: User[] = [
-          { id: 2, name: "Олексій Петренко", email: "alex@lnu.edu.ua", role: "student", status: "online", lastSeen: new Date().toISOString(), isContact: true },
-          { id: 3, name: "Марія Коваленко", email: "maria@lnu.edu.ua", role: "student", status: "away", lastSeen: new Date().toISOString(), isContact: true },
-          { id: 4, name: "Анна Сидорова", email: "anna@lnu.edu.ua", role: "teacher", status: "offline", lastSeen: new Date().toISOString(), isContact: false },
-          { id: 5, name: "Іван Іваненко", email: "ivan@lnu.edu.ua", role: "student", status: "online", lastSeen: new Date().toISOString(), isContact: true },
-        ];
-        setUsers(testUsers);
-        setOnlineUsers([2, 5]);
-        return testUsers;
-      }
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch users');
-      }
-
-      const usersData = await response.json();
-      
-      const transformedUsers: User[] = usersData.map((user: any) => ({
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        status: determineUserStatus(user.lastloginat, user.lastlogoutat),
-        lastSeen: user.lastlogoutat || user.lastloginat,
-        isContact: true,
-        faculty_id: user.faculty_id,
-        department_id: user.department_id,
-        lastloginat: user.lastloginat,
-        lastlogoutat: user.lastlogoutat
-      }));
-
-      setUsers(transformedUsers);
-      
-      const onlineUserIds = transformedUsers
-        .filter(user => user.status === 'online')
-        .map(user => user.id);
-      setOnlineUsers(onlineUserIds);
-      
-      return transformedUsers;
-    } catch (err) {
-      console.error('Error fetching users:', err);
-      const testUsers: User[] = [
-        { id: 2, name: "Олексій Петренко", email: "alex@lnu.edu.ua", role: "student", status: "online", lastSeen: new Date().toISOString(), isContact: true },
-        { id: 3, name: "Марія Коваленко", email: "maria@lnu.edu.ua", role: "student", status: "away", lastSeen: new Date().toISOString(), isContact: true },
-        { id: 4, name: "Анна Сидорова", email: "anna@lnu.edu.ua", role: "teacher", status: "offline", lastSeen: new Date().toISOString(), isContact: false },
-        { id: 5, name: "Іван Іваненко", email: "ivan@lnu.edu.ua", role: "student", status: "online", lastSeen: new Date().toISOString(), isContact: true },
-      ];
-      setUsers(testUsers);
-      setOnlineUsers([2, 5]);
-      return testUsers;
-    }
-  };
-
-  // Отримання чатів з бекенду
-  const fetchChats = async (currentUser: User) => {
-    try {
-      const token = localStorage.getItem('token');
-      
-      if (!token) {
-        const testChats = createInitialChats(users, currentUser);
-        return testChats;
-      }
-
-      const response = await fetch('/api/chats', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
+        {
+          id: 'student-2',
+          name: 'Марія Коваль',
+          avatar: 'МК',
+          type: 'student',
+          isOnline: true,
+          securityLevel: 'medium'
         },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch chats');
-      }
-
-      const chatsData = await response.json();
-      
-      const transformedChats: Chat[] = chatsData.map((chat: any) => ({
-        id: chat.id,
-        name: chat.name,
-        type: chat.type,
-        participants: chat.participants,
-        unreadCount: 0,
-        createdAt: chat.created_at,
-        updatedAt: chat.updated_at,
-        isPinned: chat.is_pinned,
-        isArchived: chat.is_archived,
-        isMuted: chat.is_muted,
-        description: chat.description,
-        admins: chat.admins,
-        image: chat.image
-      }));
-
-      return transformedChats;
-    } catch (err) {
-      console.error('Error fetching chats:', err);
-      const testChats = createInitialChats(users, currentUser);
-      return testChats;
-    }
-  };
-
-  // Отримання повідомлень для активного чату
-  const fetchMessages = async (chatId: number) => {
-    try {
-      const token = localStorage.getItem('token');
-      
-      if (!token) {
-        return [];
-      }
-
-      const response = await fetch(`/api/chats/${chatId}/messages`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
+        {
+          id: 'student-3',
+          name: 'Олексій Шевченко',
+          avatar: 'ОШ',
+          type: 'student',
+          isOnline: true,
+          securityLevel: 'medium'
         },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch messages');
-      }
-
-      const messagesData = await response.json();
-      
-      const transformedMessages: Message[] = messagesData.map((msg: any) => ({
-        id: msg.id,
-        senderId: msg.senderId,
-        senderName: msg.senderName,
-        senderEmail: msg.senderEmail,
-        content: msg.content,
-        timestamp: new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        attachment: msg.attachment,
-        chatId: chatId,
-        isEdited: msg.isEdited,
-        reactions: msg.reactions,
-        replyTo: msg.replyTo,
-        readBy: msg.readBy,
-        isDeleted: msg.isDeleted
-      }));
-
-      return transformedMessages;
-    } catch (err) {
-      console.error('Error fetching messages:', err);
-      return [];
-    }
-  };
-
-  // Створення чату через API
-  const createChat = async (chatData: {
-    name: string;
-    type: 'direct' | 'group';
-    participantIds: number[];
-    description?: string;
-  }) => {
-    try {
-      const token = localStorage.getItem('token');
-      
-      if (!token) {
-        return { id: Date.now() };
-      }
-
-      const response = await fetch('/api/chats', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(chatData),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to create chat');
-      }
-
-      const newChat = await response.json();
-      return newChat;
-    } catch (err) {
-      console.error('Error creating chat:', err);
-      return { id: Date.now() };
-    }
-  };
-
-  // Відправка повідомлення через API
-  const sendMessageToAPI = async (messageData: {
-    chatId: number;
-    senderId: number;
-    content: string;
-    attachment?: any;
-  }) => {
-    try {
-      const token = localStorage.getItem('token');
-      
-      if (!token) {
-        return { success: true };
-      }
-
-      const response = await fetch(`/api/chats/${messageData.chatId}/messages`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(messageData),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to send message');
-      }
-
-      return await response.json();
-    } catch (err) {
-      console.error('Error sending message:', err);
-      return { success: false };
-    }
-  };
-
-  // Функція для визначення статусу користувача
-  const determineUserStatus = (lastLogin: string, lastLogout: string): 'online' | 'offline' | 'away' => {
-    if (!lastLogin) return 'offline';
-    
-    const loginTime = new Date(lastLogin).getTime();
-    const logoutTime = lastLogout ? new Date(lastLogout).getTime() : null;
-    const now = new Date().getTime();
-    
-    if (!logoutTime || logoutTime < loginTime) {
-      const timeSinceLastAction = now - loginTime;
-      const fifteenMinutes = 15 * 60 * 1000;
-      
-      if (timeSinceLastAction < fifteenMinutes) {
-        return 'online';
-      } else {
-        return 'away';
-      }
-    }
-    
-    return 'offline';
-  };
-
-  // Функція для створення початкових чатів (для тестових даних)
-  const createInitialChats = (users: User[], currentUser: User) => {
-    const initialChats: Chat[] = [];
-    
-    const directChatUsers = users.slice(0, 2);
-    
-    directChatUsers.forEach((user, index) => {
-      if (user.id !== currentUser.id) {
-        const chat: Chat = {
-          id: index + 1,
-          name: user.name,
-          type: 'direct',
-          participants: [currentUser, user],
-          unreadCount: index === 0 ? 1 : 0,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          isPinned: index === 0
-        };
-        initialChats.push(chat);
-      }
-    });
-    
-    return initialChats;
-  };
-
-  // Завантаження даних при монтуванні компонента
-  useEffect(() => {
-    const loadData = async () => {
-      setLoading(true);
-      try {
-        const currentUserData = await fetchCurrentUser();
-        if (!currentUserData) {
-          setError('Не вдалося завантажити дані поточного користувача');
-          setLoading(false);
-          return;
+        {
+          id: 'supervisor-1',
+          name: 'проф. Іваненко І.І.',
+          avatar: 'ІІ',
+          type: 'supervisor',
+          isOnline: true,
+          securityLevel: 'high'
         }
-
-        await fetchUsers();
-        const chatsData = await fetchChats(currentUserData);
-
-        setChats(chatsData);
-        
-        // Виявлення браузера
-        detectBrowser();
-
-      } catch (err) {
-        console.error('Error loading data:', err);
-        setError('Не вдалося завантажити дані');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadData();
-
-    const handleResize = () => {
-      if (window.innerWidth >= 768) {
-        setShowChatList(true);
-      } else {
-        setShowChatList(false);
-      }
-    };
-    
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  // Завантаження повідомлень при зміні активного чату
-  useEffect(() => {
-    const loadMessages = async () => {
-      if (activeChat) {
-        const messagesData = await fetchMessages(activeChat.id);
-        setMessages(messagesData);
-      }
-    };
-
-    loadMessages();
-  }, [activeChat]);
-
-  // Виявлення браузера
-  const detectBrowser = () => {
-    const userAgent = navigator.userAgent;
-    const isSafari = /^((?!chrome|android).)*safari/i.test(userAgent);
-    const isIOS = /iPad|iPhone|iPod/.test(userAgent);
-    const versionMatch = userAgent.match(/Version\/(\d+)/);
-    const version = versionMatch ? parseInt(versionMatch[1]) : 0;
-    
-    setBrowserInfo({ isSafari, isIOS, version });
-    
-    checkAudioSupport(isSafari, version);
-  };
-
-  // Перевірка підтримки аудіо
-  const checkAudioSupport = (isSafari: boolean, version: number) => {
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      setHasAudioSupport(false);
-      setRecordingError("Ваш браузер не підтримує запис аудіо");
-      return;
-    }
-    
-    if (isSafari) {
-      if (version < 14.1) {
-        setHasAudioSupport(false);
-        setRecordingError("Ваша версія Safari не підтримує запис аудіо. Оновіть браузер до версії 14.1 або новішої");
-        return;
-      }
-      
-      const safariMimeTypes = [
-        'audio/mp4',
-        'audio/mpeg',
-        'audio/aac',
-        'audio/wav'
-      ];
-      
-      const hasSafariSupport = safariMimeTypes.some(mimeType => 
-        MediaRecorder.isTypeSupported(mimeType)
-      );
-      
-      setHasAudioSupport(hasSafariSupport);
-      
-      if (!hasSafariSupport) {
-        setRecordingError("Safari не підтримує запис аудіо в цьому форматі");
-      }
-      return;
-    }
-    
-    const hasSupport = [
-      'audio/webm',
-      'audio/webm;codecs=opus',
-      'audio/mp4',
-      'audio/mpeg',
-      'audio/wav'
-    ].some(mimeType => MediaRecorder.isTypeSupported(mimeType));
-    
-    setHasAudioSupport(hasSupport);
-    if (!hasSupport) {
-      setRecordingError("Браузер не підтримує запис аудіо");
-    }
-  };
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, replyingTo]);
-
-  // Ефект для імітації набору тексту
-  useEffect(() => {
-    if (newMessage && activeChat) {
-      const otherParticipants = activeChat.participants.filter(p => p.id !== currentUser?.id);
-      if (otherParticipants.length > 0 && Math.random() > 0.7) {
-        const typingUserId = otherParticipants[0].id;
-        if (!typingUsers.includes(typingUserId)) {
-          setTypingUsers(prev => [...prev, typingUserId]);
-          
-          if (typingTimeoutRef.current) {
-            clearTimeout(typingTimeoutRef.current);
-          }
-          
-          typingTimeoutRef.current = setTimeout(() => {
-            setTypingUsers(prev => prev.filter(id => id !== typingUserId));
-          }, 3000);
+      ],
+      createdAt: '2024-01-15',
+      privacySettings: {
+        isPublic: false,
+        allowInvites: true,
+        showMembers: true,
+        password: '123456',
+        requirePassword: true,
+        encrypted: true
+      },
+      securityLevel: 'high'
+    },
+    {
+      id: 'group-2',
+      name: 'Науковий семінар',
+      avatar: 'НС',
+      type: 'group',
+      isOnline: true,
+      lastMessage: 'проф. Іваненко: Тема наступного семінару',
+      members: [
+        {
+          id: 'supervisor-1',
+          name: 'проф. Іваненко І.І.',
+          avatar: 'ІІ',
+          type: 'supervisor',
+          isOnline: true,
+          securityLevel: 'high'
+        },
+        {
+          id: 'student-1',
+          name: 'Ви',
+          avatar: 'В',
+          type: 'student',
+          isOnline: true,
+          securityLevel: 'medium'
         }
-      }
+      ],
+      createdAt: '2024-02-01',
+      privacySettings: {
+        isPublic: true,
+        allowInvites: false,
+        showMembers: true,
+        encrypted: true
+      },
+      securityLevel: 'medium'
+    },
+    {
+      id: 'group-3',
+      name: 'Секретна лабораторія',
+      avatar: 'СЛ',
+      type: 'group',
+      isOnline: true,
+      lastMessage: 'Обговорення конфіденційних результатів',
+      members: [
+        {
+          id: 'student-1',
+          name: 'Ви',
+          avatar: 'В',
+          type: 'student',
+          isOnline: true,
+          securityLevel: 'medium'
+        }
+      ],
+      privacySettings: {
+        isPublic: false,
+        allowInvites: false,
+        showMembers: false,
+        password: 'secret123',
+        requirePassword: true,
+        encrypted: true
+      },
+      securityLevel: 'high'
+    },
+    {
+      id: 'archived-1',
+      name: 'Стара робоча група',
+      avatar: 'СР',
+      type: 'group',
+      isOnline: false,
+      isArchived: true,
+      lastMessage: 'Марія: Файли збережено в архів',
+      members: [],
+      createdAt: '2023-12-01',
+      securityLevel: 'low'
     }
-    
+  ];
+
+  const availableUsers: ChatUser[] = [
+    {
+      id: 'new-1',
+      name: 'Др. Сидоренко С.С.',
+      avatar: 'СС',
+      email: 'sydorenko@university.edu',
+      type: 'supervisor',
+      isOnline: true,
+      securityLevel: 'high'
+    },
+    {
+      id: 'new-2',
+      name: 'Анна Мельник',
+      avatar: 'АМ',
+      email: 'melnyk@university.edu',
+      type: 'student',
+      isOnline: false,
+      securityLevel: 'medium'
+    },
+    {
+      id: 'new-3',
+      name: 'Богдан Лисенко',
+      avatar: 'БЛ',
+      email: 'lysenko@university.edu',
+      type: 'student',
+      isOnline: true,
+      securityLevel: 'medium'
+    }
+  ];
+
+  useEffect(() => {
+    setUsers(mockUsers.filter(user => !user.isArchived));
+    setAllUsers([...mockUsers, ...availableUsers]);
+    connectWebSocket();
+
     return () => {
+      if (ws.current) {
+        ws.current.close();
+      }
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
       }
+      if (recordingIntervalRef.current) {
+        clearInterval(recordingIntervalRef.current);
+      }
+      if (mediaRecorderRef.current && isRecording) {
+        mediaRecorderRef.current.stop();
+      }
     };
-  }, [newMessage, activeChat]);
+  }, []);
 
-  // Ефект для обробки скролу до архіву
   useEffect(() => {
-    const chatList = chatListRef.current;
-    if (!chatList) return;
+    scrollToBottom();
+  }, [messages, replyingTo]);
 
-    const handleScroll = () => {
-      const isNearBottom = chatList.scrollTop + chatList.clientHeight >= chatList.scrollHeight - 50;
-      
-      if (isNearBottom && showArchiveHint) {
-        setShowArchiveHint(false);
-      } else if (!isNearBottom && !showArchiveHint) {
-        setShowArchiveHint(true);
-      }
-    };
-
-    chatList.addEventListener('scroll', handleScroll);
-    return () => chatList.removeEventListener('scroll', handleScroll);
-  }, [showArchiveHint]);
-
-  // Ефект для закриття контекстного меню при кліку поза ним
+  // Resize functionality
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (contextMenu.visible && contextMenuRef.current && !contextMenuRef.current.contains(e.target as Node)) {
-        closeContextMenu();
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizing) return;
+
+      const newWidth = e.clientX;
+      if (newWidth >= 280 && newWidth <= 600) {
+        setSidebarWidth(newWidth);
       }
     };
 
-    const handleEscapeKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && contextMenu.visible) {
-        closeContextMenu();
-      }
+    const handleMouseUp = () => {
+      setIsResizing(false);
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    document.addEventListener('contextmenu', handleClickOutside);
-    document.addEventListener('keydown', handleEscapeKey);
-    
+    if (isResizing) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+    }
+
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('contextmenu', handleClickOutside);
-      document.removeEventListener('keydown', handleEscapeKey);
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
     };
-  }, [contextMenu.visible]);
+  }, [isResizing]);
 
-  // Ефект для очищення URL при unmount
-  useEffect(() => {
-    return () => {
-      if (audioUrl) {
-        URL.revokeObjectURL(audioUrl);
-      }
-      messages.forEach(msg => {
-        if (msg.attachment?.type === 'audio' && msg.attachment.url) {
-          URL.revokeObjectURL(msg.attachment.url);
-        }
-      });
-    };
-  }, [audioUrl, messages]);
-
-  const filteredUsers = users.filter(user => 
-    user.id !== currentUser?.id && 
-    (user.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    user.email.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
-
-  // Розділяємо чати на закріплені та незакріплені
-  const pinnedChats = chats.filter(chat => chat.isPinned && !chat.isArchived);
-  const unpinnedChats = chats.filter(chat => !chat.isPinned && !chat.isArchived);
-  const archivedChats = chats.filter(chat => chat.isArchived);
-
-  const handleSendMessage = async () => {
-    if ((!newMessage.trim() && !file) || !activeChat || !currentUser) return;
-
-    const message: Message = {
-      id: Date.now(),
-      senderId: currentUser.id,
-      senderName: currentUser.name,
-      senderEmail: currentUser.email,
-      content: newMessage,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      attachment: file ? { 
-        name: file.name, 
-        type: file.type.startsWith('image/') ? 'image' : 
-              file.type.startsWith('video/') ? 'video' : 
-              file.type.startsWith('audio/') ? 'audio' : 'file',
-        size: `${(file.size / 1024 / 1024).toFixed(1)} MB`
-      } : undefined,
-      chatId: activeChat.id,
-      readBy: [currentUser.id],
-      replyTo: replyingTo?.id
-    };
-
-    // Додаємо повідомлення локально
-    setMessages(prev => [...prev, message]);
-    setNewMessage('');
-    setFile(null);
-    setReplyingTo(null);
-    setTypingUsers([]);
+  const connectWebSocket = () => {
+    const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:3001';
     
-    // Оновлюємо список чатів
-    setChats(prev => prev.map(chat => 
-      chat.id === activeChat.id 
-        ? { ...chat, lastMessage: message, updatedAt: new Date().toISOString(), unreadCount: 0 }
-        : chat
-    ));
-
-    // Відправляємо повідомлення на бекенд
     try {
-      await sendMessageToAPI({
-        chatId: activeChat.id,
-        senderId: currentUser.id,
-        content: newMessage,
-        attachment: file ? {
-          name: file.name,
-          type: file.type.startsWith('image/') ? 'image' : 
-                file.type.startsWith('video/') ? 'video' : 
-                file.type.startsWith('audio/') ? 'audio' : 'file',
-          size: `${(file.size / 1024 / 1024).toFixed(1)} MB`
-        } : undefined
-      });
-    } catch (err) {
-      console.error('Failed to send message to server:', err);
+      ws.current = new WebSocket(wsUrl);
+
+      ws.current.onopen = () => {
+        setIsConnected(true);
+        console.log('WebSocket connected');
+        
+        if (ws.current && selectedUser) {
+          ws.current.send(JSON.stringify({
+            type: 'user_join',
+            user: currentUser,
+            chatId: selectedUser.id
+          }));
+        }
+      };
+
+      ws.current.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        
+        switch (data.type) {
+          case 'message':
+            if (data.message.sender !== currentUser.id) {
+              handleNewMessage(data.message);
+            }
+            break;
+          case 'user_typing':
+            handleUserTyping(data);
+            break;
+          case 'user_stop_typing':
+            handleUserStopTyping();
+            break;
+          case 'user_join':
+            handleUserJoin(data.user);
+            break;
+          case 'user_leave':
+            handleUserLeave(data.userId);
+            break;
+          case 'users_list':
+            setUsers(data.users);
+            break;
+          case 'message_history':
+            setMessages(data.messages);
+            break;
+        }
+      };
+
+      ws.current.onclose = () => {
+        setIsConnected(false);
+        console.log('WebSocket disconnected');
+        
+        setTimeout(() => {
+          connectWebSocket();
+        }, 5000);
+      };
+
+      ws.current.onerror = (error) => {
+        console.error('WebSocket error:', error);
+        setIsConnected(false);
+      };
+
+    } catch (error) {
+      console.error('Failed to connect to WebSocket:', error);
+      loadMockData();
     }
   };
 
-  const handleDeleteMessage = (messageId: number) => {
-    setMessages(prev => prev.map(msg => 
-      msg.id === messageId 
-        ? { ...msg, isDeleted: true, content: "Повідомлення видалено", attachment: undefined } 
-        : msg
-    ));
+  const loadMockData = () => {
+    if (selectedUser) {
+      setMessages([
+        {
+          id: '1',
+          sender: selectedUser.id === 'supervisor-1' ? 'supervisor-1' : 'student-1',
+          name: selectedUser.id === 'supervisor-1' ? 'проф. Іваненко І.І.' : 'Ви',
+          content: 'Доброго дня! Як просувається ваша дипломна робота?',
+          timestamp: '10:10',
+          type: 'text'
+        },
+        {
+          id: '2',
+          sender: 'student-1',
+          name: 'Ви',
+          content: 'Доброго дня! Працюю над теоретичною частиною, вже майже завершив.',
+          timestamp: '10:15',
+          type: 'text'
+        },
+        {
+          id: '3',
+          sender: selectedUser.id === 'supervisor-1' ? 'supervisor-1' : 'student-2',
+          name: selectedUser.id === 'supervisor-1' ? 'проф. Іваненко І.І.' : 'Марія Коваль',
+          content: 'Чудово! Надішліть мені чернетку, коли буде готово.',
+          timestamp: '10:20',
+          type: 'text',
+          isPinned: true
+        },
+      ]);
+    }
   };
 
-  const handleStartCall = (type: 'audio' | 'video') => {
-    if (!activeChat || !currentUser) return;
+  // Password strength checker
+  const checkPasswordStrength = (password: string) => {
+    if (password.length < 6) return 'weak';
+    if (password.length < 10) return 'medium';
+    if (/[A-Z]/.test(password) && /[0-9]/.test(password) && /[^A-Za-z0-9]/.test(password)) {
+      return 'strong';
+    }
+    return 'medium';
+  };
+
+  // Generate secure password
+  const generateSecurePassword = () => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
+    let password = '';
+    for (let i = 0; i < 12; i++) {
+      password += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    setPasswordData(prev => ({ ...prev, password, confirmPassword: password }));
+    toast.success('Згенеровано безпечний пароль');
+  };
+
+  // Enhanced password management - FIXED VERSION
+  const handlePasswordAction = () => {
+    const { type, chatId } = passwordDialog;
+
+    let chatToJoin, chatToChange, chatToRemove;
+
+    switch (type) {
+      case 'join':
+        chatToJoin = users.find(c => c.id === chatId);
+        if (chatToJoin?.privacySettings?.password === passwordData.password) {
+          setSelectedUser(chatToJoin);
+          loadMockData();
+          toast.success('Успішний вхід до групи');
+          closePasswordDialog();
+        } else {
+          toast.error('Невірний пароль');
+        }
+        break;
+
+      case 'set':
+        if (passwordData.password !== passwordData.confirmPassword) {
+          toast.error('Паролі не співпадають');
+          return;
+        }
+        if (passwordData.password.length < 6) {
+          toast.error('Пароль повинен містити щонайменше 6 символів');
+          return;
+        }
+        setGroupPassword(chatId!, passwordData.password);
+        toast.success('Пароль успішно встановлено');
+        closePasswordDialog();
+        break;
+
+      case 'change':
+        chatToChange = users.find(c => c.id === chatId);
+        if (chatToChange?.privacySettings?.password !== passwordData.currentPassword) {
+          toast.error('Поточний пароль невірний');
+          return;
+        }
+        if (passwordData.password !== passwordData.confirmPassword) {
+          toast.error('Нові паролі не співпадають');
+          return;
+        }
+        setGroupPassword(chatId!, passwordData.password);
+        toast.success('Пароль успішно змінено');
+        closePasswordDialog();
+        break;
+
+      case 'remove':
+        chatToRemove = users.find(c => c.id === chatId);
+        if (chatToRemove?.privacySettings?.password !== passwordData.currentPassword) {
+          toast.error('Поточний пароль невірний');
+          return;
+        }
+        removeGroupPassword(chatId!);
+        toast.success('Пароль успішно видалено');
+        closePasswordDialog();
+        break;
+    }
+  };
+
+  const setGroupPassword = (chatId: string, password: string) => {
+    console.log('Setting password for chat:', chatId);
     
-    const call: Call = {
-      id: Date.now(),
+    setUsers(prev => prev.map(chat => 
+      chat.id === chatId 
+        ? {
+            ...chat,
+            privacySettings: {
+              ...(chat.privacySettings || {
+                isPublic: false,
+                allowInvites: true,
+                showMembers: true
+              }),
+              password,
+              requirePassword: true,
+              encrypted: true
+            },
+            securityLevel: 'high'
+          }
+        : chat
+    ));
+    
+    // FIX: Update selectedUser only if it's the current chat
+    if (selectedUser?.id === chatId) {
+      console.log('Updating selectedUser');
+      setSelectedUser(prev => prev ? {
+        ...prev,
+        privacySettings: {
+          ...(prev.privacySettings || {
+            isPublic: false,
+            allowInvites: true,
+            showMembers: true
+          }),
+          password,
+          requirePassword: true,
+          encrypted: true
+        },
+        securityLevel: 'high'
+      } : null);
+    }
+  };
+
+  const removeGroupPassword = (chatId: string) => {
+    setUsers(prev => prev.map(chat => 
+      chat.id === chatId
+        ? {
+            ...chat,
+            privacySettings: chat.privacySettings ? {
+              ...chat.privacySettings,
+              password: undefined,
+              requirePassword: false,
+              isPublic: true
+            } : undefined,
+            securityLevel: 'medium'
+          }
+        : chat
+    ));
+    
+    // FIX: Update selectedUser only if it's the current chat
+    if (selectedUser?.id === chatId) {
+      setSelectedUser(prev => prev ? {
+        ...prev,
+        privacySettings: prev.privacySettings ? {
+          ...prev.privacySettings,
+          password: undefined,
+          requirePassword: false,
+          isPublic: true
+        } : undefined,
+        securityLevel: 'medium'
+      } : null);
+    }
+  };
+
+  const openPasswordDialog = (type: PasswordDialogType, chatId?: string) => {
+    setPasswordDialog({
+      isOpen: true,
       type,
-      participants: [currentUser.id, ...activeChat.participants.filter(p => p.id !== currentUser.id).map(p => p.id)],
-      status: 'ringing',
-      startTime: new Date().toISOString()
+      chatId
+    });
+    setPasswordData({
+      password: '',
+      confirmPassword: '',
+      currentPassword: ''
+    });
+  };
+
+  const closePasswordDialog = () => {
+    setPasswordDialog({ isOpen: false, type: 'join' });
+    setPasswordData({ password: '', confirmPassword: '', currentPassword: '' });
+  };
+
+  // Enhanced group creation with security
+  const createGroup = () => {
+    if (!newGroupData.name || newGroupData.members.length === 0) return;
+
+    const securityLevel = newGroupData.requirePassword && newGroupData.password ? 'high' : 
+                        newGroupData.isPublic ? 'medium' : 'low';
+
+    const newGroup: ChatUser = {
+      id: `group-${Date.now()}`,
+      name: newGroupData.name,
+      avatar: newGroupData.name.substring(0, 2).toUpperCase(),
+      type: 'group',
+      isOnline: true,
+      unreadCount: 0,
+      lastMessage: 'Групу створено',
+      members: allUsers.filter(user => newGroupData.members.includes(user.id)),
+      createdAt: new Date().toISOString(),
+      privacySettings: {
+        isPublic: newGroupData.isPublic,
+        allowInvites: newGroupData.allowInvites,
+        showMembers: newGroupData.showMembers,
+        password: newGroupData.requirePassword ? newGroupData.password : undefined,
+        requirePassword: newGroupData.requirePassword,
+        encrypted: newGroupData.requirePassword
+      },
+      securityLevel
     };
-    
-    setActiveCall(call);
-    setCalls(prev => [...prev, call]);
-    
-    setTimeout(() => {
-      if (activeCall?.id === call.id) {
-        setActiveCall(prev => prev ? { ...prev, status: 'ongoing' } : null);
-        setCalls(prev => prev.map(c => c.id === call.id ? { ...c, status: 'ongoing' } : c));
-      }
-    }, 5000);
+
+    setUsers(prev => [newGroup, ...prev]);
+    setSelectedUser(newGroup);
+    setNewGroupData({ 
+      name: '', 
+      members: [], 
+      description: '',
+      isPublic: true,
+      allowInvites: true,
+      showMembers: true,
+      requirePassword: false,
+      securityLevel: 'medium'
+    });
+    setShowCreateGroup(false);
+    loadMockData();
+    toast.success(`Група "${newGroupData.name}" успішно створена`);
   };
 
-  const handleEndCall = () => {
-    if (!activeCall) return;
-    
-    const endedCall: Call = {
-      ...activeCall,
-      status: 'ended',
-      endTime: new Date().toISOString(),
-      duration: Math.floor((new Date().getTime() - new Date(activeCall.startTime).getTime()) / 1000)
-    };
-    
-    setCalls(prev => prev.map(call => call.id === activeCall.id ? endedCall : call));
-    setActiveCall(null);
-  };
+  // Enhanced privacy toggle with password protection
+  const toggleGroupPrivacy = (chatId: string) => {
+    const chat = users.find(c => c.id === chatId);
+    if (!chat?.privacySettings) return;
 
-  const handleAddToContacts = (userId: number) => {
-    setUsers(prev => prev.map(user => 
-      user.id === userId ? { ...user, isContact: true } : user
-    ));
-  };
-
-  const handleCreateDirectChat = async (userId: number) => {
-    const user = users.find(u => u.id === userId);
-    if (!user || !currentUser) return;
-
-    const existingChat = chats.find(chat => 
-      chat.type === 'direct' && chat.participants.some(p => p.id === userId)
-    );
-
-    if (existingChat) {
-      setActiveChat(existingChat);
-      setShowNewChatDialog(false);
+    if (!chat.privacySettings.isPublic && !chat.privacySettings.password) {
+      openPasswordDialog('set', chatId);
       return;
     }
 
-    try {
-      const newChatData = await createChat({
-        name: user.name,
-        type: 'direct',
-        participantIds: [userId],
-        description: `Особистий чат з ${user.name}`
-      });
+    if (chat.privacySettings.isPublic && chat.privacySettings.password) {
+      openPasswordDialog('remove', chatId);
+      return;
+    }
 
-      const newChat: Chat = {
-        id: newChatData.id,
-        name: user.name,
-        type: 'direct',
-        participants: [currentUser, user],
-        unreadCount: 0,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
+    // Simple toggle for groups without password
+    setUsers(prev => prev.map(chat => 
+      chat.id === chatId && chat.privacySettings 
+        ? { 
+            ...chat, 
+            privacySettings: { 
+              ...chat.privacySettings, 
+              isPublic: !chat.privacySettings.isPublic 
+            },
+            securityLevel: !chat.privacySettings.isPublic ? 'medium' : 'low'
+          } 
+        : chat
+    ));
+  };
 
-      setChats(prev => [...prev, newChat]);
-      setActiveChat(newChat);
-      setShowNewChatDialog(false);
-    } catch (err) {
-      console.error('Failed to create chat:', err);
+  // Copy group invite link
+  const copyGroupLink = (chatId: string) => {
+    const chat = users.find(c => c.id === chatId);
+    if (!chat) return;
+
+    const link = `${window.location.origin}/chat/join/${chatId}`;
+    navigator.clipboard.writeText(link);
+    toast.success('Посилання скопійовано в буфер обміну');
+  };
+
+  // Security badge component
+  const SecurityBadge = ({ level }: { level: 'low' | 'medium' | 'high' }) => {
+    const config = {
+      low: { icon: Shield, color: 'text-gray-500 bg-gray-100', label: 'Низька' },
+      medium: { icon: ShieldCheck, color: 'text-blue-500 bg-blue-100', label: 'Середня' },
+      high: { icon: ShieldAlert, color: 'text-green-500 bg-green-100', label: 'Висока' }
+    };
+
+    const { icon: Icon, color, label } = config[level];
+
+    return (
+      <Badge variant="secondary" className={`gap-1 ${color}`}>
+        <Icon className="h-3 w-3" />
+        {label}
+      </Badge>
+    );
+  };
+
+  // Chat management functions
+  const createNewChat = (user: ChatUser) => {
+    const newChat: ChatUser = {
+      ...user,
+      unreadCount: 0,
+      lastMessage: 'Чат створено',
+      isOnline: user.isOnline
+    };
+    setUsers(prev => [newChat, ...prev]);
+    setSelectedUser(newChat);
+    setShowCreateGroup(false);
+    loadMockData();
+  };
+
+  const toggleMuteChat = (chatId: string) => {
+    setUsers(prev => prev.map(chat => 
+      chat.id === chatId ? { ...chat, isMuted: !chat.isMuted } : chat
+    ));
+    if (selectedUser?.id === chatId) {
+      setSelectedUser(prev => prev ? { ...prev, isMuted: !prev.isMuted } : null);
     }
   };
 
-  const handleCreateGroupChat = async () => {
-    if (!groupChatName.trim() || selectedUsers.length === 0 || !currentUser) return;
-
-    try {
-      const newChatData = await createChat({
-        name: groupChatName,
-        type: 'group',
-        participantIds: selectedUsers,
-        description: `Груповий чат: ${groupChatName}`
-      });
-
-      const participants = [currentUser, ...users.filter(u => selectedUsers.includes(u.id))];
-
-      const newChat: Chat = {
-        id: newChatData.id,
-        name: groupChatName,
-        type: 'group',
-        participants,
-        unreadCount: 0,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        admins: [currentUser.id],
-        description: `Груповий чат: ${groupChatName}`
-      };
-
-      setChats(prev => [...prev, newChat]);
-      setActiveChat(newChat);
-      setShowNewGroupDialog(false);
-      setGroupChatName('');
-      setSelectedUsers([]);
-      setSearchTerm('');
-    } catch (err) {
-      console.error('Failed to create group chat:', err);
+  const archiveChat = (chatId: string) => {
+    setUsers(prev => prev.map(chat => 
+      chat.id === chatId ? { ...chat, isArchived: true } : chat
+    ));
+    if (selectedUser?.id === chatId) {
+      setSelectedUser(null);
     }
+    toast.success('Чат архівовано');
   };
 
-  const handleReaction = (messageId: number, reaction: string) => {
-    setMessages(prev => prev.map(msg => {
-      if (msg.id === messageId) {
-        const reactions = { ...msg.reactions };
-        if (reactions[reaction]) {
-          reactions[reaction] += 1;
-        } else {
-          reactions[reaction] = 1;
-        }
-        return { ...msg, reactions };
-      }
-      return msg;
-    }));
+  const unarchiveChat = (chatId: string) => {
+    setUsers(prev => prev.map(chat => 
+      chat.id === chatId ? { ...chat, isArchived: false } : chat
+    ));
+    toast.success('Чат розархівовано');
   };
 
-  const handleEditMessage = () => {
-    if (!editingMessage || !newMessage.trim()) return;
+  const deleteChat = (chatId: string) => {
+    setUsers(prev => prev.filter(chat => chat.id !== chatId));
+    if (selectedUser?.id === chatId) {
+      setSelectedUser(null);
+    }
+    toast.success('Чат видалено');
+  };
 
+  const leaveGroup = (chatId: string) => {
+    setUsers(prev => prev.filter(chat => chat.id !== chatId));
+    if (selectedUser?.id === chatId) {
+      setSelectedUser(null);
+    }
+    toast.success('Ви покинули групу');
+  };
+
+  const pinMessage = (messageId: string) => {
     setMessages(prev => prev.map(msg => 
-      msg.id === editingMessage.id 
-        ? { ...msg, content: newMessage, isEdited: true }
-        : msg
+      msg.id === messageId ? { ...msg, isPinned: !msg.isPinned } : msg
+    ));
+    toast.success('Повідомлення закріплено');
+  };
+
+  const replyToMessage = (message: Message) => {
+    setReplyingTo(message);
+  };
+
+  const cancelReply = () => {
+    setReplyingTo(null);
+  };
+
+  const startResizing = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizing(true);
+  };
+
+  const toggleInvites = (chatId: string) => {
+    setUsers(prev => prev.map(chat => 
+      chat.id === chatId && chat.privacySettings 
+        ? { 
+            ...chat, 
+            privacySettings: { 
+              ...chat.privacySettings, 
+              allowInvites: !chat.privacySettings.allowInvites 
+            } 
+          } 
+        : chat
+    ));
+    if (selectedUser?.id === chatId && selectedUser.privacySettings) {
+      setSelectedUser(prev => prev ? { 
+        ...prev, 
+        privacySettings: { 
+          ...prev.privacySettings!, 
+          allowInvites: !prev.privacySettings!.allowInvites 
+        } 
+      } : null);
+    }
+  };
+
+  const toggleMembersVisibility = (chatId: string) => {
+    setUsers(prev => prev.map(chat => 
+      chat.id === chatId && chat.privacySettings 
+        ? { 
+            ...chat, 
+            privacySettings: { 
+              ...chat.privacySettings, 
+              showMembers: !chat.privacySettings.showMembers 
+            } 
+          } 
+        : chat
+    ));
+    if (selectedUser?.id === chatId && selectedUser.privacySettings) {
+      setSelectedUser(prev => prev ? { 
+        ...prev, 
+        privacySettings: { 
+          ...prev.privacySettings!, 
+          showMembers: !prev.privacySettings!.showMembers 
+        } 
+      } : null);
+    }
+  };
+
+  const addMemberByEmail = (chatId: string, email: string) => {
+    const newMember = availableUsers.find(user => user.email === email);
+    if (!newMember) {
+      toast.error('Користувача з такою поштою не знайдено');
+      return;
+    }
+
+    setUsers(prev => prev.map(chat => 
+      chat.id === chatId 
+        ? { 
+            ...chat, 
+            members: [...(chat.members || []), newMember] 
+          } 
+        : chat
     ));
     
-    setEditingMessage(null);
-    setNewMessage('');
-  };
-
-  const getInitials = (name: string) => {
-    return name.split(' ').map(n => n[0]?.toUpperCase()).join('');
-  };
-
-  const formatLastSeen = (lastSeen: string) => {
-    const now = new Date();
-    const seenDate = new Date(lastSeen);
-    const diffMinutes = Math.floor((now.getTime() - seenDate.getTime()) / 60000);
+    if (selectedUser?.id === chatId) {
+      setSelectedUser(prev => prev ? { 
+        ...prev, 
+        members: [...(prev.members || []), newMember] 
+      } : null);
+    }
     
-    if (diffMinutes < 1) return 'щойно';
-    if (diffMinutes < 60) return `${diffMinutes} хв тому`;
-    if (diffMinutes < 1440) return `${Math.floor(diffMinutes / 60)} год тому`;
-    return `${Math.floor(diffMinutes / 1440)} дн тому`;
+    setNewMemberEmail('');
+    toast.success('Користувача додано до групи');
   };
 
-  const formatCallDuration = (seconds: number) => {
+  const removeMember = (chatId: string, memberId: string) => {
+    setUsers(prev => prev.map(chat => 
+      chat.id === chatId 
+        ? { 
+            ...chat, 
+            members: chat.members?.filter(m => m.id !== memberId) || [] 
+          } 
+        : chat
+    ));
+    
+    if (selectedUser?.id === chatId) {
+      setSelectedUser(prev => prev ? { 
+        ...prev, 
+        members: prev.members?.filter(m => m.id !== memberId) || [] 
+      } : null);
+    }
+    toast.success('Користувача видалено з групи');
+  };
+
+  // Filter chats based on active tab
+  const filteredChats = users.filter(chat => {
+    if (activeTab === 'groups') return chat.type === 'group' && !chat.isArchived;
+    if (activeTab === 'archived') return chat.isArchived;
+    return !chat.isArchived;
+  });
+
+  const filteredUsers = filteredChats.filter(chat =>
+    chat.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const handleNewMessage = (message: Message) => {
+    setMessages(prev => [...prev, message]);
+  };
+
+  const handleUserTyping = (data: { userId: string; userName: string }) => {
+    setIsTyping(true);
+    setTypingUser(data.userName);
+
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+
+    typingTimeoutRef.current = setTimeout(() => {
+      setIsTyping(false);
+      setTypingUser('');
+    }, 3000);
+  };
+
+  const handleUserStopTyping = () => {
+    setIsTyping(false);
+    setTypingUser('');
+  };
+
+  const handleUserJoin = (user: ChatUser) => {
+    setUsers(prev => {
+      const existingUser = prev.find(u => u.id === user.id);
+      if (existingUser) {
+        return prev.map(u => u.id === user.id ? { ...u, isOnline: true } : u);
+      }
+      return [...prev, user];
+    });
+  };
+
+  const handleUserLeave = (userId: string) => {
+    setUsers(prev => prev.map(user => 
+      user.id === userId ? { ...user, isOnline: false } : user
+    ));
+  };
+
+  const handleSend = () => {
+    if (!newMessage.trim() && !attachment) return;
+
+    const message: Message = {
+      id: Date.now().toString(),
+      sender: currentUser.id,
+      name: currentUser.name,
+      content: newMessage,
+      timestamp: new Date().toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' }),
+      type: attachment ? 'file' : 'text'
+    };
+
+    // Add reply if exists
+    if (replyingTo) {
+      message.replyTo = {
+        id: replyingTo.id,
+        sender: replyingTo.sender,
+        name: replyingTo.name,
+        content: replyingTo.content
+      };
+    }
+
+    if (attachment) {
+      message.attachment = {
+        name: attachment.name,
+        url: URL.createObjectURL(attachment),
+        type: attachment.type,
+        size: attachment.size
+      };
+    }
+
+    if (ws.current && ws.current.readyState === WebSocket.OPEN) {
+      ws.current.send(JSON.stringify({
+        type: 'message',
+        message,
+        chatId: selectedUser?.id
+      }));
+    } else {
+      handleNewMessage(message);
+    }
+
+    setNewMessage('');
+    setAttachment(null);
+    setReplyingTo(null);
+    sendStopTyping();
+  };
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        audioChunksRef.current.push(event.data);
+      };
+
+      mediaRecorder.onstop = () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
+        const audioUrl = URL.createObjectURL(audioBlob);
+        
+        const voiceMessage: Message = {
+          id: Date.now().toString(),
+          sender: currentUser.id,
+          name: currentUser.name,
+          content: 'Голосове повідомлення',
+          timestamp: new Date().toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' }),
+          type: 'voice',
+          voiceMessage: {
+            url: audioUrl,
+            duration: recordingTime
+          }
+        };
+
+        if (ws.current && ws.current.readyState === WebSocket.OPEN) {
+          ws.current.send(JSON.stringify({
+            type: 'message',
+            message: voiceMessage,
+            chatId: selectedUser?.id
+          }));
+        } else {
+          handleNewMessage(voiceMessage);
+        }
+
+        stream.getTracks().forEach(track => track.stop());
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+      setRecordingTime(0);
+
+      recordingIntervalRef.current = setInterval(() => {
+        setRecordingTime(prev => prev + 1);
+      }, 1000);
+
+    } catch (error) {
+      console.error('Error starting recording:', error);
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      if (recordingIntervalRef.current) {
+        clearInterval(recordingIntervalRef.current);
+      }
+    }
+  };
+
+  const handleTyping = () => {
+    if (ws.current && ws.current.readyState === WebSocket.OPEN) {
+      ws.current.send(JSON.stringify({
+        type: 'user_typing',
+        userId: currentUser.id,
+        userName: currentUser.name,
+        chatId: selectedUser?.id
+      }));
+    }
+  };
+
+  const sendStopTyping = () => {
+    if (ws.current && ws.current.readyState === WebSocket.OPEN) {
+      ws.current.send(JSON.stringify({
+        type: 'user_stop_typing',
+        userId: currentUser.id,
+        chatId: selectedUser?.id
+      }));
+    }
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setAttachment(file);
+    }
+  };
+
+  const scrollToBottom = () => {
+    if (scrollAreaRef.current) {
+      const scrollContainer = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
+      if (scrollContainer) {
+        scrollContainer.scrollTop = scrollContainer.scrollHeight;
+      }
+    }
+  };
+
+  const removeAttachment = () => {
+    setAttachment(null);
+  };
+
+  const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const renderAvatar = (name: string, isOnline?: boolean, size: 'small' | 'default' | 'large' = 'default') => {
-    const sizeClasses = {
-      small: 'w-6 h-6 text-xs',
-      default: 'w-8 h-8 text-xs',
-      large: 'w-10 h-10 text-sm'
-    };
-    
-    return (
-      <div className="relative">
-        <div className={`${sizeClasses[size]} bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center text-primary-foreground font-semibold`}>
-          {getInitials(name)}
-        </div>
-        {isOnline && (
-          <div className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-green-500 rounded-full border border-card"></div>
-        )}
-      </div>
-    );
-  };
-
-  // Функція для відкриття налаштувань браузера
-  const openBrowserSettings = () => {
-    if (browserInfo.isIOS) {
-      window.open('app-settings:');
-    } else {
-      setRecordingError(
-        "Будь ласка, дозвольте доступ до мікрофона в налаштуваннях браузера. " +
-        "Зазвичай це можна знайти в налаштуваннях приватності або дозволів сайту."
-      );
+  // Додайте цю функцію для безпечного закриття діалогів
+  const handleDialogClose = (open: boolean) => {
+    if (!open) {
+      closePasswordDialog();
     }
   };
-
-  // Функція для початку запису
-  const startRecording = async () => {
-    try {
-      setRecordingError(null);
-      
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        setRecordingError("Ваш браузер не підтримує запис аудіо");
-        setHasAudioSupport(false);
-        return;
-      }
-
-      let mimeTypes;
-      if (browserInfo.isSafari) {
-        mimeTypes = [
-          'audio/mp4',
-          'audio/mpeg', 
-          'audio/aac',
-          'audio/wav'
-        ];
-      } else {
-        mimeTypes = [
-          'audio/webm',
-          'audio/webm;codecs=opus',
-          'audio/mp4',
-          'audio/mpeg',
-          'audio/wav'
-        ];
-      }
-      
-      let supportedMimeType = '';
-      for (const mimeType of mimeTypes) {
-        if (MediaRecorder.isTypeSupported(mimeType)) {
-          supportedMimeType = mimeType;
-          break;
-        }
-      }
-      
-      if (!supportedMimeType) {
-        setRecordingError("Браузер не підтримує жоден з доступних аудіо форматів");
-        setHasAudioSupport(false);
-        return;
-      }
-
-      const constraints = browserInfo.isSafari ? {
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          sampleRate: 44100,
-          channelCount: 1
-        }
-      } : {
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          sampleRate: 44100
-        }
-      };
-
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      
-      const options = { mimeType: supportedMimeType };
-      
-      let recorder;
-      try {
-        recorder = new MediaRecorder(stream, options);
-      } catch (error) {
-        console.error('Помилка створення MediaRecorder:', error);
-        
-        if (browserInfo.isSafari) {
-          try {
-            recorder = new MediaRecorder(stream);
-          } catch (fallbackError) {
-            throw new Error('Не вдається створити записувач аудіо');
-          }
-        } else {
-          throw error;
-        }
-      }
-      
-      audioRecorderRef.current = recorder;
-      audioChunksRef.current = [];
-      
-      recorder.ondataavailable = (e) => {
-        if (e.data && e.data.size > 0) {
-          audioChunksRef.current.push(e.data);
-        }
-      };
-      
-      recorder.onstop = () => {
-        if (audioChunksRef.current.length === 0) {
-          setRecordingError("Не вдалося записати аудіо");
-          return;
-        }
-        
-        const audioBlob = new Blob(audioChunksRef.current, { 
-          type: supportedMimeType || 'audio/mp4'
-        });
-        
-        if (audioBlob.size > 10 * 1024 * 1024) {
-          setRecordingError("Розмір голосового повідомлення занадто великий");
-          return;
-        }
-        
-        setRecordedAudio(audioBlob);
-        const url = URL.createObjectURL(audioBlob);
-        setAudioUrl(url);
-        
-        stream.getTracks().forEach(track => track.stop());
-      };
-      
-      recorder.onerror = (event) => {
-        console.error('Помилка запису:', event);
-        setRecordingError("Сталася помилка під час запису");
-        stopRecording();
-      };
-      
-      try {
-        recorder.start(1000);
-        setIsRecording(true);
-        
-        let time = 0;
-        const timer = setInterval(() => {
-          time += 1;
-          setRecordingTime(time);
-        }, 1000);
-        
-        setRecordingTimer(timer);
-        
-        setTimeout(() => {
-          if (isRecording) {
-            stopRecording();
-          }
-        }, 120000);
-        
-      } catch (error) {
-        console.error('Помилка запуску запису:', error);
-        setRecordingError("Не вдалося запустити запис");
-        stopRecording();
-      }
-      
-    } catch (error) {
-      console.error('Помилка доступу до мікрофона:', error);
-      
-      if (error instanceof DOMException) {
-        switch (error.name) {
-          case 'NotAllowedError':
-            setRecordingError("Доступ до мікрофона заборонено. Дозвольте доступ у налаштуваннях браузера");
-            break;
-          case 'NotFoundError':
-            setRecordingError("Мікрофон не знайдено");
-            break;
-          case 'NotReadableError':
-            setRecordingError("Не вдається отримати доступ до мікрофона");
-            break;
-          case 'NotSupportedError':
-            setRecordingError("Функція не підтримується вашим браузером");
-            break;
-          default:
-            setRecordingError("Помилка доступу до мікрофона: " + error.message);
-        }
-      } else {
-        setRecordingError("Не вдалося отримати доступ до мікрофона");
-      }
-      
-      setHasAudioSupport(false);
-    }
-  };
-
-  // Альтернативний спосіб запису для Safari
-  const startRecordingFallback = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const source = audioContext.createMediaStreamSource(stream);
-      const processor = audioContext.createScriptProcessor(4096, 1, 1);
-      
-      audioDataRef.current = [];
-      
-      source.connect(processor);
-      processor.connect(audioContext.destination);
-      
-      processor.onaudioprocess = (e) => {
-        audioDataRef.current.push(new Float32Array(e.inputBuffer.getChannelData(0)));
-      };
-      
-      audioContextRef.current = audioContext;
-      audioProcessorRef.current = processor;
-      
-      setIsRecording(true);
-      setUsingAudioWorkaround(true);
-      
-      let time = 0;
-      const timer = setInterval(() => {
-        time += 1;
-        setRecordingTime(time);
-      }, 1000);
-      
-      setRecordingTimer(timer);
-      
-      setTimeout(() => {
-        if (isRecording) {
-          stopRecordingFallback();
-        }
-      }, 60000);
-      
-    } catch (error) {
-      console.error('Помилка fallback запису:', error);
-      setRecordingError("Не вдалося запустити запис");
-    }
-  };
-
-  // Зупинка fallback запису
-  const stopRecordingFallback = () => {
-    if (audioContextRef.current && audioProcessorRef.current) {
-      audioProcessorRef.current.disconnect();
-      audioContextRef.current.close();
-      
-      const wavBlob = convertToWav(audioDataRef.current, 44100);
-      setRecordedAudio(wavBlob);
-      setAudioUrl(URL.createObjectURL(wavBlob));
-      
-      setIsRecording(false);
-      setUsingAudioWorkaround(false);
-      
-      if (recordingTimer) {
-        clearInterval(recordingTimer);
-        setRecordingTimer(null);
-      }
-      setRecordingTime(0);
-    }
-  };
-
-  // Функція конвертації в WAV
-  const convertToWav = (audioData: Float32Array[], sampleRate: number): Blob => {
-    const buffer = new ArrayBuffer(44 + audioData.length * 2);
-    const view = new DataView(buffer);
-    
-    const writeString = (offset: number, string: string) => {
-      for (let i = 0; i < string.length; i++) {
-        view.setUint8(offset + i, string.charCodeAt(i));
-      }
-    };
-    
-    writeString(0, 'RIFF');
-    view.setUint32(4, 36 + audioData.length * 2, true);
-    writeString(8, 'WAVE');
-    writeString(12, 'fmt ');
-    view.setUint32(16, 16, true);
-    view.setUint16(20, 1, true);
-    view.setUint16(22, 1, true);
-    view.setUint32(24, sampleRate, true);
-    view.setUint32(28, sampleRate * 2, true);
-    view.setUint16(32, 2, true);
-    view.setUint16(34, 16, true);
-    writeString(36, 'data');
-    view.setUint32(40, audioData.length * 2, true);
-    
-    let offset = 44;
-    for (let i = 0; i < audioData.length; i++) {
-      const samples = audioData[i];
-      for (let j = 0; j < samples.length; j++) {
-        const sample = Math.max(-1, Math.min(1, samples[j]));
-        view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true);
-        offset += 2;
-      }
-    }
-    
-    return new Blob([buffer], { type: 'audio/wav' });
-  };
-
-  // Функція для зупинки запису
-  const stopRecording = () => {
-    if (usingAudioWorkaround) {
-      stopRecordingFallback();
-      return;
-    }
-
-    if (audioRecorderRef.current && isRecording) {
-      try {
-        if (audioRecorderRef.current.state === 'recording') {
-          audioRecorderRef.current.stop();
-        }
-      } catch (error) {
-        console.error('Помилка зупинки запису:', error);
-      }
-      setIsRecording(false);
-      
-      if (recordingTimer) {
-        clearInterval(recordingTimer);
-        setRecordingTimer(null);
-      }
-      setRecordingTime(0);
-    }
-  };
-
-  // Функція для відтворення записаного аудіо
-  const playRecordedAudio = () => {
-    if (recordedAudio) {
-      const url = URL.createObjectURL(recordedAudio);
-      const audio = new Audio(url);
-      
-      audio.onended = () => {
-        setIsPlaying(false);
-        URL.revokeObjectURL(url);
-      };
-      
-      audio.onerror = () => {
-        setIsPlaying(false);
-        URL.revokeObjectURL(url);
-      };
-      
-      audio.play().then(() => {
-        setIsPlaying(true);
-      }).catch(error => {
-        console.error('Помилка відтворення аудіо:', error);
-        setIsPlaying(false);
-        URL.revokeObjectURL(url);
-      });
-    }
-  };
-
-  // Функція для паузи аудіо
-  const pauseRecordedAudio = () => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      setIsPlaying(false);
-    }
-  };
-
-  // Функція для відправки голосового повідомлення
-  const sendVoiceMessage = async () => {
-    if (!recordedAudio || !activeChat || !currentUser) return;
-
-    const message: Message = {
-      id: Date.now(),
-      senderId: currentUser.id,
-      senderName: currentUser.name,
-      senderEmail: currentUser.email,
-      content: "Голосове повідомлення",
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      attachment: { 
-        name: usingAudioWorkaround ? "voice-message.wav" : "voice-message.webm",
-        type: "audio",
-        size: `${(recordedAudio.size / 1024).toFixed(1)} KB`,
-        blob: recordedAudio
-      },
-      chatId: activeChat.id,
-      readBy: [currentUser.id]
-    };
-
-    setMessages(prev => [...prev, message]);
-    setRecordedAudio(null);
-    setAudioUrl('');
-    setIsPlaying(false);
-    setUsingAudioWorkaround(false);
-    
-    setChats(prev => prev.map(chat => 
-      chat.id === activeChat.id 
-        ? { ...chat, lastMessage: message, updatedAt: new Date().toISOString(), unreadCount: 0 }
-        : chat
-    ));
-
-    // Відправляємо голосове повідомлення на бекенд
-    try {
-      await sendMessageToAPI({
-        chatId: activeChat.id,
-        senderId: currentUser.id,
-        content: "Голосове повідомлення",
-        attachment: {
-          name: usingAudioWorkaround ? "voice-message.wav" : "voice-message.webm",
-          type: "audio",
-          size: `${(recordedAudio.size / 1024).toFixed(1)} KB`
-        }
-      });
-    } catch (err) {
-      console.error('Failed to send voice message to server:', err);
-    }
-  };
-
-  // Функція для скасування запису
-  const cancelRecording = () => {
-    stopRecording();
-    setRecordedAudio(null);
-    setAudioUrl('');
-    setRecordingError(null);
-    setUsingAudioWorkaround(false);
-  };
-
-  // Функція для відтворення аудіо повідомлення
-  const playAudioMessage = (messageId: number, blob: Blob) => {
-    if (currentlyPlaying === messageId) {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current = null;
-      }
-      setCurrentlyPlaying(null);
-      return;
-    }
-    
-    if (audioRef.current) {
-      audioRef.current.pause();
-    }
-    
-    const url = URL.createObjectURL(blob);
-    const audio = new Audio(url);
-    audioRef.current = audio;
-    
-    audio.onended = () => {
-      setCurrentlyPlaying(null);
-      URL.revokeObjectURL(url);
-    };
-    
-    audio.onerror = () => {
-      setCurrentlyPlaying(null);
-      URL.revokeObjectURL(url);
-    };
-    
-    audio.play().catch(error => {
-      console.error('Помилка відтворення аудіо:', error);
-      setCurrentlyPlaying(null);
-      URL.revokeObjectURL(url);
-    });
-    
-    setCurrentlyPlaying(messageId);
-  };
-
-  // Обробник правого кліку миші
-  const handleRightClick = (e: React.MouseEvent, chat: Chat) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    setContextMenu({
-      visible: true,
-      x: e.clientX,
-      y: e.clientY,
-      chat
-    });
-  };
-
-  // Закриття контекстного меню
-  const closeContextMenu = () => {
-    setContextMenu({
-      visible: false,
-      x: 0,
-      y: 0,
-      chat: null
-    });
-  };
-
-  // Функції для обробки дій меню
-  const handleTogglePinChat = (chatId: number) => {
-    setChats(prev => prev.map(chat => 
-      chat.id === chatId ? { ...chat, isPinned: !chat.isPinned } : chat
-    ));
-    closeContextMenu();
-  };
-
-  const handleToggleMuteChat = (chatId: number) => {
-    setChats(prev => prev.map(chat => 
-      chat.id === chatId ? { ...chat, isMuted: !chat.isMuted } : chat
-    ));
-    closeContextMenu();
-  };
-
-  const handleToggleArchiveChat = (chatId: number) => {
-    setChats(prev => prev.map(chat => 
-      chat.id === chatId ? { ...chat, isArchived: !chat.isArchived } : chat
-    ));
-    closeContextMenu();
-  };
-
-  const handleDeleteChat = (chatId: number) => {
-    setChats(prev => prev.filter(chat => chat.id !== chatId));
-    if (activeChat?.id === chatId) {
-      setActiveChat(null);
-    }
-    closeContextMenu();
-  };
-
-  // Функція для перемикання відображення архіву
-  const toggleArchived = () => {
-    setShowArchived(!showArchived);
-  };
-
-  // Компонент для відображення інструкцій Safari
-  const renderSafariInstructions = () => {
-    if (!browserInfo.isSafari) return null;
-
-    return (
-      <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg mb-3">
-        <div className="flex items-start gap-2">
-          <Info className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
-          <div className="flex-1">
-            <p className="text-xs font-medium text-blue-800 mb-1">
-              Інструкція для Safari:
-            </p>
-            <ol className="text-xs text-blue-700 space-y-1">
-              <li>1. Натисніть "Safari" в меню → "Налаштування"</li>
-              <li>2. Перейдіть в "Вебсайти" → "Мікрофон"</li>
-              <li>3. Знайдіть цей сайт і встановіть "Дозволити"</li>
-              <li>4. Перезавантажте сторінку</li>
-            </ol>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  const renderAttachment = (attachment: Message['attachment'], messageId: number) => {
-    if (!attachment) return null;
-
-    if (attachment.type === 'image') {
-      return (
-        <div className="mt-2 rounded-lg overflow-hidden bg-muted max-w-xs">
-          <div className="h-32 bg-gradient-to-br from-muted to-muted/80 flex items-center justify-center">
-            <ImageIcon className="h-8 w-8 text-muted-foreground" />
-          </div>
-          <div className="p-2">
-            <p className="text-xs font-medium truncate text-foreground">{attachment.name}</p>
-            <p className="text-xs text-muted-foreground">{attachment.size}</p>
-          </div>
-        </div>
-      );
-    }
-
-    if (attachment.type === 'audio') {
-      const isPlaying = currentlyPlaying === messageId;
-      
-      return (
-        <div className="mt-2 p-2 bg-muted rounded-lg border border-border flex items-center gap-2 max-w-xs">
-          <button 
-            onClick={() => {
-              if (attachment.blob) {
-                playAudioMessage(messageId, attachment.blob);
-              }
-            }}
-            className={`p-1.5 rounded-full flex-shrink-0 ${
-              isPlaying ? 'bg-destructive text-destructive-foreground' : 'bg-primary text-primary-foreground'
-            }`}
-          >
-            {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-          </button>
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium truncate text-foreground">{attachment.name}</p>
-            <p className="text-xs text-muted-foreground">{attachment.size}</p>
-          </div>
-          <div className="w-16 h-1 bg-muted-foreground/20 rounded-full overflow-hidden">
-            <div className="h-full bg-primary w-1/2"></div>
-          </div>
-          <button 
-            className="p-1 hover:bg-accent rounded-md flex-shrink-0 transition-colors"
-            onClick={() => {
-              if (attachment.blob) {
-                const url = URL.createObjectURL(attachment.blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = attachment.name;
-                a.click();
-                setTimeout(() => URL.revokeObjectURL(url), 100);
-              }
-            }}
-          >
-            <Download className="h-3 w-3 text-muted-foreground" />
-          </button>
-        </div>
-      );
-    }
-
-    if (attachment.type === 'video') {
-      return (
-        <div className="mt-2 rounded-lg overflow-hidden bg-muted max-w-xs">
-          <div className="h-32 bg-gradient-to-br from-muted to-muted/80 flex items-center justify-center">
-            <Video className="h-8 w-8 text-muted-foreground" />
-          </div>
-          <div className="p-2">
-            <p className="text-xs font-medium truncate text-foreground">{attachment.name}</p>
-            <p className="text-xs text-muted-foreground">{attachment.size}</p>
-          </div>
-        </div>
-      );
-    }
-
-    return (
-      <div className="mt-2 p-2 bg-muted rounded-lg border border-border flex items-center gap-2 max-w-xs">
-        <File className="h-6 w-6 text-primary flex-shrink-0" />
-        <div className="flex-1 min-w-0">
-          <p className="text-xs font-medium truncate text-foreground">{attachment.name}</p>
-          <p className="text-xs text-muted-foreground">{attachment.size}</p>
-        </div>
-        <button className="p-1 hover:bg-accent rounded-md flex-shrink-0 transition-colors">
-          <Download className="h-3 w-3 text-muted-foreground" />
-        </button>
-      </div>
-    );
-  };
-
-  const renderNewChatDialog = () => (
-    <div className={`fixed inset-0 z-50 ${showNewChatDialog ? '' : 'hidden'}`}>
-      <div className="fixed inset-0 bg-black/20 backdrop-blur-sm" onClick={() => setShowNewChatDialog(false)} />
-      <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-popover rounded-xl shadow-xl p-4 border border-border">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-popover-foreground">Новий чат</h2>
-          <button onClick={() => setShowNewChatDialog(false)} className="p-1 hover:bg-muted rounded-md transition-colors">
-            <X className="w-4 h-4 text-muted-foreground" />
-          </button>
-        </div>
-        
-        <div className="relative mb-3">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-          <input
-            type="text"
-            placeholder="Пошук користувачів..."
-            className="w-full pl-9 pr-3 py-2 bg-input border-0 rounded-lg text-foreground placeholder:text-muted-foreground focus:bg-background focus:ring-1 focus:ring-ring transition-all text-sm"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-        
-        <div className="space-y-1 max-h-64 overflow-y-auto">
-          {filteredUsers.length === 0 ? (
-            <div className="py-6 text-center text-muted-foreground text-sm">
-              Користувачів не знайдено
-            </div>
-          ) : (
-            filteredUsers.map(user => (
-              <div
-                key={user.id}
-                className="flex items-center gap-2 p-2 hover:bg-muted rounded-lg cursor-pointer transition-colors"
-                onClick={() => handleCreateDirectChat(user.id)}
-              >
-                {renderAvatar(user.name, user.status === 'online')}
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium truncate text-foreground text-sm">{user.name}</p>
-                  <p className="text-xs text-muted-foreground truncate">{user.email}</p>
-                </div>
-                {!user.isContact && (
-                  <button 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleAddToContacts(user.id);
-                    }}
-                    className="p-1 hover:bg-accent rounded-md transition-colors"
-                  >
-                    <UserPlus className="w-4 h-4 text-muted-foreground" />
-                  </button>
-                )}
-              </div>
-            ))
-          )}
-        </div>
-      </div>
-    </div>
-  );
-
-  const renderNewGroupDialog = () => (
-    <div className={`fixed inset-0 z-50 ${showNewGroupDialog ? '' : 'hidden'}`}>
-      <div className="fixed inset-0 bg-black/20 backdrop-blur-sm" onClick={() => setShowNewGroupDialog(false)} />
-      <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-popover rounded-xl shadow-xl p-4 border border-border">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-popover-foreground">Нова група</h2>
-          <button onClick={() => setShowNewGroupDialog(false)} className="p-1 hover:bg-muted rounded-md transition-colors">
-            <X className="w-4 h-4 text-muted-foreground" />
-          </button>
-        </div>
-        
-        <div className="space-y-4">
-          <div>
-            <label className="block text-xs font-medium mb-1 text-foreground">Назва групи</label>
-            <input
-              type="text"
-              placeholder="Введіть назву групи..."
-              className="w-full px-3 py-2 bg-input border-0 rounded-lg text-foreground placeholder:text-muted-foreground focus:bg-background focus:ring-1 focus:ring-ring transition-all text-sm"
-              value={groupChatName}
-              onChange={(e) => setGroupChatName(e.target.value)}
-            />
-          </div>
-          
-          <div>
-            <label className="block text-xs font-medium mb-1 text-foreground">Учасники</label>
-            <div className="relative mb-2">
-              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-              <input
-                type="text"
-                placeholder="Пошук користувачів..."
-                className="w-full pl-9 pr-3 py-2 bg-input border-0 rounded-lg text-foreground placeholder:text-muted-foreground focus:bg-background focus:ring-1 focus:ring-ring transition-all text-sm"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-            
-            <div className="space-y-1 max-h-40 overflow-y-auto">
-              {filteredUsers.map(user => (
-                <div key={user.id} className="flex items-center gap-2 p-2 hover:bg-muted rounded-lg">
-                  <label className="flex items-center gap-2 flex-1 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={selectedUsers.includes(user.id)}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setSelectedUsers(prev => [...prev, user.id]);
-                        } else {
-                          setSelectedUsers(prev => prev.filter(id => id !== user.id));
-                        }
-                      }}
-                      className="w-4 h-4 rounded border border-border text-primary focus:ring-ring"
-                    />
-                    {renderAvatar(user.name, user.status === 'online', 'small')}
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium truncate text-foreground text-sm">{user.name}</p>
-                      <p className="text-xs text-muted-foreground">{user.role}</p>
-                    </div>
-                  </label>
-                </div>
-              ))}
-            </div>
-            
-            {selectedUsers.length > 0 && (
-              <div className="mt-3 p-2 bg-accent/10 rounded-lg">
-                <p className="text-xs font-medium text-accent-foreground mb-1">
-                  Обрано: {selectedUsers.length} учасників
-                </p>
-                <div className="flex flex-wrap gap-1">
-                  {users
-                    .filter(u => selectedUsers.includes(u.id))
-                    .map(user => (
-                      <span 
-                        key={user.id}
-                        className="inline-flex items-center gap-1 bg-accent text-accent-foreground px-2 py-0.5 rounded-md text-xs"
-                      >
-                        {user.name}
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedUsers(prev => prev.filter(id => id !== user.id));
-                          }}
-                          className="hover:text-destructive transition-colors"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </span>
-                    ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-        
-        <div className="flex justify-end pt-4 border-t border-border mt-4">
-          <button
-            onClick={handleCreateGroupChat}
-            disabled={!groupChatName.trim() || selectedUsers.length === 0}
-            className="px-4 py-2 bg-primary hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground text-primary-foreground rounded-lg font-medium transition-colors text-sm"
-          >
-            Створити групу
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-
-  // Компонент контекстного меню
-  const renderContextMenu = () => {
-    if (!contextMenu.visible || !contextMenu.chat) return null;
-
-    return (
-      <div 
-        ref={contextMenuRef}
-        className="fixed z-50 bg-popover rounded-lg shadow-lg border border-border py-1 min-w-[180px]"
-        style={{ left: contextMenu.x, top: contextMenu.y }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <button
-          onClick={() => handleTogglePinChat(contextMenu.chat!.id)}
-          className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted transition-colors text-left"
-        >
-          <Pin className="w-4 h-4 text-muted-foreground" />
-          <span>{contextMenu.chat.isPinned ? 'Відкріпити' : 'Закріпити'}</span>
-        </button>
-        
-        <button
-          onClick={() => handleToggleMuteChat(contextMenu.chat!.id)}
-          className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted transition-colors text-left"
-        >
-          {contextMenu.chat.isMuted ? (
-            <>
-              <BellRing className="w-4 h-4 text-muted-foreground" />
-              <span>Увімкнути сповіщення</span>
-            </>
-          ) : (
-            <>
-              <BellOff className="w-4 h-4 text-muted-foreground" />
-              <span>Вимкнути сповіщення</span>
-            </>
-          )}
-        </button>
-        
-        <button
-          onClick={() => handleToggleArchiveChat(contextMenu.chat!.id)}
-          className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted transition-colors text-left"
-        >
-          <Archive className="w-4 h-4 text-muted-foreground" />
-          <span>{contextMenu.chat.isArchived ? 'Розархівувати' : 'Архівувати'}</span>
-        </button>
-        
-        <div className="h-px bg-border my-1"></div>
-        
-        <button
-          onClick={() => handleDeleteChat(contextMenu.chat!.id)}
-          className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-destructive/10 text-destructive transition-colors text-left"
-        >
-          <Trash2 className="w-4 h-4" />
-          <span>Видалити чат</span>
-        </button>
-      </div>
-    );
-  };
-
-  const renderCallInterface = () => {
-    if (!activeCall) return null;
-    
-    const otherParticipants = activeCall.participants.filter(id => id !== currentUser?.id);
-    const participantNames = otherParticipants.map(id => users.find(u => u.id === id)?.name).join(', ');
-    
-    return (
-      <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center">
-        <div className="bg-popover rounded-xl p-6 w-full max-w-md">
-          <div className="text-center mb-6">
-            <h2 className="text-xl font-semibold text-popover-foreground mb-2">
-              {activeCall.type === 'audio' ? 'Аудіодзвінок' : 'Відеодзвінок'}
-            </h2>
-            <p className="text-muted-foreground">
-              {activeCall.status === 'ringing' ? 'Дзвінок...' : participantNames}
-            </p>
-            {activeCall.status === 'ongoing' && (
-              <p className="text-muted-foreground mt-2">
-                {formatCallDuration(Math.floor((new Date().getTime() - new Date(activeCall.startTime).getTime()) / 1000))}
-              </p>
-            )}
-          </div>
-          
-          <div className="flex justify-center gap-4">
-            {activeCall.status === 'ringing' ? (
-              <>
-                <button 
-                  onClick={handleEndCall}
-                  className="p-3 bg-destructive text-destructive-foreground rounded-full"
-                >
-                  <PhoneOff className="w-6 h-6" />
-                </button>
-              </>
-            ) : (
-              <>
-                <button className="p-3 bg-muted text-muted-foreground rounded-full">
-                  <Mic className="w-6 h-6" />
-                </button>
-                <button 
-                  onClick={handleEndCall}
-                  className="p-3 bg-destructive text-destructive-foreground rounded-full"
-                >
-                  <PhoneOff className="w-6 h-6" />
-                </button>
-                {activeCall.type === 'video' && (
-                  <button className="p-3 bg-muted text-muted-foreground rounded-full">
-                    <VideoOff className="w-6 h-6" />
-                  </button>
-                )}
-              </>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  // Додамо обробку стану завантаження та помилок
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Завантаження чату...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <AlertCircle className="w-12 h-12 text-destructive mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-foreground mb-2">Помилка</h2>
-          <p className="text-muted-foreground mb-4">{error}</p>
-          <button 
-            onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
-          >
-            Спробувати знову
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-background flex">
-      {/* Sidebar */}
       <div className="hidden md:block">
         <Sidebar />
       </div>
-      
+
       <div className="flex-1 flex flex-col h-screen">
-        {/* Header */}
-        <div className="sticky top-0 z-10 bg-card border-b border-border">
+        <div className="sticky top-0 z-10 bg-[var(--card)] border-b border-[var(--border)]">
           <Header />
         </div>
 
-        {/* Chat Content */}
-        <div className="flex-1 flex overflow-hidden">
-          {/* Chat Sidebar - показується тільки коли showChatList = true */}
-          {showChatList && (
-            <div className="w-full md:w-64 bg-card border-r border-border flex flex-col">
-              {/* Заголовок з кнопками */}
-              <div className="p-4 border-b border-border">
-                <div className="flex items-center justify-between mb-4">
-                  <h1 className="text-lg font-bold text-card-foreground">Повідомлення</h1>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => setShowChatList(false)}
-                      className="p-1 hover:bg-muted rounded-md transition-colors md:hidden"
-                      title="Сховати чати"
+        <main className="flex-1 overflow-hidden">
+          <div className="h-full">
+            <div className="flex h-full">
+              {/* Users sidebar */}
+              <div 
+                ref={sidebarRef}
+                className="border-r bg-muted/20 flex flex-col relative"
+                style={{ width: `${sidebarWidth}px` }}
+              >
+                {/* Resize handle */}
+                <div
+                  className="absolute -right-1 top-0 bottom-0 w-2 cursor-col-resize z-20 flex items-center justify-center"
+                  onMouseDown={startResizing}
+                >
+                  <div className="w-1 h-16 bg-gray-300 rounded-full hover:bg-blue-500 transition-colors" />
+                </div>
+
+                <div className="p-3 border-b flex-shrink-0">
+                  <div className="flex items-center justify-between mb-3">
+                    <h2 className="text-lg font-semibold">Чати</h2>
+                    <div className="flex gap-1">
+                      <Dialog open={showCreateGroup} onOpenChange={setShowCreateGroup}>
+                        <DialogTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <Users className="h-4 w-4" />
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-md">
+                          <DialogHeader>
+                            <DialogTitle>Створити групу</DialogTitle>
+                          </DialogHeader>
+                          <div className="space-y-4">
+                            <Input
+                              placeholder="Назва групи"
+                              value={newGroupData.name}
+                              onChange={(e) => setNewGroupData(prev => ({...prev, name: e.target.value}))}
+                            />
+                            <Textarea
+                              placeholder="Опис групи (необов'язково)"
+                              value={newGroupData.description}
+                              onChange={(e) => setNewGroupData(prev => ({...prev, description: e.target.value}))}
+                            />
+                            
+                            <div className="space-y-4">
+                              <div className="flex items-center justify-between">
+                                <Label htmlFor="public-group">Публічна група</Label>
+                                <Switch
+                                  id="public-group"
+                                  checked={newGroupData.isPublic}
+                                  onCheckedChange={(checked: boolean) => setNewGroupData(prev => ({...prev, isPublic: checked}))}
+                                />
+                              </div>
+                              
+                              <div className="flex items-center justify-between">
+                                <Label htmlFor="require-password">Захистити паролем</Label>
+                                <Switch
+                                  id="require-password"
+                                  checked={newGroupData.requirePassword}
+                                  onCheckedChange={(checked: boolean) => setNewGroupData(prev => ({...prev, requirePassword: checked}))}
+                                />
+                              </div>
+
+                              {newGroupData.requirePassword && (
+                                <div className="space-y-3 p-3 bg-blue-50 rounded-lg">
+                                  <div className="flex items-center justify-between">
+                                    <Label htmlFor="password">Пароль групи</Label>
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={generateSecurePassword}
+                                    >
+                                      <Shield className="h-3 w-3 mr-1" />
+                                      Згенерувати
+                                    </Button>
+                                  </div>
+                                  <Input
+                                    id="password"
+                                    type="password"
+                                    placeholder="Введіть пароль"
+                                    value={newGroupData.password || ''}
+                                    onChange={(e) => setNewGroupData(prev => ({...prev, password: e.target.value}))}
+                                  />
+                                  {newGroupData.password && (
+                                    <div className="text-xs text-muted-foreground">
+                                      Надійність: {checkPasswordStrength(newGroupData.password)}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                              
+                              <div className="flex items-center justify-between">
+                                <Label htmlFor="allow-invites">Дозволити запрошення</Label>
+                                <Switch
+                                  id="allow-invites"
+                                  checked={newGroupData.allowInvites}
+                                  onCheckedChange={(checked: boolean) => setNewGroupData(prev => ({...prev, allowInvites: checked}))}
+                                />
+                              </div>
+                              
+                              <div className="flex items-center justify-between">
+                                <Label htmlFor="show-members">Показувати учасників</Label>
+                                <Switch
+                                  id="show-members"
+                                  checked={newGroupData.showMembers}
+                                  onCheckedChange={(checked: boolean) => setNewGroupData(prev => ({...prev, showMembers: checked}))}
+                                />
+                              </div>
+                            </div>
+
+                            <div className="space-y-2">
+                              <h4 className="text-sm font-medium">Учасники:</h4>
+                              {availableUsers.map(user => (
+                                <div key={user.id} className="flex items-center gap-2">
+                                  <input
+                                    type="checkbox"
+                                    checked={newGroupData.members.includes(user.id)}
+                                    onChange={(e) => {
+                                      if (e.target.checked) {
+                                        setNewGroupData(prev => ({
+                                          ...prev,
+                                          members: [...prev.members, user.id]
+                                        }));
+                                      } else {
+                                        setNewGroupData(prev => ({
+                                          ...prev,
+                                          members: prev.members.filter(id => id !== user.id)
+                                        }));
+                                      }
+                                    }}
+                                  />
+                                  <Avatar className="h-6 w-6">
+                                    <AvatarFallback className="text-xs">{user.avatar}</AvatarFallback>
+                                  </Avatar>
+                                  <span className="text-sm">{user.name}</span>
+                                </div>
+                              ))}
+                            </div>
+                            <Button onClick={createGroup} disabled={!newGroupData.name || newGroupData.members.length === 0}>
+                              Створити групу
+                            </Button>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <Plus className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent>
+                          <DropdownMenuItem onClick={() => setShowCreateGroup(true)}>
+                            <Users className="h-4 w-4 mr-2" />
+                            Нова група
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <div className="max-h-60 overflow-y-auto">
+                            {availableUsers.map(user => (
+                              <DropdownMenuItem key={user.id} onClick={() => createNewChat(user)}>
+                                <Avatar className="h-6 w-6 mr-2">
+                                  <AvatarFallback className="text-xs">{user.avatar}</AvatarFallback>
+                                </Avatar>
+                                {user.name}
+                              </DropdownMenuItem>
+                            ))}
+                          </div>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </div>
+
+                  <div className="relative">
+                    <Search className="absolute left-2 top-2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Пошук чатів..."
+                      className="pl-8 h-9"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="mt-3 flex gap-1">
+                    <Button
+                      variant={activeTab === 'all' ? 'default' : 'ghost'}
+                      size="sm"
+                      className="flex-1 text-xs h-8"
+                      onClick={() => setActiveTab('all')}
                     >
-                      <ArrowLeft className="w-4 h-4 text-muted-foreground" />
-                    </button>
-                    <button
-                      onClick={() => setShowChatList(false)}
-                      className="p-1 hover:bg-muted rounded-md transition-colors hidden md:block"
-                      title="Сховати чати"
+                      Всі
+                    </Button>
+                    <Button
+                      variant={activeTab === 'groups' ? 'default' : 'ghost'}
+                      size="sm"
+                      className="flex-1 text-xs h-8"
+                      onClick={() => setActiveTab('groups')}
                     >
-                      <X className="w-4 h-4 text-muted-foreground" />
-                    </button>
+                      Групи
+                    </Button>
+                    <Button
+                      variant={activeTab === 'archived' ? 'default' : 'ghost'}
+                      size="sm"
+                      className="flex-1 text-xs h-8"
+                      onClick={() => setActiveTab('archived')}
+                    >
+                      Архів
+                    </Button>
                   </div>
                 </div>
                 
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setShowNewChatDialog(true)}
-                    className="flex-1 flex items-center justify-center gap-1 py-1.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg font-medium transition-colors text-sm"
-                  >
-                    <Plus className="w-3 h-3" />
-                    <span>Новий чат</span>
-                  </button>
-                  <button
-                    onClick={() => setShowNewGroupDialog(true)}
-                    className="p-1.5 bg-muted hover:bg-muted/80 rounded-lg transition-colors"
-                    title="Створити групу"
-                  >
-                    <Users className="w-3 h-3 text-muted-foreground" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Список чатів */}
-              <div ref={chatListRef} className="flex-1 overflow-y-auto">
-                <div className="p-2">
-                  {/* Закріплені чати */}
-                  {pinnedChats.length > 0 && (
-                    <div className="mb-4">
-                      <div className="px-2 py-1 text-xs font-medium text-muted-foreground uppercase">
-                        Закріплені
-                      </div>
-                      <div className="space-y-1">
-                        {pinnedChats.map(chat => (
-                          <div
-                            key={chat.id}
-                            className={`p-3 rounded-lg cursor-pointer transition-colors ${
-                              activeChat?.id === chat.id 
-                                ? 'bg-accent border border-accent-foreground/20' 
-                                : 'hover:bg-muted'
-                            }`}
-                            onClick={() => {
-                              setActiveChat(chat);
-                              if (window.innerWidth < 768) {
-                                setShowChatList(false);
-                              }
-                            }}
-                            onContextMenu={(e) => handleRightClick(e, chat)}
-                          >
-                            <div className="flex items-center gap-2">
-                              <div className="relative">
-                                {chat.type === 'group' ? (
-                                  <div className="w-8 h-8 bg-gradient-to-br from-accent to-primary rounded-full flex items-center justify-center text-accent-foreground font-semibold">
-                                    <Users className="w-4 h-4" />
-                                  </div>
-                                ) : (
-                                  renderAvatar(chat.name, true)
-                                )}
-                                {chat.unreadCount > 0 && (
-                                  <div className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-xs rounded-full h-4 w-4 flex items-center justify-center font-medium">
-                                    {chat.unreadCount > 9 ? '9+' : chat.unreadCount}
-                                  </div>
-                                )}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center justify-between mb-0.5">
-                                  <h3 className="font-medium text-card-foreground truncate text-sm">{chat.name}</h3>
-                                  <span className="text-xs text-muted-foreground flex-shrink-0">
-                                    {chat.lastMessage?.timestamp}
-                                  </span>
-                                </div>
-                                {chat.lastMessage && (
-                                  <p className="text-xs text-muted-foreground truncate">
-                                    {chat.type === 'group' && `${chat.lastMessage.senderName}: `}
-                                    {chat.lastMessage.content}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Незакріплені чати */}
-                  {unpinnedChats.length > 0 && (
-                    <div className="mb-4">
-                      {pinnedChats.length > 0 && (
-                        <div className="px-2 py-1 text-xs font-medium text-muted-foreground uppercase">
-                          Всі чати
-                        </div>
-                      )}
-                      <div className="space-y-1">
-                        {unpinnedChats.map(chat => (
-                          <div
-                            key={chat.id}
-                            className={`p-3 rounded-lg cursor-pointer transition-colors ${
-                              activeChat?.id === chat.id 
-                                ? 'bg-accent border border-accent-foreground/20' 
-                                : 'hover:bg-muted'
-                            }`}
-                            onClick={() => {
-                              setActiveChat(chat);
-                              if (window.innerWidth < 768) {
-                                setShowChatList(false);
-                              }
-                            }}
-                            onContextMenu={(e) => handleRightClick(e, chat)}
-                          >
-                            <div className="flex items-center gap-2">
-                              <div className="relative">
-                                {chat.type === 'group' ? (
-                                  <div className="w-8 h-8 bg-gradient-to-br from-accent to-primary rounded-full flex items-center justify-center text-accent-foreground font-semibold">
-                                    <Users className="w-4 h-4" />
-                                  </div>
-                                ) : (
-                                  renderAvatar(chat.name, true)
-                                )}
-                                {chat.unreadCount > 0 && (
-                                  <div className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-xs rounded-full h-4 w-4 flex items-center justify-center font-medium">
-                                    {chat.unreadCount > 9 ? '9+' : chat.unreadCount}
-                                  </div>
-                                )}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center justify-between mb-0.5">
-                                  <h3 className="font-medium text-card-foreground truncate text-sm">{chat.name}</h3>
-                                  <span className="text-xs text-muted-foreground flex-shrink-0">
-                                    {chat.lastMessage?.timestamp}
-                                  </span>
-                                </div>
-                                {chat.lastMessage && (
-                                  <p className="text-xs text-muted-foreground truncate">
-                                    {chat.type === 'group' && `${chat.lastMessage.senderName}: `}
-                                    {chat.lastMessage.content}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Архів */}
-                  {archivedChats.length > 0 && (
-                    <div className="border-t border-border pt-3">
-                      <button
-                        onClick={toggleArchived}
-                        className="w-full flex items-center justify-between px-2 py-2 text-sm text-muted-foreground hover:bg-muted rounded-lg transition-colors"
-                      >
-                        <span>Архівовані чати</span>
-                        {showArchived ? (
-                          <ChevronUp className="w-4 h-4" />
-                        ) : (
-                          <ChevronDown className="w-4 h-4" />
-                        )}
-                      </button>
-                      
-                      {showArchived && (
-                        <div className="mt-2 space-y-1">
-                          {archivedChats.map(chat => (
-                            <div
-                              key={chat.id}
-                              className={`p-3 rounded-lg cursor-pointer transition-colors ${
-                                activeChat?.id === chat.id 
-                                  ? 'bg-accent border border-accent-foreground/20' 
-                                  : 'hover:bg-muted'
-                              } opacity-70`}
-                              onClick={() => {
-                                setActiveChat(chat);
-                                if (window.innerWidth < 768) {
-                                  setShowChatList(false);
-                                }
-                              }}
-                              onContextMenu={(e) => handleRightClick(e, chat)}
-                            >
-                              <div className="flex items-center gap-2">
-                                <div className="relative">
-                                  {chat.type === 'group' ? (
-                                    <div className="w-8 h-8 bg-gradient-to-br from-accent to-primary rounded-full flex items-center justify-center text-accent-foreground font-semibold">
-                                      <Users className="w-4 h-4" />
-                                    </div>
-                                  ) : (
-                                    renderAvatar(chat.name, true)
-                                  )}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center justify-between mb-0.5">
-                                    <h3 className="font-medium text-card-foreground truncate text-sm">{chat.name}</h3>
-                                    <span className="text-xs text-muted-foreground flex-shrink-0">
-                                      {chat.lastMessage?.timestamp}
-                                    </span>
-                                  </div>
-                                  {chat.lastMessage && (
-                                    <p className="text-xs text-muted-foreground truncate">
-                                      {chat.type === 'group' && `${chat.lastMessage.senderName}: `}
-                                      {chat.lastMessage.content}
-                                    </p>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Main Chat Area */}
-          <div className="flex-1 flex flex-col">
-            {!activeChat ? (
-              <div className="flex-1 flex items-center justify-center">
-                <div className="text-center max-w-md px-4">
-                  <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <MessageCircle className="w-8 h-8 text-primary" />
-                  </div>
-                  <h3 className="text-xl font-semibold text-foreground mb-2">
-                    Оберіть чат
-                  </h3>
-                  <p className="text-muted-foreground mb-4 text-sm">
-                    Виберіть існуючий чат або створіть новий для початку спілкування
-                  </p>
-                  <button
-                    onClick={() => setShowChatList(true)}
-                    className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg font-medium transition-colors text-sm"
-                  >
-                    {window.innerWidth >= 768 ? 'Показати чати' : 'Переглянути чати'}
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <>
-                {/* Chat Header */}
-                <div className="p-4 bg-card border-b border-border">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <button
+                <ScrollArea className="flex-1">
+                  <div className="p-1">
+                    {filteredUsers.map((user) => (
+                      <div
+                        key={user.id}
+                        className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors mb-1 group ${
+                          selectedUser?.id === user.id
+                            ? 'bg-blue-100 border border-blue-200'
+                            : 'hover:bg-muted'
+                        }`}
                         onClick={() => {
-                          setActiveChat(null);
-                          setShowChatList(true);
-                        }}
-                        className="p-1 hover:bg-muted rounded-md transition-colors md:hidden"
-                        title="Назад до чатів"
-                      >
-                        <ArrowLeft className="w-4 h-4 text-muted-foreground" />
-                      </button>
-                      <button
-                        onClick={() => setShowChatList(true)}
-                        className="p-1 hover:bg-muted rounded-md transition-colors hidden md:block"
-                        title="Показати чати"
-                      >
-                        <Menu className="w-4 h-4 text-muted-foreground" />
-                      </button>
-                      
-                      {activeChat.type === 'group' ? (
-                        <div className="w-8 h-8 bg-gradient-to-br from-accent to-primary rounded-full flex items-center justify-center text-accent-foreground font-semibold">
-                          <Users className="w-4 h-4" />
-                        </div>
-                      ) : (
-                        renderAvatar(activeChat.name, true, 'default')
-                      )}
-                      
-                      <div>
-                        <h2 className="text-base font-semibold text-card-foreground">{activeChat.name}</h2>
-                        {activeChat.type === 'group' ? (
-                          <p className="text-xs text-muted-foreground">
-                            {activeChat.participants.length} учасників
-                            {activeChat.description && ` • ${activeChat.description}`}
-                          </p>
-                        ) : (
-                          <p className="text-xs text-muted-foreground">
-                            {users.find(u => u.id === activeChat.participants.find(p => p.id !== currentUser?.id)?.id)?.status === 'online' 
-                              ? 'В мережі' 
-                              : `Був(ла) ${formatLastSeen(users.find(u => u.id === activeChat.participants.find(p => p.id !== currentUser?.id)?.id)?.lastSeen || new Date().toISOString())}`
-                            }
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-1">
-                      <button 
-                        onClick={() => handleStartCall('audio')}
-                        className="p-2 hover:bg-muted rounded-md transition-colors"
-                        title="Аудіодзвінок"
-                      >
-                        <Phone className="w-4 h-4 text-muted-foreground" />
-                      </button>
-                      <button 
-                        onClick={() => handleStartCall('video')}
-                        className="p-2 hover:bg-muted rounded-md transition-colors"
-                        title="Відеодзвінок"
-                      >
-                        <Video className="w-4 h-4 text-muted-foreground" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Messages */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                  {messages.filter(m => m.chatId === activeChat.id).map((message) => (
-                    <div
-                      key={message.id}
-                      className={`flex ${message.senderId === currentUser?.id ? 'justify-end' : 'justify-start'}`}
-                    >
-                      <div className="flex items-end gap-2 max-w-md">
-                        {message.senderId !== currentUser?.id && activeChat.type === 'group' && (
-                          renderAvatar(message.senderName, false, 'small')
-                        )}
-                        <div className="flex flex-col">
-                          {activeChat.type === 'group' && message.senderId !== currentUser?.id && (
-                            <span className="text-xs text-muted-foreground mb-0.5 px-1">
-                              {message.senderName}
-                            </span>
-                          )}
-                          <div className="group relative">
-                            <div
-                              className={`rounded-xl px-3 py-2 max-w-xs ${
-                                message.senderId === currentUser?.id
-                                  ? 'bg-primary text-primary-foreground rounded-br-sm'
-                                  : 'bg-card border border-border text-card-foreground rounded-bl-sm'
-                              }`}
-                            >
-                              {message.replyTo && (
-                                <div className={`text-xs border-l-2 pl-2 mb-1 ${
-                                  message.senderId === currentUser?.id 
-                                    ? 'border-primary-foreground/30 text-primary-foreground/70' 
-                                    : 'border-border text-muted-foreground'
-                                }`}>
-                                  <p className="italic">У відповідь на:</p>
-                                  <p className="truncate">"{messages.find(m => m.id === message.replyTo)?.content}"</p>
-                                </div>
-                              )}
-                              <p className="text-sm leading-relaxed">{message.content}</p>
-                              {message.attachment && renderAttachment(message.attachment, message.id)}
-                              {message.reactions && (
-                                <div className="flex items-center gap-1 mt-1">
-                                  {Object.entries(message.reactions).map(([reaction, count]) => (
-                                    <div key={reaction} className={`px-1 py-0.5 rounded-full flex items-center text-xs ${
-                                      message.senderId === currentUser?.id 
-                                        ? 'bg-primary-foreground/20 text-primary-foreground' 
-                                        : 'bg-muted text-muted-foreground'
-                                    }`}>
-                                      <span>{reaction}</span>
-                                      <span className="ml-0.5 font-medium">{count}</span>
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                            
-                            <div className={`flex items-center mt-0.5 text-xs text-muted-foreground ${
-                              message.senderId === currentUser?.id ? 'justify-end' : 'justify-start'
-                            }`}>
-                              <span>
-                                {message.timestamp}
-                                {message.isEdited && <span className="italic ml-0.5">(ред.)</span>}
-                              </span>
-                              {message.senderId === currentUser?.id && (
-                                <div className="ml-1 flex">
-                                  <Check className="w-3 h-3" />
-                                  <Check className="w-3 h-3 -ml-0.5" />
-                                </div>
-                              )}
-                            </div>
-                            
-                            {/* Message actions */}
-                            <div className={`absolute top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity ${
-                              message.senderId === currentUser?.id ? 'left-0 -translate-x-full' : 'right-0 translate-x-full'
-                            }`}>
-                              <div className="flex bg-popover rounded-lg shadow-lg border border-border p-0.5">
-                                {message.senderId === currentUser?.id ? (
-                                  <>
-                                    <button 
-                                      onClick={() => {
-                                        setEditingMessage(message);
-                                        setNewMessage(message.content);
-                                      }}
-                                      className="p-1 hover:bg-muted rounded-md transition-colors"
-                                    >
-                                      <Edit className="w-3 h-3 text-muted-foreground" />
-                                    </button>
-                                    <button 
-                                      onClick={() => handleDeleteMessage(message.id)}
-                                      className="p-1 hover:bg-muted rounded-md transition-colors"
-                                    >
-                                      <Trash2 className="w-3 h-3 text-destructive" />
-                                    </button>
-                                  </>
-                                ) : (
-                                  <>
-                                    <button 
-                                      onClick={() => setReplyingTo(message)}
-                                      className="p-1 hover:bg-muted rounded-md transition-colors"
-                                    >
-                                      <Reply className="w-3 h-3 text-muted-foreground" />
-                                    </button>
-                                    <button 
-                                      onClick={() => handleReaction(message.id, '👍')}
-                                      className="p-1 hover:bg-muted rounded-md transition-colors"
-                                    >
-                                      <ThumbsUp className="w-3 h-3 text-muted-foreground" />
-                                    </button>
-                                  </>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                  
-                  {/* Typing indicator */}
-                  {typingUsers.length > 0 && (
-                    <div className="flex justify-start">
-                      <div className="flex items-end gap-2 max-w-md">
-                        {activeChat.type === 'group' && (
-                          renderAvatar(users.find(u => u.id === typingUsers[0])?.name || '', false, 'small')
-                        )}
-                        <div className="bg-card border border-border rounded-xl px-3 py-2">
-                          <div className="flex space-x-1">
-                            <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce"></div>
-                            <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                            <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                  
-                  <div ref={messagesEndRef} />
-                </div>
-
-                {/* Reply indicator */}
-                {replyingTo && (
-                  <div className="px-4 py-2 bg-accent/10 border-t border-accent/20">
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <p className="text-xs font-medium text-accent-foreground">
-                          Відповідь {replyingTo.senderId === currentUser?.id ? 'собі' : replyingTo.senderName}
-                        </p>
-                        <p className="text-xs text-muted-foreground truncate">{replyingTo.content}</p>
-                      </div>
-                      <button 
-                        onClick={() => setReplyingTo(null)}
-                        className="p-1 hover:bg-accent/20 rounded-md ml-2 transition-colors"
-                      >
-                        <X className="w-3 h-3 text-muted-foreground" />
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* Edit indicator */}
-                {editingMessage && (
-                  <div className="px-4 py-2 bg-yellow-500/10 border-t border-yellow-500/20">
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <p className="text-xs font-medium text-yellow-700 dark:text-yellow-400">Редагування повідомлення</p>
-                        <p className="text-xs text-muted-foreground truncate">{editingMessage.content}</p>
-                      </div>
-                      <button 
-                        onClick={() => {
-                          setEditingMessage(null);
-                          setNewMessage('');
-                        }}
-                        className="p-1 hover:bg-yellow-500/20 rounded-md ml-2 transition-colors"
-                      >
-                        <X className="w-3 h-3 text-muted-foreground" />
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* Message Input */}
-                <div className="p-4 bg-card border-t border-border">
-                  {/* Аудіо елемент для відтворення */}
-                  <audio 
-                    ref={audioRef}
-                    className="hidden"
-                  />
-                  
-                  {/* Помилки запису */}
-                  {recordingError && (
-                    <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg mb-3">
-                      <div className="flex items-start gap-2">
-                        <AlertCircle className="w-4 h-4 text-destructive mt-0.5 flex-shrink-0" />
-                        <div className="flex-1">
-                          <p className="text-xs text-destructive mb-2">{recordingError}</p>
-                          {recordingError.includes("заборонено") && (
-                            <button 
-                              onClick={openBrowserSettings}
-                              className="text-xs bg-destructive text-destructive-foreground px-3 py-1 rounded-md hover:bg-destructive/90 transition-colors"
-                            >
-                              Відкрити налаштування
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {renderSafariInstructions()}
-
-                  {!hasAudioSupport && browserInfo.isSafari && browserInfo.version < 14.1 && (
-                    <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg mb-3">
-                      <div className="flex items-start gap-2">
-                        <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
-                        <div className="flex-1">
-                          <p className="text-xs font-medium text-amber-800 mb-1">
-                            Оновіть Safari
-                          </p>
-                          <p className="text-xs text-amber-700">
-                            Ваша версія Safari ({browserInfo.version}) не підтримує запис аудіо. 
-                            Оновіть до версії 14.1 або новішої.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {!hasAudioSupport && !browserInfo.isSafari && (
-                    <div className="p-3 bg-muted rounded-lg mb-3">
-                      <p className="text-xs text-muted-foreground">
-                        Голосові повідомлення не підтримуються у вашому браузері
-                      </p>
-                    </div>
-                  )}
-
-                  {recordedAudio ? (
-                    // Відображення записаного аудіо перед відправкою
-                    <div className="flex items-center gap-3 p-3 bg-muted rounded-lg mb-3">
-                      <button 
-                        onClick={isPlaying ? pauseRecordedAudio : playRecordedAudio}
-                        className="p-2 bg-primary text-primary-foreground rounded-full"
-                      >
-                        {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-                      </button>
-                      
-                      <div className="flex-1">
-                        <div className="w-full h-1 bg-muted-foreground/20 rounded-full overflow-hidden">
-                          <div 
-                            className="h-full bg-primary transition-all duration-300"
-                            style={{ width: isPlaying ? '50%' : '0%' }}
-                          ></div>
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {Math.floor(recordingTime / 60)}:{(recordingTime % 60).toString().padStart(2, '0')}
-                        </p>
-                      </div>
-                      
-                      <div className="flex gap-2">
-                        <button 
-                          onClick={cancelRecording}
-                          className="p-2 text-destructive hover:bg-destructive/10 rounded-md"
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
-                        <button 
-                          onClick={sendVoiceMessage}
-                          className="p-2 bg-primary text-primary-foreground rounded-md"
-                        >
-                          <Send className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </div>
-                  ) : isRecording ? (
-                    // Відображення процесу запису
-                    <div className="flex items-center gap-3 p-3 bg-destructive/10 rounded-lg mb-3">
-                      <div className="p-2 bg-destructive text-destructive-foreground rounded-full animate-pulse">
-                        <Mic className="h-4 w-4" />
-                      </div>
-                      
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 bg-destructive rounded-full animate-pulse"></div>
-                          <div className="w-2 h-2 bg-destructive rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
-                          <div className="w-2 h-2 bg-destructive rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
-                        </div>
-                        <p className="text-xs text-destructive mt-1">
-                          Запис: {Math.floor(recordingTime / 60)}:{(recordingTime % 60).toString().padStart(2, '0')}
-                        </p>
-                      </div>
-                      
-                      <button 
-                        onClick={stopRecording}
-                        className="p-2 bg-destructive text-destructive-foreground rounded-md"
-                        title="Зупинити запис"
-                      >
-                        <StopCircle className="h-4 w-4" />
-                      </button>
-                    </div>
-                  ) : null}
-
-                  <div className="flex items-end gap-3">
-                    <input 
-                      type="file" 
-                      ref={fileInputRef} 
-                      className="hidden" 
-                      onChange={(e) => setFile(e.target.files?.[0] || null)}
-                    />
-                    
-                    <div className="flex gap-1">
-                      <button 
-                        onClick={() => fileInputRef.current?.click()}
-                        className="p-2 hover:bg-muted rounded-md transition-colors"
-                        title="Прикріпити файл"
-                      >
-                        <Paperclip className="w-4 h-4 text-muted-foreground" />
-                      </button>
-                      <button className="p-2 hover:bg-muted rounded-md transition-colors" title="Емоції">
-                        <Smile className="w-4 h-4 text-muted-foreground" />
-                      </button>
-                      <button 
-                        onClick={() => {
-                          if (browserInfo.isSafari && !hasAudioSupport) {
-                            startRecordingFallback();
-                          } else if (hasAudioSupport) {
-                            startRecording();
+                          if (user.type === 'group' && user.privacySettings?.requirePassword) {
+                            openPasswordDialog('join', user.id);
+                          } else {
+                            setSelectedUser(user);
+                            loadMockData();
                           }
                         }}
-                        disabled={!hasAudioSupport && !browserInfo.isSafari}
-                        className="p-2 hover:bg-muted rounded-md transition-colors disabled:opacity-50"
-                        title={hasAudioSupport || browserInfo.isSafari ? 
-                          "Записати голосове повідомлення" : 
-                          "Голосові повідомлення не підтримуються"}
                       >
-                        <Mic className="w-4 h-4 text-muted-foreground" />
-                      </button>
-                    </div>
-                    
-                    <div className="flex-1">
-                      <div className="relative">
-                        <textarea
-                          value={newMessage}
-                          onChange={(e) => setNewMessage(e.target.value)}
-                          placeholder="Напишіть повідомлення..."
-                          className="w-full px-3 py-2 bg-input border-0 rounded-xl text-foreground placeholder:text-muted-foreground focus:bg-background focus:ring-1 focus:ring-ring resize-none transition-all text-sm"
-                          rows={1}
-                          style={{ minHeight: '40px', maxHeight: '100px' }}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' && !e.shiftKey) {
-                              e.preventDefault();
-                              if (editingMessage) {
-                                handleEditMessage();
-                              } else {
-                                handleSendMessage();
-                              }
-                            }
-                          }}
-                        />
-                      </div>
-                      
-                      {file && (
-                        <div className="mt-2 flex items-center gap-2 p-2 bg-muted rounded-lg">
-                          <Paperclip className="w-4 h-4 text-muted-foreground" />
-                          <span className="text-xs text-foreground flex-1 truncate">{file.name}</span>
-                          <button 
-                            onClick={() => setFile(null)}
-                            className="p-0.5 hover:bg-accent rounded-md transition-colors"
-                            title="Видалити файл"
+                        <Avatar className="h-8 w-8 flex-shrink-0">
+                          <AvatarFallback
+                            className={`text-xs ${
+                              user.type === 'supervisor'
+                                ? 'bg-green-100 text-green-600'
+                                : user.type === 'group'
+                                ? 'bg-purple-100 text-purple-600'
+                                : 'bg-blue-100 text-blue-600'
+                            }`}
                           >
-                            <X className="w-3 h-3 text-muted-foreground" />
-                          </button>
+                            {user.avatar}
+                          </AvatarFallback>
+                        </Avatar>
+                        
+                        <div className="flex-1 min-w-0" style={{ maxWidth: `${sidebarWidth - 100}px` }}>
+                          <div className="flex items-center justify-between">
+                            <h3 className="font-semibold text-sm truncate">
+                              {user.name}
+                              {user.type === 'group' && (
+                                <Users className="h-3 w-3 inline ml-1 text-muted-foreground" />
+                              )}
+                            </h3>
+                            <div className="flex items-center gap-1">
+                              {user.securityLevel && <SecurityBadge level={user.securityLevel} />}
+                              <span className="text-xs text-muted-foreground flex-shrink-0 ml-1">
+                                {user.lastSeen || '12:30'}
+                              </span>
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-center justify-between mt-0.5">
+                            <p className="text-xs text-muted-foreground truncate" style={{ maxWidth: `${sidebarWidth - 140}px` }}>
+                              {user.lastMessage}
+                            </p>
+                            <div className="flex items-center gap-1">
+                              {user.unreadCount && user.unreadCount > 0 && (
+                                <span className="bg-blue-600 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center flex-shrink-0 text-[10px]">
+                                  {user.unreadCount}
+                                </span>
+                              )}
+                              {user.isMuted && (
+                                <BellOff className="h-3 w-3 text-muted-foreground" />
+                              )}
+                              {user.privacySettings?.requirePassword && (
+                                <Lock className="h-3 w-3 text-orange-500" />
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <MoreVertical className="h-3 w-3" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent>
+                            <DropdownMenuItem onClick={() => toggleMuteChat(user.id)}>
+                              {user.isMuted ? (
+                                <>
+                                  <Bell className="h-4 w-4 mr-2" />
+                                  Увімкнути сповіщення
+                                </>
+                              ) : (
+                                <>
+                                  <BellOff className="h-4 w-4 mr-2" />
+                                  Вимкнути сповіщення
+                                </>
+                              )}
+                            </DropdownMenuItem>
+                            
+                            {user.isArchived ? (
+                              <DropdownMenuItem onClick={() => unarchiveChat(user.id)}>
+                                <Archive className="h-4 w-4 mr-2" />
+                                Розархівувати
+                              </DropdownMenuItem>
+                            ) : (
+                              <DropdownMenuItem onClick={() => archiveChat(user.id)}>
+                                <Archive className="h-4 w-4 mr-2" />
+                                Архівувати
+                              </DropdownMenuItem>
+                            )}
+                            
+                            {user.type === 'group' && (
+                              <>
+                                <DropdownMenuItem onClick={() => setShowGroupMembers(true)}>
+                                  <UserPlus className="h-4 w-4 mr-2" />
+                                  Додати учасника
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setShowSecuritySettings(true)}>
+                                  <Shield className="h-4 w-4 mr-2" />
+                                  Налаштування безпеки
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem 
+                                  onClick={() => leaveGroup(user.id)}
+                                  className="text-red-600"
+                                >
+                                  <LogOut className="h-4 w-4 mr-2" />
+                                  Покинути групу
+                                </DropdownMenuItem>
+                              </>
+                            )}
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem 
+                              onClick={() => deleteChat(user.id)}
+                              className="text-red-600"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Видалити чат
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              </div>
+
+              {/* Основна область */}
+              <div className="flex-1 flex flex-col min-h-0">
+                {selectedUser ? (
+                  <>
+                    {/* Chat header */}
+                    <div className="flex-shrink-0 border-b bg-background p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-10 w-10">
+                            <AvatarFallback
+                              className={`${
+                                selectedUser.type === 'supervisor'
+                                  ? 'bg-green-100 text-green-600'
+                                  : selectedUser.type === 'group'
+                                  ? 'bg-purple-100 text-purple-600'
+                                  : 'bg-blue-100 text-blue-600'
+                              }`}
+                            >
+                              {selectedUser.avatar}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <h2 className="text-lg font-semibold">{selectedUser.name}</h2>
+                            <div className="flex items-center gap-2">
+                              <div className={`w-2 h-2 rounded-full ${
+                                selectedUser.isOnline ? 'bg-green-500' : 'bg-gray-300'
+                              }`} />
+                              <span className="text-sm text-muted-foreground">
+                                {selectedUser.type === 'group' 
+                                  ? `${selectedUser.members?.length || 0} учасників`
+                                  : selectedUser.isOnline ? 'В мережі' : 'Не в мережі'
+                                }
+                              </span>
+                              {selectedUser.securityLevel && (
+                                <SecurityBadge level={selectedUser.securityLevel} />
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center gap-2">
+                          <Button variant="ghost" size="icon">
+                            <Phone className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon">
+                            <Video className="h-4 w-4" />
+                          </Button>
+                          
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon">
+                                <Info className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent>
+                              <DropdownMenuItem onClick={() => toggleMuteChat(selectedUser.id)}>
+                                {selectedUser.isMuted ? (
+                                  <>
+                                    <Bell className="h-4 w-4 mr-2" />
+                                    Увімкнути сповіщення
+                                  </>
+                                ) : (
+                                  <>
+                                    <BellOff className="h-4 w-4 mr-2" />
+                                    Вимкнути сповіщення
+                                  </>
+                                )}
+                              </DropdownMenuItem>
+                              {selectedUser.type === 'group' && (
+                                <>
+                                  <DropdownMenuItem onClick={() => setShowGroupMembers(true)}>
+                                    <Users className="h-4 w-4 mr-2" />
+                                    Учасники групи
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => setShowSecuritySettings(true)}>
+                                    <Shield className="h-4 w-4 mr-2" />
+                                    Налаштування безпеки
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem onClick={() => toggleGroupPrivacy(selectedUser.id)}>
+                                    {selectedUser.privacySettings?.isPublic ? (
+                                      <>
+                                        <Lock className="h-4 w-4 mr-2" />
+                                        Зробити приватним
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Unlock className="h-4 w-4 mr-2" />
+                                        Зробити публічним
+                                      </>
+                                    )}
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => toggleInvites(selectedUser.id)}>
+                                    {selectedUser.privacySettings?.allowInvites ? (
+                                      <>
+                                        <UserPlus className="h-4 w-4 mr-2" />
+                                        Заблокувати запрошення
+                                      </>
+                                    ) : (
+                                      <>
+                                        <UserPlus className="h-4 w-4 mr-2" />
+                                        Дозволити запрошення
+                                      </>
+                                    )}
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => toggleMembersVisibility(selectedUser.id)}>
+                                    {selectedUser.privacySettings?.showMembers ? (
+                                      <>
+                                        <EyeOff className="h-4 w-4 mr-2" />
+                                        Приховати учасників
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Eye className="h-4 w-4 mr-2" />
+                                        Показувати учасників
+                                      </>
+                                    )}
+                                  </DropdownMenuItem>
+                                </>
+                              )}
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem 
+                                onClick={() => archiveChat(selectedUser.id)}
+                              >
+                                <Archive className="h-4 w-4 mr-2" />
+                                Архівувати чат
+                              </DropdownMenuItem>
+                              <DropdownMenuItem className="text-red-600">
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Видалити чат
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Messages area */}
+                    <div className="flex-1 flex flex-col min-h-0">
+                      <ScrollArea 
+                        ref={scrollAreaRef}
+                        className="flex-1 px-6 py-4 space-y-4"
+                      >
+                        {/* Pinned messages */}
+                        {messages.filter(msg => msg.isPinned).length > 0 && (
+                          <div className="mb-3 p-2 bg-yellow-50 border border-yellow-200 rounded-lg">
+                            <div className="flex items-center gap-2 mb-1">
+                              <Pin className="h-3 w-3 text-yellow-600" />
+                              <span className="text-xs font-medium text-yellow-800">Закріплені повідомлення</span>
+                            </div>
+                            {messages.filter(msg => msg.isPinned).map(message => (
+                              <div key={message.id} className="text-xs text-yellow-700 bg-yellow-100 p-1 rounded mb-0.5">
+                                <strong>{message.name}:</strong> {message.content}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {messages.map((message) => (
+                          <div
+                            key={message.id}
+                            className={`flex ${message.sender === currentUser.id ? 'justify-end' : 'justify-start'}`}
+                          >
+                            <div
+                              className={`flex items-end max-w-xl gap-3 ${
+                                message.sender === currentUser.id ? 'flex-row-reverse' : ''
+                              }`}
+                            >
+                              <Avatar className="h-8 w-8 flex-shrink-0">
+                                <AvatarFallback
+                                  className={`text-xs ${
+                                    message.sender === currentUser.id
+                                      ? 'bg-blue-100 text-blue-600'
+                                      : 'bg-gray-100 text-gray-600'
+                                  }`}
+                                >
+                                  {message.sender === currentUser.id ? 'В' : selectedUser.avatar[0]}
+                                </AvatarFallback>
+                              </Avatar>
+
+                              <div
+                                className={`flex flex-col ${
+                                  message.sender === currentUser.id ? 'items-end' : 'items-start'
+                                }`}
+                              >
+                                <div className="flex items-center gap-2">
+                                  {message.sender !== currentUser.id && (
+                                    <span className="text-xs font-medium text-gray-600">{message.name}</span>
+                                  )}
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button variant="ghost" size="icon" className="h-6 w-6">
+                                        <MoreVertical className="h-3 w-3" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent>
+                                      <DropdownMenuItem onClick={() => pinMessage(message.id)}>
+                                        <Pin className="h-4 w-4 mr-2" />
+                                        {message.isPinned ? 'Відкріпити' : 'Закріпити'}
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => replyToMessage(message)}>
+                                        <Reply className="h-4 w-4 mr-2" />
+                                        Відповісти
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem>
+                                        <FileText className="h-4 w-4 mr-2" />
+                                        Копіювати текст
+                                      </DropdownMenuItem>
+                                      <DropdownMenuSeparator />
+                                      <DropdownMenuItem className="text-red-600">
+                                        <Trash2 className="h-4 w-4 mr-2" />
+                                        Видалити
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </div>
+
+                                <div
+                                  className={`rounded-2xl px-4 py-3 shadow-md transition-all duration-300 ${
+                                    message.sender === currentUser.id
+                                      ? 'bg-blue-600 text-white rounded-br-none'
+                                      : 'bg-white border border-gray-200 text-gray-900 rounded-bl-none'
+                                  }`}
+                                >
+                                  {/* Reply preview */}
+                                  {message.replyTo && (
+                                    <div className={`mb-2 p-2 rounded-lg border-l-4 ${
+                                      message.sender === currentUser.id
+                                        ? 'bg-blue-500/20 border-l-blue-400'
+                                        : 'bg-gray-100 border-l-gray-400'
+                                    }`}>
+                                      <div className="flex items-center gap-1 mb-1">
+                                        <Reply className="h-3 w-3" />
+                                        <span className="text-xs font-medium">{message.replyTo.name}</span>
+                                      </div>
+                                      <p className="text-xs text-muted-foreground truncate">
+                                        {message.replyTo.content}
+                                      </p>
+                                    </div>
+                                  )}
+
+                                  {message.type === 'voice' ? (
+                                    <div className="flex items-center gap-3">
+                                      <button className="p-2 bg-white/20 rounded-full">
+                                        <div className="w-4 h-4 bg-white rounded-full" />
+                                      </button>
+                                      <div className="flex items-center gap-2">
+                                        <div className="w-32 h-2 bg-white/30 rounded-full">
+                                          <div 
+                                            className="h-2 bg-white rounded-full" 
+                                            style={{ width: '70%' }}
+                                          />
+                                        </div>
+                                        <span className="text-sm">
+                                          {formatTime(message.voiceMessage?.duration || 0)}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <p className="text-sm leading-relaxed whitespace-pre-line">
+                                      {message.content}
+                                    </p>
+                                  )}
+
+                                  {message.attachment && (
+                                    <div
+                                      className={`mt-3 p-3 rounded-xl flex items-center gap-2 text-sm font-medium ${
+                                        message.sender === currentUser.id
+                                          ? 'bg-blue-700/50 text-white'
+                                          : 'bg-gray-100 text-gray-800'
+                                      }`}
+                                    >
+                                      <FileText className="w-4 h-4" />
+                                      <div className="flex-1">
+                                        <div className="font-medium">{message.attachment.name}</div>
+                                        <div className="text-xs opacity-75">
+                                          {message.attachment.size && (message.attachment.size / 1024).toFixed(1)} KB
+                                        </div>
+                                      </div>
+                                      <a 
+                                        href={message.attachment.url} 
+                                        download={message.attachment.name}
+                                        className="ml-2 text-xs underline hover:no-underline"
+                                      >
+                                        Завантажити
+                                      </a>
+                                    </div>
+                                  )}
+                                </div>
+
+                                <span className="text-xs text-muted-foreground mt-1">
+                                  {message.timestamp}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+
+                        {/* Typing indicator */}
+                        {isTyping && (
+                          <div className="flex justify-start">
+                            <div className="flex items-end max-w-xl gap-3">
+                              <Avatar className="h-8 w-8">
+                                <AvatarFallback className="text-xs bg-gray-100 text-gray-600">
+                                  {selectedUser.avatar[0]}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="rounded-2xl px-4 py-3 bg-white border border-gray-200 rounded-bl-none">
+                                <div className="flex space-x-1">
+                                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+                                </div>
+                                <span className="text-xs text-muted-foreground">
+                                  {typingUser} друкує...
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </ScrollArea>
+
+                      {/* Reply preview above input */}
+                      {replyingTo && (
+                        <div className="border-t border-b bg-blue-50 p-3 flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Reply className="h-4 w-4 text-blue-600" />
+                            <div>
+                              <div className="text-sm font-medium text-blue-800">
+                                Відповідь {replyingTo.name}
+                              </div>
+                              <div className="text-xs text-blue-600 truncate max-w-md">
+                                {replyingTo.content}
+                              </div>
+                            </div>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={cancelReply}
+                            className="h-6 w-6 text-blue-600 hover:text-blue-800"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
                         </div>
                       )}
+
+                      {/* Input Area */}
+                      <div className="border-t p-4 space-y-3 flex-shrink-0 bg-background">
+                        {/* Attachment preview */}
+                        {attachment && (
+                          <div className="flex items-center gap-2 p-2 bg-blue-50 rounded-lg">
+                            <FileText className="w-4 h-4 text-blue-600" />
+                            <span className="text-sm text-blue-800 flex-1">{attachment.name}</span>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={removeAttachment}
+                              className="h-6 w-6 p-0 text-blue-600 hover:text-blue-800"
+                            >
+                              ×
+                            </Button>
+                          </div>
+                        )}
+
+                        {/* Recording indicator */}
+                        {isRecording && (
+                          <div className="flex items-center gap-3 p-3 bg-red-50 rounded-lg">
+                            <div className="flex items-center gap-2">
+                              <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
+                              <span className="text-sm font-medium text-red-800">
+                                Запис... {formatTime(recordingTime)}
+                              </span>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={stopRecording}
+                              className="ml-auto text-red-600 hover:text-red-800"
+                            >
+                              <Square className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        )}
+
+                        <div className="flex items-end gap-2">
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                            >
+                              <Smile className="h-4 w-4" />
+                            </Button>
+                            
+                            <label className="cursor-pointer flex items-center">
+                              <Paperclip className="h-4 w-4" />
+                              <Input 
+                                type="file" 
+                                className="hidden" 
+                                onChange={handleFileChange}
+                                accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png"
+                              />
+                            </label>
+                            
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={isRecording ? stopRecording : startRecording}
+                              className={isRecording ? 'text-red-600' : ''}
+                            >
+                              {isRecording ? <Square className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                            </Button>
+                          </div>
+
+                          <div className="flex-1 relative">
+                            <Textarea
+                              value={newMessage}
+                              onChange={(e) => {
+                                setNewMessage(e.target.value);
+                                handleTyping();
+                              }}
+                              onKeyDown={handleKeyPress}
+                              onBlur={sendStopTyping}
+                              placeholder={replyingTo ? `Відповідь ${replyingTo.name}...` : "Напишіть повідомлення..."}
+                              className="min-h-[60px] resize-none pr-12"
+                            />
+                          </div>
+
+                          <Button 
+                            onClick={handleSend} 
+                            disabled={(!newMessage.trim() && !attachment) || !isConnected}
+                            size="icon"
+                          >
+                            <Send className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
                     </div>
-                    
-                    <button 
-                      onClick={editingMessage ? handleEditMessage : handleSendMessage} 
-                      disabled={!newMessage.trim() && !file}
-                      className="p-2 bg-primary hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground text-primary-foreground rounded-md transition-colors"
-                      title={editingMessage ? "Зберегти зміни" : "Надіслати повідомлення"}
-                    >
-                      {editingMessage ? <Check className="w-4 h-4" /> : <Send className="w-4 h-4" />}
-                    </button>
+                  </>
+                ) : (
+                  // Екран вибору чату
+                  <div className="flex-1 flex flex-col items-center justify-center bg-muted/20">
+                    <div className="text-center max-w-md mx-auto p-8">
+                      <div className="w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <MessageCircle className="h-12 w-12 text-blue-600" />
+                      </div>
+                      <h2 className="text-2xl font-bold mb-4">Оберіть чат для спілкування</h2>
+                      <p className="text-muted-foreground mb-6">
+                        Виберіть розмову зі списку зліва, щоб почати спілкування з колегами, 
+                        науковими керівниками або приєднатися до групових дискусій.
+                      </p>
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div className="text-center p-4 bg-white rounded-lg border">
+                          <Users className="h-8 w-8 mx-auto mb-2 text-green-600" />
+                          <h3 className="font-semibold mb-1">Групові чати</h3>
+                          <p className="text-muted-foreground text-xs">
+                            Спілкування з командою
+                          </p>
+                        </div>
+                        <div className="text-center p-4 bg-white rounded-lg border">
+                          <MessageCircle className="h-8 w-8 mx-auto mb-2 text-blue-600" />
+                          <h3 className="font-semibold mb-1">Приватні повідомлення</h3>
+                          <p className="text-muted-foreground text-xs">
+                            Особисте спілкування
+                          </p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+
+      {/* Dialog for group members */}
+      <Dialog open={showGroupMembers} onOpenChange={setShowGroupMembers}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Учасники групи "{selectedUser?.name}"</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {/* Додавання учасника по email */}
+            {selectedUser?.privacySettings?.allowInvites && (
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Email учасника"
+                  value={newMemberEmail}
+                  onChange={(e) => setNewMemberEmail(e.target.value)}
+                  type="email"
+                />
+                <Button 
+                  onClick={() => addMemberByEmail(selectedUser.id, newMemberEmail)}
+                  disabled={!newMemberEmail}
+                >
+                  <Mail className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+            
+            <div className="space-y-3 max-h-96 overflow-y-auto">
+              {selectedUser?.members?.map((member) => (
+                <div key={member.id} className="flex items-center gap-3 p-2 rounded-lg border">
+                  <Avatar className="h-8 w-8">
+                    <AvatarFallback
+                      className={`text-xs ${
+                        member.type === 'supervisor'
+                          ? 'bg-green-100 text-green-600'
+                          : 'bg-blue-100 text-blue-600'
+                      }`}
+                    >
+                      {member.avatar}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1">
+                    <div className="font-medium text-sm">{member.name}</div>
+                    <div className="flex items-center gap-2">
+                      <div className={`w-2 h-2 rounded-full ${member.isOnline ? 'bg-green-500' : 'bg-gray-300'}`} />
+                      <span className="text-xs text-muted-foreground">
+                        {member.isOnline ? 'В мережі' : 'Не в мережі'}
+                      </span>
+                    </div>
+                  </div>
+                  {member.type === 'supervisor' && (
+                    <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
+                      Керівник
+                    </span>
+                  )}
+                  {member.id !== currentUser.id && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeMember(selectedUser.id, member.id)}
+                      className="text-red-600 hover:text-red-800"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Enhanced Password Dialog - FIXED */}
+      <Dialog open={passwordDialog.isOpen} onOpenChange={handleDialogClose}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {passwordDialog.type === 'join' && 'Вхід до групи'}
+              {passwordDialog.type === 'set' && 'Встановити пароль'}
+              {passwordDialog.type === 'change' && 'Змінити пароль'}
+              {passwordDialog.type === 'remove' && 'Видалити пароль'}
+            </DialogTitle>
+            <DialogDescription>
+              {passwordDialog.type === 'join' && 'Ця група захищена паролем. Введіть пароль для входу.'}
+              {passwordDialog.type === 'set' && 'Встановіть пароль для захисту вашої групи.'}
+              {passwordDialog.type === 'change' && 'Змініть пароль для вашої групи.'}
+              {passwordDialog.type === 'remove' && 'Для видалення пароля введіть поточний пароль.'}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {(passwordDialog.type === 'change' || passwordDialog.type === 'remove') && (
+              <div className="space-y-2">
+                <Label htmlFor="current-password">Поточний пароль</Label>
+                <Input
+                  id="current-password"
+                  type="password"
+                  placeholder="Введіть поточний пароль"
+                  value={passwordData.currentPassword}
+                  onChange={(e) => setPasswordData(prev => ({ ...prev, currentPassword: e.target.value }))}
+                />
+              </div>
+            )}
+
+            {(passwordDialog.type === 'set' || passwordDialog.type === 'change') && (
+              <>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="new-password">
+                      {passwordDialog.type === 'set' ? 'Пароль' : 'Новий пароль'}
+                    </Label>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={generateSecurePassword}
+                    >
+                      <Shield className="h-3 w-3 mr-1" />
+                      Згенерувати
+                    </Button>
+                  </div>
+                  <Input
+                    id="new-password"
+                    type="password"
+                    placeholder={`Введіть ${passwordDialog.type === 'set' ? 'пароль' : 'новий пароль'}`}
+                    value={passwordData.password}
+                    onChange={(e) => setPasswordData(prev => ({ ...prev, password: e.target.value }))}
+                  />
+                  {passwordData.password && (
+                    <div className="text-xs text-muted-foreground">
+                      Надійність: {checkPasswordStrength(passwordData.password)}
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="confirm-password">Підтвердіть пароль</Label>
+                  <Input
+                    id="confirm-password"
+                    type="password"
+                    placeholder="Підтвердіть пароль"
+                    value={passwordData.confirmPassword}
+                    onChange={(e) => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                  />
+                  {passwordData.confirmPassword && passwordData.password !== passwordData.confirmPassword && (
+                    <div className="text-xs text-red-500">Паролі не співпадають</div>
+                  )}
                 </div>
               </>
             )}
-          </div>
-        </div>
-      </div>
 
-      {/* Dialogs */}
-      {renderNewChatDialog()}
-      {renderNewGroupDialog()}
-      {renderCallInterface()}
-      {renderContextMenu()}
+            {passwordDialog.type === 'join' && (
+              <div className="space-y-2">
+                <Label htmlFor="join-password">Пароль групи</Label>
+                <Input
+                  id="join-password"
+                  type="password"
+                  placeholder="Введіть пароль для входу"
+                  value={passwordData.password}
+                  onChange={(e) => setPasswordData(prev => ({ ...prev, password: e.target.value }))}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter' && passwordData.password) {
+                      handlePasswordAction();
+                    }
+                  }}
+                />
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={closePasswordDialog}>
+              Скасувати
+            </Button>
+            <Button 
+              onClick={handlePasswordAction}
+              disabled={
+                !passwordData.password ||
+                (passwordDialog.type === 'set' && passwordData.password !== passwordData.confirmPassword) ||
+                (passwordDialog.type === 'change' && (!passwordData.currentPassword || passwordData.password !== passwordData.confirmPassword)) ||
+                (passwordDialog.type === 'remove' && !passwordData.currentPassword)
+              }
+            >
+              {passwordDialog.type === 'join' && 'Увійти'}
+              {passwordDialog.type === 'set' && 'Встановити'}
+              {passwordDialog.type === 'change' && 'Змінити'}
+              {passwordDialog.type === 'remove' && 'Видалити'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Security Settings Dialog */}
+      <Dialog open={showSecuritySettings} onOpenChange={setShowSecuritySettings}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Налаштування безпеки</DialogTitle>
+            <DialogDescription>
+              Керуйте налаштуваннями безпеки та приватності вашої групи
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedUser?.type === 'group' && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-base">Рівень безпеки</Label>
+                  <p className="text-sm text-muted-foreground">
+                    {selectedUser.securityLevel === 'high' && 'Високий рівень захисту з паролем'}
+                    {selectedUser.securityLevel === 'medium' && 'Середній рівень захисту'}
+                    {selectedUser.securityLevel === 'low' && 'Базовий рівень захисту'}
+                  </p>
+                </div>
+                <SecurityBadge level={selectedUser.securityLevel || 'medium'} />
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label>Захист паролем</Label>
+                    <p className="text-sm text-muted-foreground">
+                      {selectedUser.privacySettings?.requirePassword 
+                        ? 'Група захищена паролем' 
+                        : 'Група не захищена паролем'}
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      if (selectedUser.privacySettings?.requirePassword) {
+                        openPasswordDialog('change', selectedUser.id);
+                      } else {
+                        openPasswordDialog('set', selectedUser.id);
+                      }
+                      setShowSecuritySettings(false);
+                    }}
+                  >
+                    <Key className="h-4 w-4 mr-2" />
+                    {selectedUser.privacySettings?.requirePassword ? 'Змінити пароль' : 'Встановити пароль'}
+                  </Button>
+                </div>
+
+                {selectedUser.privacySettings?.requirePassword && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      openPasswordDialog('remove', selectedUser.id);
+                      setShowSecuritySettings(false);
+                    }}
+                    className="w-full text-red-600 hover:text-red-700"
+                  >
+                    <Lock className="h-4 w-4 mr-2" />
+                    Видалити пароль
+                  </Button>
+                )}
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label>Публічна група</Label>
+                    <p className="text-sm text-muted-foreground">
+                      {selectedUser.privacySettings?.isPublic 
+                        ? 'Група видима для всіх' 
+                        : 'Група приватна'}
+                    </p>
+                  </div>
+                  <Switch
+                    checked={selectedUser.privacySettings?.isPublic || false}
+                    onCheckedChange={() => toggleGroupPrivacy(selectedUser.id)}
+                  />
+                </div>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => copyGroupLink(selectedUser.id)}
+                  className="w-full"
+                >
+                  <Copy className="h-4 w-4 mr-2" />
+                  Копіювати посилання запрошення
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
