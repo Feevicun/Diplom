@@ -23,7 +23,11 @@ import {
   MessageCircle,
   Trash2,
   Save,
-  Loader2
+  Loader2,
+  History,
+  User,
+  Download as DownloadIcon,
+  RotateCcw
 } from 'lucide-react';
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
@@ -33,6 +37,18 @@ interface TeacherComment {
   text: string;
   date: string;
   status: 'info' | 'warning' | 'error' | 'success';
+}
+
+interface FileVersion {
+  id: string;
+  fileName: string;
+  fileSize: string;
+  uploadDate: string;
+  uploadedBy: string;
+  userId: string;
+  version: number;
+  downloadUrl?: string;
+  changes?: string;
 }
 
 interface ChapterData {
@@ -45,11 +61,19 @@ interface ChapterData {
     name: string;
     uploadDate: string;
     size: string;
+    currentVersion: number;
   };
   teacherComments: TeacherComment[];
+  fileHistory?: FileVersion[];
 }
 
-
+// Новий інтерфейс для користувача
+interface UserData {
+  id: string;
+  name: string;
+  role: 'student' | 'teacher';
+  avatar?: string;
+}
 
 const projectTitles: Record<string, string> = {
   diploma: 'Дипломний проєкт',
@@ -107,7 +131,137 @@ const apiRequest = async (url: string, options: any = {}) => {
   return response.json();
 };
 
-// Компонент початкового екрану
+// Компонент для відображення історії версій
+const FileHistoryModal = ({ 
+  isOpen, 
+  onClose, 
+  fileHistory, 
+  currentUser,
+  onRestoreVersion 
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  fileHistory: FileVersion[];
+  currentUser: UserData;
+  onRestoreVersion: (version: FileVersion) => void;
+}) => {
+  if (!isOpen) return null;
+
+  const formatFileSize = (size: string) => {
+    return size;
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleString('uk-UA', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg max-w-2xl w-full max-h-[80vh] overflow-hidden">
+        <div className="flex items-center justify-between p-4 border-b">
+          <h3 className="text-lg font-semibold flex items-center gap-2">
+            <History className="w-5 h-5" />
+            Історія версій файлу
+          </h3>
+          <Button variant="ghost" size="sm" onClick={onClose}>
+            ×
+          </Button>
+        </div>
+        
+        <div className="overflow-y-auto max-h-[60vh]">
+          <div className="p-4 space-y-3">
+            {fileHistory.map((version, index) => (
+              <div
+                key={version.id}
+                className={`p-3 border rounded-lg ${
+                  index === 0 
+                    ? 'bg-blue-50 border-blue-200' 
+                    : 'bg-gray-50 border-gray-200'
+                }`}
+              >
+                <div className="flex items-start justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Badge variant={index === 0 ? "default" : "outline"}>
+                      Версія {version.version}
+                      {index === 0 && ' (поточна)'}
+                    </Badge>
+                    {version.uploadedBy === currentUser.name && (
+                      <Badge variant="secondary" className="text-xs">
+                        Ваша версія
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="text-right text-sm text-gray-600">
+                    {formatDate(version.uploadDate)}
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <FileText className="w-4 h-4 text-gray-600" />
+                      <span className="font-medium text-sm">{version.fileName}</span>
+                    </div>
+                    <div className="flex items-center gap-4 text-xs text-gray-500">
+                      <span>{formatFileSize(version.fileSize)}</span>
+                      <span className="flex items-center gap-1">
+                        <User className="w-3 h-3" />
+                        {version.uploadedBy}
+                      </span>
+                    </div>
+                    {version.changes && (
+                      <div className="mt-2 text-xs text-gray-600 bg-white p-2 rounded border">
+                        <strong>Зміни:</strong> {version.changes}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2 ml-4">
+                    {version.downloadUrl && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => window.open(version.downloadUrl, '_blank')}
+                        className="h-8"
+                      >
+                        <DownloadIcon className="w-3 h-3" />
+                      </Button>
+                    )}
+                    {index > 0 && currentUser.role === 'student' && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => onRestoreVersion(version)}
+                        className="h-8"
+                      >
+                        <RotateCcw className="w-3 h-3" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="p-4 border-t bg-gray-50">
+          <div className="text-sm text-gray-600">
+            <p>• Всього версій: {fileHistory.length}</p>
+            <p>• Остання зміна: {fileHistory[0] ? formatDate(fileHistory[0].uploadDate) : 'немає'}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Компонент початкового екрану (залишається без змін)
 const WelcomeScreen = ({ onSelectProject, loading }: { 
   onSelectProject: (type: 'diploma' | 'coursework' | 'practice') => void;
   loading: boolean;
@@ -188,7 +342,6 @@ const WelcomeScreen = ({ onSelectProject, loading }: {
         })}
       </div>
 
-      {/* Решта коду для екрану допомоги залишається той же */}
       <div className="mt-12 flex justify-center">
         <Card className="w-full max-w-5xl bg-[var(--muted)]/50 border-dashed border-2 border-[var(--border)]">
           <CardContent className="py-10">
@@ -248,12 +401,26 @@ const ThesisTracker = () => {
   const [expandedNotes, setExpandedNotes] = useState<Record<number, boolean>>({});
   const [expandedComments, setExpandedComments] = useState<Record<number, boolean>>({});
   const [editingNotes, setEditingNotes] = useState<Record<number, boolean>>({});
+  const [currentUser, setCurrentUser] = useState<UserData | null>(null);
+  const [fileHistoryModal, setFileHistoryModal] = useState<{
+    isOpen: boolean;
+    chapterId: number | null;
+    fileHistory: FileVersion[];
+  }>({
+    isOpen: false,
+    chapterId: null,
+    fileHistory: []
+  });
 
   // Завантаження даних при ініціалізації
   useEffect(() => {
     const initializeData = async () => {
       try {
         setLoading(true);
+
+        // Завантажуємо дані користувача
+        const userResponse = await apiRequest('/current-user');
+        setCurrentUser(userResponse.user);
 
         // Якщо є URL параметр, встановлюємо тип проекту
         if (urlType && ['diploma', 'coursework', 'practice'].includes(urlType)) {
@@ -287,20 +454,28 @@ const ThesisTracker = () => {
       // Завантажуємо глави для цього типу проекту
       const chaptersResponse = await apiRequest(`/user-chapters?projectType=${type}`);
       
-      // Завантажуємо коментарі для кожної глави
-      const chaptersWithComments = await Promise.all(
+      // Завантажуємо коментарі та історію файлів для кожної глави
+      const chaptersWithDetails = await Promise.all(
         chaptersResponse.map(async (chapter: ChapterData) => {
           try {
-            const comments = await apiRequest(`/teacher-comments?projectType=${type}&chapterKey=${chapter.key}`);
-            return { ...chapter, teacherComments: comments };
+            const [comments, fileHistory] = await Promise.all([
+              apiRequest(`/teacher-comments?projectType=${type}&chapterKey=${chapter.key}`),
+              apiRequest(`/file-history?projectType=${type}&chapterKey=${chapter.key}`)
+            ]);
+            
+            return { 
+              ...chapter, 
+              teacherComments: comments,
+              fileHistory: fileHistory || []
+            };
           } catch (error) {
-            console.warn(`Error loading comments for chapter ${chapter.key}:`, error);
-            return { ...chapter, teacherComments: [] };
+            console.warn(`Error loading details for chapter ${chapter.key}:`, error);
+            return { ...chapter, teacherComments: [], fileHistory: [] };
           }
         })
       );
       
-      setChapters(chaptersWithComments);
+      setChapters(chaptersWithDetails);
       
       // Оновлюємо URL без перезавантаження
       window.history.replaceState({}, '', `/tracker?type=${type}`);
@@ -344,43 +519,44 @@ const ThesisTracker = () => {
             : ch
         )
       );
-
-      // Якщо статус змінився на inProgress, можливо потрібно оновити коментарі
-      if (updates.status === 'inProgress') {
-        try {
-          const comments = await apiRequest(`/teacher-comments?projectType=${projectType}&chapterKey=${chapterKey}`);
-          setChapters(prev =>
-            prev.map(ch =>
-              ch.key === chapterKey
-                ? { ...ch, teacherComments: comments }
-                : ch
-            )
-          );
-        } catch (error) {
-          console.warn('Error updating comments:', error);
-        }
-      }
     } catch (error) {
       console.error('Error updating chapter:', error);
     }
   };
 
-  const handleFileUpload = async (chapterId: number, file: File) => {
+  const handleFileUpload = async (chapterId: number, file: File, changes?: string) => {
     const chapter = chapters.find(ch => ch.id === chapterId);
-    if (!chapter) return;
+    if (!chapter || !currentUser) return;
 
     const fileSizeKB = Math.round(file.size / 1024);
     const fileSizeStr = fileSizeKB > 1024 ? `${(fileSizeKB / 1024).toFixed(1)} MB` : `${fileSizeKB} KB`;
     
+    // Створюємо нову версію файлу
+    const newVersion: FileVersion = {
+      id: Date.now().toString(),
+      fileName: file.name,
+      fileSize: fileSizeStr,
+      uploadDate: new Date().toISOString(),
+      uploadedBy: currentUser.name,
+      userId: currentUser.id,
+      version: (chapter.fileHistory?.length || 0) + 1,
+      changes: changes || 'Перше завантаження'
+    };
+
+    // Оновлюємо історію файлів
+    const updatedFileHistory = [newVersion, ...(chapter.fileHistory || [])];
+
     const uploadedFile = {
       name: file.name,
-      size: fileSizeStr
+      size: fileSizeStr,
+      currentVersion: newVersion.version
     };
 
     await updateChapter(chapter.key, {
       progress: 70,
       status: 'review',
-      uploadedFile
+      uploadedFile,
+      fileHistory: updatedFileHistory
     });
   };
 
@@ -409,6 +585,41 @@ const ThesisTracker = () => {
     } catch (error) {
       console.error('Error deleting file:', error);
     }
+  };
+
+  const handleRestoreVersion = async (chapterId: number, version: FileVersion) => {
+    try {
+      // Тут буде логіка відновлення версії
+      // На практиці це може включати завантаження файлу з сервера
+      // або встановлення його як поточної версії
+      
+      alert(`Відновлюємо версію ${version.version} файлу "${version.fileName}"`);
+      
+      // Оновлюємо поточний файл глави
+      const chapter = chapters.find(ch => ch.id === chapterId);
+      if (chapter) {
+        await updateChapter(chapter.key, {
+          uploadedFile: {
+            name: version.fileName,
+            size: version.fileSize,
+            currentVersion: version.version
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Error restoring version:', error);
+    }
+  };
+
+  const showFileHistory = (chapterId: number) => {
+    const chapter = chapters.find(ch => ch.id === chapterId);
+    if (!chapter || !chapter.fileHistory) return;
+
+    setFileHistoryModal({
+      isOpen: true,
+      chapterId,
+      fileHistory: chapter.fileHistory
+    });
   };
 
   const handleSendForReview = async (chapterId: number) => {
@@ -463,9 +674,9 @@ const ThesisTracker = () => {
 
   return (
     <div className="min-h-screen bg-background flex">
-        <div className="hidden md:block">
-          <Sidebar />
-        </div>
+      <div className="hidden md:block">
+        <Sidebar />
+      </div>
 
       <div className="flex-1 flex flex-col h-screen">
         <div className="sticky top-0 z-10 bg-[var(--card)] border-b border-[var(--border)]">
@@ -477,6 +688,7 @@ const ThesisTracker = () => {
             <WelcomeScreen onSelectProject={handleSelectProject} loading={loading} />
           ) : (
             <div className="max-w-6xl mx-auto py-6 px-4 space-y-6 pb-20">
+              {/* Заголовок та прогрес (залишається без змін) */}
               <Card className="bg-[var(--card)] text-[var(--card-foreground)]">
                 <CardHeader>
                   <CardTitle className="text-lg md:text-xl">
@@ -536,6 +748,12 @@ const ThesisTracker = () => {
                                   {chapter.teacherComments?.length || 0}
                                 </Badge>
                               )}
+                              {(chapter.fileHistory?.length || 0) > 0 && (
+                                <Badge variant="outline" className="text-xs">
+                                  <History className="w-3 h-3 mr-1" />
+                                  {chapter.fileHistory?.length || 0} версій
+                                </Badge>
+                              )}
                             </div>
                             <p className="text-sm text-[var(--muted-foreground)]">
                               {t(`thesis.chapterDescriptions.${chapter.key}`)}
@@ -556,27 +774,40 @@ const ThesisTracker = () => {
                               <div>
                                 <p className="text-sm font-medium">{chapter.uploadedFile.name}</p>
                                 <p className="text-xs text-[var(--muted-foreground)]">
-                                  {chapter.uploadedFile.size} • {chapter.uploadedFile.uploadDate}
+                                  {chapter.uploadedFile.size} • Версія {chapter.uploadedFile.currentVersion}
                                 </p>
                               </div>
                             </div>
-                            {chapter.status === 'review' && (
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => handleDeleteFile(chapter.id)}
-                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            )}
+                            <div className="flex items-center gap-2">
+                              {(chapter.fileHistory?.length || 0) > 0 && (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => showFileHistory(chapter.id)}
+                                  className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                >
+                                  <History className="w-4 h-4 mr-1" />
+                                  Історія
+                                </Button>
+                              )}
+                              {chapter.status === 'review' && (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => handleDeleteFile(chapter.id)}
+                                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              )}
+                            </div>
                           </div>
                         </div>
                       )}
 
                       {/* Дії з файлами */}
                       <div className="flex gap-2 flex-wrap">
-                        {!chapter.uploadedFile && (
+                        {!chapter.uploadedFile ? (
                           <div className="relative">
                             <input
                               type="file"
@@ -585,7 +816,8 @@ const ThesisTracker = () => {
                               onChange={(e) => {
                                 const file = e.target.files?.[0];
                                 if (file) {
-                                  handleFileUpload(chapter.id, file);
+                                  const changes = prompt('Опишіть зміни в цій версії (необов\'язково):');
+                                  handleFileUpload(chapter.id, file, changes || undefined);
                                 }
                               }}
                             />
@@ -598,6 +830,32 @@ const ThesisTracker = () => {
                               <label htmlFor={`file-upload-${chapter.id}`} className="flex items-center cursor-pointer">
                                 <FileText className="w-4 h-4 mr-1" />
                                 Завантажити файл
+                              </label>
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="relative">
+                            <input
+                              type="file"
+                              id={`file-update-${chapter.id}`}
+                              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  const changes = prompt('Опишіть зміни в цій версії:') || 'Оновлення файлу';
+                                  handleFileUpload(chapter.id, file, changes);
+                                }
+                              }}
+                            />
+                            <Button
+                              asChild
+                              size="sm"
+                              variant="outline"
+                              className="border-[var(--border)] text-[var(--foreground)] hover:bg-[var(--secondary)]"
+                            >
+                              <label htmlFor={`file-update-${chapter.id}`} className="flex items-center cursor-pointer">
+                                <FileText className="w-4 h-4 mr-1" />
+                                Оновити файл
                               </label>
                             </Button>
                           </div>
@@ -729,6 +987,20 @@ const ThesisTracker = () => {
                   ))}
                 </CardContent>
               </Card>
+
+              {/* Модальне вікно історії файлів */}
+              <FileHistoryModal
+                isOpen={fileHistoryModal.isOpen}
+                onClose={() => setFileHistoryModal({ isOpen: false, chapterId: null, fileHistory: [] })}
+                fileHistory={fileHistoryModal.fileHistory}
+                currentUser={currentUser!}
+                onRestoreVersion={(version) => {
+                  if (fileHistoryModal.chapterId) {
+                    handleRestoreVersion(fileHistoryModal.chapterId, version);
+                  }
+                  setFileHistoryModal({ isOpen: false, chapterId: null, fileHistory: [] });
+                }}
+              />
             </div>
           )}
         </main>
