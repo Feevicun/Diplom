@@ -14,8 +14,9 @@ import {
   Zap,
   LogOut,
   ChevronRight,
-  Search,
   Book,
+  Users,
+  GraduationCap,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -97,18 +98,32 @@ const Sidebar = () => {
 
   const userRole = user?.role ?? '';
 
-  const mainMenuItems: MenuItemType[] = [
+  // Студентське меню
+  const studentMenuItems: MenuItemType[] = [
     { title: t('sidebar.dashboard'), href: '/dashboard', icon: Home, badge: null },
     { title: t('sidebar.projects'), href: '/tracker', icon: FileText },
     { title: t('sidebar.tasks'), href: '/chat', icon: MessageSquare },
     { title: t('sidebar.calendar'), href: '/calendar', icon: Calendar, badge: null }
   ];
 
+  // Викладацьке меню
+  const teacherMenuItems: MenuItemType[] = [
+    { title: 'Панель викладача', href: '/teacherdashboard', icon: Home },
+    { title: 'Оцінювання робіт', href: '/teacher/grades', icon: FileText },
+    { title: 'Мої студенти', href: '/teacher/students', icon: Users },
+    { title: 'Повідомлення', href: '/chat', icon: MessageSquare },
+    { title: 'Календар', href: '/calendar', icon: Calendar }
+  ];
+
+  // Спільні інструменти
   const toolsItems: MenuItemType[] = [
     { title: t('sidebar.aiAssistant'), href: '/ai-assistant', icon: Zap, badge: 'BETA' },
     { title: t('sidebar.analytics'), href: '/analytics', icon: TrendingUp, badge: null },
     { title: t('sidebar.resources'), href: '/resources', icon: Book, badge: null }
   ];
+
+  // Вибір відповідного меню в залежності від ролі
+  const mainMenuItems = userRole === 'teacher' ? teacherMenuItems : studentMenuItems;
 
   const MenuItem = ({ item, isActive }: { item: MenuItemType; isActive: boolean }) => {
     const Icon = item.icon;
@@ -146,11 +161,13 @@ const Sidebar = () => {
       <div className="p-6 border-b flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-            <Search className="h-4 w-4 text-primary-foreground" />
+            <GraduationCap className="h-4 w-4 text-primary-foreground" />
           </div>
           <div>
             <h1 className="text-lg font-bold">ThesisHub</h1>
-            <p className="text-xs text-muted-foreground">Research Platform</p>
+            <p className="text-xs text-muted-foreground">
+              {userRole === 'teacher' ? 'Teaching Platform' : 'Research Platform'}
+            </p>
           </div>
         </div>
       </div>
@@ -158,9 +175,10 @@ const Sidebar = () => {
       {/* Navigation з ScrollArea */}
       <ScrollArea className="flex-1">
         <div className="px-4 py-6 space-y-8">
+          {/* Основне меню */}
           <div className="space-y-2">
             <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-3 mb-3">
-              {t('sidebar.sectionMain')}
+              {userRole === 'teacher' ? 'Викладацька панель' : t('sidebar.sectionMain')}
             </h2>
             <nav className="space-y-1">
               {mainMenuItems.map((item) => (
@@ -175,6 +193,7 @@ const Sidebar = () => {
 
           <Separator />
 
+          {/* Інструменти (спільні для всіх) */}
           <div className="space-y-2">
             <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-3 mb-3">
               {t('sidebar.sectionTools')}
@@ -216,13 +235,14 @@ const Sidebar = () => {
                 ? 'Студент'
                 : userRole === 'teacher'
                 ? 'Викладач'
-                : ''}
+                : userRole || 'Користувач'}
             </p>
           </div>
           <Button
             variant="ghost"
             size="icon"
             className="h-8 w-8 text-muted-foreground"
+            onClick={handleLogout}
           >
             <LogOut className="h-4 w-4" />
           </Button>

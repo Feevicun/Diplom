@@ -1,9 +1,10 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Badge } from '@/components/ui/badge';
 import { 
   FileText, 
   Send, 
@@ -23,21 +24,36 @@ import {
   Bell,
   BellOff,
   LogOut,
-  UserPlus,
   Pin,
   MessageCircle,
   Reply,
   X,
+  Image,
+  File,
+  Video as VideoIcon,
+  Download,
+  Calendar,
+  Filter,
+  UserPlus,
+  Settings,
+  Clock,
+  Check,
+  CheckCheck,
+  Edit,
+  Save,
+  Pause,
+  Play,
   Eye,
-  EyeOff,
-  Lock,
-  Unlock,
-  Key,
-  Mail,
   Shield,
-  ShieldCheck,
-  ShieldAlert,
-  Copy
+  Sliders,
+  Wifi,
+  WifiOff,
+  Palette,
+  Type,
+  User,
+  Globe,
+  RefreshCw,
+  AlertTriangle
 } from 'lucide-react';
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
@@ -57,8 +73,39 @@ import {
   DialogFooter,
   DialogDescription,
 } from '@/components/ui/dialog';
-import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Progress } from '@/components/ui/progress';
 import { Label } from '@/components/ui/label';
+
+// Додамо просту реалізацію Switch
+const Switch = ({ 
+  checked, 
+  onCheckedChange,
+  id,
+  className 
+}: { 
+  checked: boolean; 
+  onCheckedChange: (checked: boolean) => void;
+  id?: string;
+  className?: string;
+}) => (
+  <button
+    id={id}
+    type="button"
+    role="switch"
+    aria-checked={checked}
+    onClick={() => onCheckedChange(!checked)}
+    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
+      checked ? 'bg-blue-600' : 'bg-gray-200'
+    } ${className || ''}`}
+  >
+    <span
+      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+        checked ? 'translate-x-6' : 'translate-x-1'
+      }`}
+    />
+  </button>
+);
 
 // Типи
 type Message = {
@@ -67,120 +114,279 @@ type Message = {
   name: string;
   content: string;
   timestamp: string;
-  type: 'text' | 'voice' | 'file';
+  type: 'text' | 'voice' | 'file' | 'image' | 'video' | 'location' | 'system';
   isPinned?: boolean;
+  isEdited?: boolean;
   replyTo?: {
     id: string;
     sender: string;
     name: string;
     content: string;
+    type: string;
   };
   attachment?: {
     name: string;
     url: string;
     type: string;
     size?: number;
+    previewUrl?: string;
+    uploadProgress?: number;
   };
   voiceMessage?: {
     url: string;
     duration: number;
+    isPlaying?: boolean;
+    currentTime?: number;
   };
+  reactions?: {
+    [key: string]: string[];
+  };
+  status?: 'sent' | 'delivered' | 'read';
+  expiresAt?: string;
+  chatId: string;
 };
 
 type ChatUser = {
   id: string;
   name: string;
   avatar: string;
+  avatarUrl?: string;
   email?: string;
-  type: 'student' | 'supervisor' | 'group';
+  phone?: string;
+  type: 'student' | 'supervisor' | 'group' | 'admin';
   isOnline: boolean;
   lastSeen?: string;
   unreadCount?: number;
   lastMessage?: string;
   isMuted?: boolean;
   isArchived?: boolean;
+  isBlocked?: boolean;
   members?: ChatUser[];
   createdAt?: string;
-  privacySettings?: {
-    isPublic: boolean;
+  description?: string;
+  settings?: {
     allowInvites: boolean;
-    showMembers: boolean;
-    password?: string;
-    requirePassword?: boolean;
-    encrypted?: boolean;
+    slowMode: boolean;
+    adminOnlyMessages: boolean;
   };
-  securityLevel?: 'low' | 'medium' | 'high';
 };
 
 type CreateGroupData = {
   name: string;
   members: string[];
   description?: string;
-  isPublic: boolean;
-  allowInvites: boolean;
-  showMembers: boolean;
-  password?: string;
-  requirePassword: boolean;
-  securityLevel: 'low' | 'medium' | 'high';
+  avatar?: File;
+  settings: {
+    allowInvites: boolean;
+    slowMode: boolean;
+    adminOnlyMessages: boolean;
+  };
 };
 
-type PasswordDialogType = 'join' | 'set' | 'change' | 'remove';
-
-// Кастомний Switch компонент
-const Switch = ({ 
-  checked, 
-  onCheckedChange,
-  id 
-}: { 
-  checked: boolean; 
-  onCheckedChange: (checked: boolean) => void;
-  id?: string;
-}) => {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      id={id}
-      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-        checked ? 'bg-blue-600' : 'bg-gray-200'
-      }`}
-      onClick={() => onCheckedChange(!checked)}
-    >
-      <span
-        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-          checked ? 'translate-x-6' : 'translate-x-1'
-        }`}
-      />
-    </button>
-  );
+type MediaItem = {
+  type: 'image' | 'video' | 'file' | 'voice';
+  url: string;
+  name: string;
+  timestamp: string;
+  messageId: string;
+  thumbnail?: string;
 };
+
+type SearchFilter = {
+  type: 'all' | 'text' | 'file' | 'image' | 'video' | 'voice' | 'link' | 'location';
+  date?: Date;
+  sender?: string;
+};
+
+interface ChatSettings {
+  theme: 'light' | 'dark' | 'system';
+  fontSize: 'small' | 'medium' | 'large';
+  messageSound: boolean;
+  notificationSound: boolean;
+  autoDownload: boolean;
+  language: 'uk' | 'en';
+  chatBackground: string;
+  backgroundBlur: 'none' | 'light' | 'medium';
+  messageBubbles: 'rounded' | 'square' | 'minimal' | 'modern';
+  bubbleOpacity: number;
+  messageShadow: boolean;
+  messageDensity: 'comfortable' | 'cozy' | 'compact';
+  showAvatars: boolean;
+  showMessageTime: 'always' | 'hover' | 'never';
+  typingIndicators: true;
+  typingAnimation: 'dots' | 'wave' | 'pulse';
+  readReceipts: boolean;
+  readReceiptsStyle: 'classic' | 'modern' | 'minimal';
+  showOnlineStatus: boolean;
+  showLastSeen: boolean;
+  privacyMode: 'all' | 'contacts' | 'none';
+  autoDeleteMessages: 'never' | '1h' | '24h' | '7d' | '30d';
+  autoDeleteMedia: boolean;
+  emojiStyle: 'native' | 'apple' | 'google' | 'twitter' | 'facebook';
+  animatedEmoji: boolean;
+  emojiSize: 'small' | 'medium' | 'large';
+  messageFormatting: boolean;
+  markdownSupport: boolean;
+  linkPreview: boolean;
+  codeHighlighting: boolean;
+}
+
+interface EnhancedChatSettingsProps {
+  showChatSettings: boolean;
+  setShowChatSettings: (show: boolean) => void;
+  chatSettings: ChatSettings;
+  setChatSettings: (settings: ChatSettings | ((prev: ChatSettings) => ChatSettings)) => void;
+  onChatSettingsChange?: (settings: ChatSettings) => void;
+  onSaveAndStartNewChat?: () => void;
+}
+
+// WebSocket message types
+interface WSMessage {
+  type: 'auth' | 'message' | 'typing' | 'read_receipt' | 'user_status' | 'error' | 'chat_list' | 'reaction';
+  payload: unknown;
+}
+
+interface AuthMessage {
+  success: boolean;
+  user?: {
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+  };
+}
+
+interface ChatListMessage {
+  chats: ChatUser[];
+}
+
+interface TypingMessage {
+  chatId: string;
+  userId: string;
+  userName: string;
+  isTyping: boolean;
+}
+
+interface UserStatusMessage {
+  userId: string;
+  isOnline: boolean;
+  lastSeen?: string;
+}
+
+interface ErrorMessage {
+  message: string;
+}
+
+interface ReadReceiptMessage {
+  messageId: string;
+  userId: string;
+  userName: string;
+  chatId: string;
+}
+
+interface ReactionMessage {
+  messageId: string;
+  emoji: string;
+  action: 'add' | 'remove';
+  userId: string;
+  chatId: string;
+}
 
 // Кастомна toast функція
 const toast = {
   success: (message: string) => {
     console.log(`✅ ${message}`);
+    alert(`✅ ${message}`);
   },
   error: (message: string) => {
     console.log(`❌ ${message}`);
+    alert(`❌ ${message}`);
+  },
+  info: (message: string) => {
+    console.log(`ℹ️ ${message}`);
+    alert(`ℹ️ ${message}`);
   }
 };
 
+// Емодзі для реакцій
+const REACTION_EMOJIS = [
+  { emoji: '👍', label: 'Like' },
+  { emoji: '❤️', label: 'Heart' },
+  { emoji: '😂', label: 'Laugh' },
+  { emoji: '😮', label: 'Wow' },
+  { emoji: '😠', label: 'Angry' },
+  { emoji: '🔥', label: 'Fire' },
+  { emoji: '👏', label: 'Clap' }
+];
+
+const EMOJI_STYLES = [
+  { id: 'native' as const, name: 'Системні', preview: '😊' },
+  { id: 'apple' as const, name: 'Apple', preview: '😊' },
+  { id: 'google' as const, name: 'Google', preview: '😊' },
+  { id: 'twitter' as const, name: 'Twitter', preview: '😊' },
+  { id: 'facebook' as const, name: 'Facebook', preview: '😊' },
+];
+
+// Current user info - буде отримуватися з API
+const getCurrentUser = () => {
+  const userData = localStorage.getItem('currentUser');
+  return userData ? JSON.parse(userData) : {
+    id: 'current-user',
+    name: 'Ви',
+    email: 'you@university.edu',
+    type: 'student' as const,
+    avatar: 'В',
+    avatarUrl: '/avatars/current-user.jpg'
+  };
+};
+
+const BACKGROUND_PRESETS = [
+  { id: 'gradient-blue', name: 'Блакитний градієнт', color: 'bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950 dark:to-cyan-950' },
+  { id: 'gradient-purple', name: 'Фіолетовий градієнт', color: 'bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950 dark:to-pink-950' },
+  { id: 'gradient-green', name: 'Зелений градієнт', color: 'bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950 dark:to-emerald-950' },
+  { id: 'dark', name: 'Темний', color: 'bg-gradient-to-br from-gray-900 to-gray-800' },
+  { id: 'pattern', name: 'Текстура', color: 'bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950 dark:to-orange-950' },
+];
+
+const BACKGROUND_PRESETS_WITH_DEFAULT = [
+  { id: 'default', name: 'Системна тема', color: '' },
+  ...BACKGROUND_PRESETS
+];
+
+// CSS змінні та стилі
+const chatStyles = `
+  @keyframes wave {
+    0%, 60%, 100% { transform: scaleY(0.5); }
+    30% { transform: scaleY(1); }
+  }
+  .animate-wave {
+    animation: wave 1.2s infinite ease-in-out;
+  }
+`;
+
+const cssVariables = `
+  :root {
+    --bubble-radius: 16px;
+    --bubble-opacity: 0.9;
+    --message-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    --message-gap: 1rem;
+  }
+`;
+
 const ChatPage = () => {
+  // Стани
   const [newMessage, setNewMessage] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
-  const [isConnected, setIsConnected] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
-  const [typingUser, setTypingUser] = useState<string>('');
+  const [typingUser, setTypingUser] = useState('');
   const [users, setUsers] = useState<ChatUser[]>([]);
-  const [allUsers, setAllUsers] = useState<ChatUser[]>([]);
   const [selectedUser, setSelectedUser] = useState<ChatUser | null>(null);
   const [attachment, setAttachment] = useState<File | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeTab, setActiveTab] = useState<'all' | 'groups' | 'archived'>('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'groups' | 'archived' | 'blocked'>('all');
   const [showCreateGroup, setShowCreateGroup] = useState(false);
   const [showGroupMembers, setShowGroupMembers] = useState(false);
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
@@ -190,269 +396,1776 @@ const ChatPage = () => {
     name: '',
     members: [],
     description: '',
-    isPublic: true,
-    allowInvites: true,
-    showMembers: true,
-    requirePassword: false,
-    securityLevel: 'medium'
+    settings: {
+      allowInvites: true,
+      slowMode: false,
+      adminOnlyMessages: false
+    }
   });
-  const [passwordDialog, setPasswordDialog] = useState<{
-    isOpen: boolean;
-    type: PasswordDialogType;
-    chatId?: string;
-  }>({
-    isOpen: false,
-    type: 'join'
+  const [showMembersTooltip, setShowMembersTooltip] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const [showMediaGallery, setShowMediaGallery] = useState(false);
+  const [globalSearchTerm, setGlobalSearchTerm] = useState('');
+  const [showGlobalSearch, setShowGlobalSearch] = useState(false);
+  const [searchFilter, setSearchFilter] = useState<SearchFilter>({ type: 'all' });
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [editingMessage, setEditingMessage] = useState<Message | null>(null);
+  const [showChatSettings, setShowChatSettings] = useState(false);
+  const [userSettings, setUserSettings] = useState<ChatSettings>({
+    theme: 'system',
+    fontSize: 'medium',
+    messageSound: true,
+    notificationSound: true,
+    autoDownload: true,
+    language: 'uk',
+    chatBackground: 'default',
+    backgroundBlur: 'none',
+    messageBubbles: 'rounded',
+    bubbleOpacity: 0.9,
+    messageShadow: true,
+    messageDensity: 'comfortable',
+    showAvatars: true,
+    showMessageTime: 'always',
+    typingIndicators: true,
+    typingAnimation: 'dots',
+    readReceipts: true,
+    readReceiptsStyle: 'classic',
+    showOnlineStatus: true,
+    showLastSeen: true,
+    privacyMode: 'all',
+    autoDeleteMessages: 'never',
+    autoDeleteMedia: false,
+    emojiStyle: 'native',
+    animatedEmoji: true,
+    emojiSize: 'medium',
+    messageFormatting: true,
+    markdownSupport: true,
+    linkPreview: true,
+    codeHighlighting: true,
   });
-  const [passwordData, setPasswordData] = useState({
-    password: '',
-    confirmPassword: '',
-    currentPassword: ''
-  });
-  const [newMemberEmail, setNewMemberEmail] = useState('');
-  const [showSecuritySettings, setShowSecuritySettings] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({});
+  const [playingVoiceMessage, setPlayingVoiceMessage] = useState<string | null>(null);
+  const [voiceProgress, setVoiceProgress] = useState<{ [key: string]: number }>({});
+  const [messageSearchResults, setMessageSearchResults] = useState<Message[]>([]);
+  const [currentSearchIndex, setCurrentSearchIndex] = useState(-1);
+  const [ws, setWs] = useState<WebSocket | null>(null);
+  const [isConnected, setIsConnected] = useState(false);
+  const [currentUser] = useState(getCurrentUser());
+  const [availableUsers, setAvailableUsers] = useState<ChatUser[]>([]);
+  const [showPinDialog, setShowPinDialog] = useState(false);
+  const [messageToPinId, setMessageToPinId] = useState<string | null>(null);
+  const [pinForBoth, setPinForBoth] = useState(false);
 
-  const ws = useRef<WebSocket | null>(null);
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  // Референси
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const sidebarRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const dropZoneRef = useRef<HTMLDivElement>(null);
+  const messageEndRef = useRef<HTMLDivElement>(null);
+  const voiceProgressIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const chatAreaRef = useRef<HTMLDivElement>(null);
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
-  const sidebarRef = useRef<HTMLDivElement>(null);
 
-  // Current user info
-  const currentUser = {
-    id: 'student-1',
-    name: 'Ви',
-    email: 'you@university.edu',
-    type: 'student' as const,
-  };
-
-  // Mock users data with enhanced privacy settings
-  const mockUsers: ChatUser[] = [
-    {
-      id: 'supervisor-1',
-      name: 'проф. Іваненко І.І.',
-      avatar: 'ІІ',
-      email: 'ivanenko@university.edu',
-      type: 'supervisor',
-      isOnline: true,
-      unreadCount: 2,
-      lastMessage: 'Переглянув ваші правки, добре!',
-      securityLevel: 'high'
-    },
-    {
-      id: 'supervisor-2',
-      name: 'доц. Петренко П.П.',
-      avatar: 'ПП',
-      email: 'petrenko@university.edu',
-      type: 'supervisor',
-      isOnline: false,
-      lastMessage: 'Надішліть оновлений план',
-      securityLevel: 'medium'
-    },
-    {
-      id: 'student-2',
-      name: 'Марія Коваль',
-      avatar: 'МК',
-      email: 'koval@university.edu',
-      type: 'student',
-      isOnline: true,
-      lastMessage: 'Ти вже здав лабу?',
-      securityLevel: 'medium'
-    },
-    {
-      id: 'student-3',
-      name: 'Олексій Шевченко',
-      avatar: 'ОШ',
-      email: 'shevchenko@university.edu',
-      type: 'student',
-      isOnline: true,
-      lastMessage: 'Коли зустрічаємось?',
-      securityLevel: 'medium'
-    },
-    {
-      id: 'group-1',
-      name: 'Дипломна група',
-      avatar: 'ГР',
-      type: 'group',
-      isOnline: true,
-      unreadCount: 5,
-      lastMessage: 'Олексій: Зустріч о 14:00',
-      members: [
-        {
-          id: 'student-1',
-          name: 'Ви',
-          avatar: 'В',
-          type: 'student',
-          isOnline: true,
-          securityLevel: 'medium'
-        },
-        {
-          id: 'student-2',
-          name: 'Марія Коваль',
-          avatar: 'МК',
-          type: 'student',
-          isOnline: true,
-          securityLevel: 'medium'
-        },
-        {
-          id: 'student-3',
-          name: 'Олексій Шевченко',
-          avatar: 'ОШ',
-          type: 'student',
-          isOnline: true,
-          securityLevel: 'medium'
-        },
-        {
-          id: 'supervisor-1',
-          name: 'проф. Іваненко І.І.',
-          avatar: 'ІІ',
-          type: 'supervisor',
-          isOnline: true,
-          securityLevel: 'high'
-        }
-      ],
-      createdAt: '2024-01-15',
-      privacySettings: {
-        isPublic: false,
-        allowInvites: true,
-        showMembers: true,
-        password: '123456',
-        requirePassword: true,
-        encrypted: true
-      },
-      securityLevel: 'high'
-    },
-    {
-      id: 'group-2',
-      name: 'Науковий семінар',
-      avatar: 'НС',
-      type: 'group',
-      isOnline: true,
-      lastMessage: 'проф. Іваненко: Тема наступного семінару',
-      members: [
-        {
-          id: 'supervisor-1',
-          name: 'проф. Іваненко І.І.',
-          avatar: 'ІІ',
-          type: 'supervisor',
-          isOnline: true,
-          securityLevel: 'high'
-        },
-        {
-          id: 'student-1',
-          name: 'Ви',
-          avatar: 'В',
-          type: 'student',
-          isOnline: true,
-          securityLevel: 'medium'
-        }
-      ],
-      createdAt: '2024-02-01',
-      privacySettings: {
-        isPublic: true,
-        allowInvites: false,
-        showMembers: true,
-        encrypted: true
-      },
-      securityLevel: 'medium'
-    },
-    {
-      id: 'group-3',
-      name: 'Секретна лабораторія',
-      avatar: 'СЛ',
-      type: 'group',
-      isOnline: true,
-      lastMessage: 'Обговорення конфіденційних результатів',
-      members: [
-        {
-          id: 'student-1',
-          name: 'Ви',
-          avatar: 'В',
-          type: 'student',
-          isOnline: true,
-          securityLevel: 'medium'
-        }
-      ],
-      privacySettings: {
-        isPublic: false,
-        allowInvites: false,
-        showMembers: false,
-        password: 'secret123',
-        requirePassword: true,
-        encrypted: true
-      },
-      securityLevel: 'high'
-    },
-    {
-      id: 'archived-1',
-      name: 'Стара робоча група',
-      avatar: 'СР',
-      type: 'group',
-      isOnline: false,
-      isArchived: true,
-      lastMessage: 'Марія: Файли збережено в архів',
-      members: [],
-      createdAt: '2023-12-01',
-      securityLevel: 'low'
+  // WebSocket з'єднання
+  const connectWebSocket = useCallback(() => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      console.error('No token found');
+      return;
     }
-  ];
 
-  const availableUsers: ChatUser[] = [
-    {
-      id: 'new-1',
-      name: 'Др. Сидоренко С.С.',
-      avatar: 'СС',
-      email: 'sydorenko@university.edu',
-      type: 'supervisor',
-      isOnline: true,
-      securityLevel: 'high'
-    },
-    {
-      id: 'new-2',
-      name: 'Анна Мельник',
-      avatar: 'АМ',
-      email: 'melnyk@university.edu',
-      type: 'student',
-      isOnline: false,
-      securityLevel: 'medium'
-    },
-    {
-      id: 'new-3',
-      name: 'Богдан Лисенко',
-      avatar: 'БЛ',
-      email: 'lysenko@university.edu',
-      type: 'student',
-      isOnline: true,
-      securityLevel: 'medium'
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = process.env.NODE_ENV === 'production' 
+      ? `${protocol}//${window.location.host}/ws`
+      : `${protocol}//localhost:4000/ws`;
+
+    const websocket = new WebSocket(`${wsUrl}?token=${token}`);
+
+    websocket.onopen = () => {
+      console.log('WebSocket connected');
+      setIsConnected(true);
+      setWs(websocket);
+      toast.success('Підключено до чату');
+    };
+
+    websocket.onmessage = (event) => {
+      try {
+        const message: WSMessage = JSON.parse(event.data);
+        handleWebSocketMessage(message);
+      } catch (error) {
+        console.error('Error parsing WebSocket message:', error);
+      }
+    };
+
+    websocket.onclose = (event) => {
+      console.log('WebSocket disconnected:', event.code, event.reason);
+      setIsConnected(false);
+      setWs(null);
+      
+      if (event.code !== 4001) {
+        reconnectTimeoutRef.current = setTimeout(() => {
+          console.log('Attempting to reconnect...');
+          connectWebSocket();
+        }, 3000);
+      }
+    };
+
+    websocket.onerror = (error) => {
+      console.error('WebSocket error:', error);
+      setIsConnected(false);
+    };
+
+    return websocket;
+  }, []);
+
+  // Обробка повідомлень від WebSocket
+  const handleWebSocketMessage = useCallback((message: WSMessage) => {
+    console.log('WebSocket message received:', message);
+    
+    switch (message.type) {
+      case 'auth': {
+        const authPayload = message.payload as AuthMessage;
+        if (authPayload.success) {
+          console.log('Authentication successful');
+          sendWebSocketMessage('chat_list', {});
+        } else {
+          toast.error('Помилка аутентифікації в чаті');
+        }
+        break;
+      }
+        
+      case 'chat_list': {
+        const chatListPayload = message.payload as ChatListMessage;
+        setUsers(chatListPayload.chats || []);
+        break;
+      }
+        
+      case 'message': {
+        const messagePayload = message.payload as Message;
+        
+        setMessages(prev => {
+          const existingMessageIndex = prev.findIndex(msg => 
+            msg.id === messagePayload.id
+          );
+          
+          if (existingMessageIndex !== -1) {
+            const updatedMessages = [...prev];
+            updatedMessages[existingMessageIndex] = {
+              ...updatedMessages[existingMessageIndex],
+              ...messagePayload,
+              status: 'delivered'
+            };
+            return updatedMessages;
+          } else {
+            return [...prev, messagePayload];
+          }
+        });
+        
+        setTimeout(() => {
+          scrollToBottom();
+        }, 100);
+        break;
+      }
+        
+      case 'typing': {
+        const typingPayload = message.payload as TypingMessage;
+        
+        if (typingPayload.userId !== currentUser.id) {
+          if (typingPayload.isTyping) {
+            setIsTyping(true);
+            setTypingUser(typingPayload.userName);
+          } else {
+            setIsTyping(false);
+            setTypingUser('');
+          }
+        }
+        break;
+      }
+        
+      case 'user_status': {
+        const statusPayload = message.payload as UserStatusMessage;
+        setUsers(prev => prev.map(chat => 
+          chat.id === statusPayload.userId 
+            ? { 
+                ...chat, 
+                isOnline: statusPayload.isOnline, 
+                lastSeen: statusPayload.lastSeen 
+              }
+            : chat
+        ));
+        break;
+      }
+        
+      case 'read_receipt': {
+        const receiptPayload = message.payload as ReadReceiptMessage;
+        setMessages(prev => prev.map(msg => 
+          msg.id === receiptPayload.messageId 
+            ? { ...msg, status: 'read' as const }
+            : msg
+        ));
+        break;
+      }
+
+      case 'reaction': {
+        const reactionPayload = message.payload as ReactionMessage;
+        
+        setMessages(prev => prev.map(msg => {
+          if (msg.id === reactionPayload.messageId) {
+            const reactions = { ...(msg.reactions || {}) };
+            
+            if (reactionPayload.action === 'add') {
+              if (!reactions[reactionPayload.emoji]) {
+                reactions[reactionPayload.emoji] = [];
+              }
+              if (!reactions[reactionPayload.emoji].includes(reactionPayload.userId)) {
+                reactions[reactionPayload.emoji].push(reactionPayload.userId);
+              }
+            } else {
+              if (reactions[reactionPayload.emoji]) {
+                reactions[reactionPayload.emoji] = reactions[reactionPayload.emoji].filter(
+                  id => id !== reactionPayload.userId
+                );
+                if (reactions[reactionPayload.emoji].length === 0) {
+                  delete reactions[reactionPayload.emoji];
+                }
+              }
+            }
+            
+            return { ...msg, reactions };
+          }
+          return msg;
+        }));
+        break;
+      }
+        
+      case 'error': {
+        const errorPayload = message.payload as ErrorMessage;
+        console.error('WebSocket error:', errorPayload.message);
+        toast.error(errorPayload.message);
+        break;
+      }
+        
+      default: {
+        console.warn('Unknown message type:', message.type);
+        break;
+      }
     }
-  ];
+  }, [currentUser.id]);
 
-  useEffect(() => {
-    setUsers(mockUsers.filter(user => !user.isArchived));
-    setAllUsers([...mockUsers, ...availableUsers]);
-    connectWebSocket();
+  // Функція для відправки повідомлень через WebSocket
+  const sendWebSocketMessage = useCallback((type: string, payload: unknown) => {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type, payload }));
+    } else {
+      console.warn('WebSocket is not connected');
+    }
+  }, [ws]);
 
-    return () => {
-      if (ws.current) {
-        ws.current.close();
+  // Завантаження доступних користувачів для нових чатів
+  const loadAvailableUsers = useCallback(async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/users', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (response.ok) {
+        const usersData = await response.json();
+        const formattedUsers = usersData
+          .filter((user: { id: number; name: string; email: string; role: string }) => user.id.toString() !== currentUser.id)
+          .map((user: { id: number; name: string; email: string; role: string }) => ({
+            id: user.id.toString(),
+            name: user.name,
+            avatar: user.name.split(' ').map((n: string) => n[0]).join('').toUpperCase(),
+            email: user.email,
+            type: user.role === 'teacher' ? 'supervisor' as const : 'student' as const,
+            isOnline: false
+          }));
+        
+        setAvailableUsers(formattedUsers);
       }
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current);
+    } catch (error) {
+      console.error('Error loading available users:', error);
+    }
+  }, [currentUser.id]);
+
+  // Завантаження історії повідомлень для вибраного чату
+  const loadChatHistory = useCallback(async (chatId: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/chat/${chatId}/messages`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (response.ok) {
+        const messagesData = await response.json();
+        const messagesWithSenderInfo = messagesData.map((msg: any) => ({
+          ...msg,
+          sender: msg.sender.toString(),
+          name: msg.name || 'Unknown'
+        }));
+        setMessages(messagesWithSenderInfo);
+        
+        sendWebSocketMessage('read_receipt', { chatId });
       }
+    } catch (error) {
+      console.error('Error loading chat history:', error);
+    }
+  }, [sendWebSocketMessage]);
+
+  // Функції для голосових повідомлень
+  const startRecording = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
+        await handleVoiceMessage(audioBlob);
+        
+        stream.getTracks().forEach(track => track.stop());
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+      setRecordingTime(0);
+
+      recordingIntervalRef.current = setInterval(() => {
+        setRecordingTime(prev => prev + 1);
+      }, 1000);
+
+    } catch (error) {
+      console.error('Error starting recording:', error);
+      toast.error('Не вдалося отримати доступ до мікрофона');
+    }
+  }, []);
+
+  const stopRecording = useCallback(() => {
+    if (isRecording && mediaRecorderRef.current) {
+      setIsRecording(false);
       if (recordingIntervalRef.current) {
         clearInterval(recordingIntervalRef.current);
       }
-      if (mediaRecorderRef.current && isRecording) {
+      
+      if (mediaRecorderRef.current.state === 'recording') {
         mediaRecorderRef.current.stop();
       }
-    };
+      
+      setRecordingTime(0);
+    }
+  }, [isRecording]);
+
+  const handleVoiceMessage = useCallback(async (audioBlob: Blob) => {
+    if (!selectedUser) {
+      toast.error('Виберіть чат для відправки повідомлення');
+      return;
+    }
+
+    try {
+      const voiceUrl = URL.createObjectURL(audioBlob);
+      
+      const messageId = Date.now().toString();
+      const timestamp = new Date().toLocaleTimeString('uk-UA', {
+        hour: '2-digit', minute: '2-digit'
+      });
+
+      const localMessage: Message = {
+        id: messageId,
+        sender: currentUser.id,
+        name: currentUser.name,
+        content: 'Голосове повідомлення',
+        timestamp: timestamp,
+        type: 'voice',
+        chatId: selectedUser.id,
+        status: 'sent',
+        voiceMessage: {
+          url: voiceUrl,
+          duration: recordingTime,
+          isPlaying: false,
+          currentTime: 0
+        }
+      };
+
+      setMessages(prev => [...prev, localMessage]);
+
+      const voiceMessageData = {
+        chatId: selectedUser.id,
+        content: 'Голосове повідомлення',
+        type: 'voice' as const,
+        voiceMessage: {
+          duration: recordingTime
+        }
+      };
+
+      sendWebSocketMessage('message', voiceMessageData);
+      
+      toast.success('Голосове повідомлення відправлено');
+      
+      setTimeout(() => {
+        scrollToBottom();
+      }, 100);
+    } catch (error) {
+      console.error('Error sending voice message:', error);
+      toast.error('Помилка відправки голосового повідомлення');
+    }
+  }, [selectedUser, recordingTime, currentUser, sendWebSocketMessage]);
+
+  // Мемоізовані значення
+  const allMedia = useMemo(() => {
+    return messages.reduce<MediaItem[]>((acc, message) => {
+      if (message.attachment) {
+        const mediaType = message.attachment.type.startsWith('image/') ? 'image' :
+                         message.attachment.type.startsWith('video/') ? 'video' : 'file';
+        
+        acc.push({
+          type: mediaType,
+          url: message.attachment.url,
+          name: message.attachment.name,
+          timestamp: message.timestamp,
+          messageId: message.id,
+          thumbnail: message.attachment.previewUrl
+        });
+      }
+      if (message.type === 'voice' && message.voiceMessage) {
+        acc.push({
+          type: 'voice',
+          url: message.voiceMessage.url,
+          name: 'Голосове повідомлення',
+          timestamp: message.timestamp,
+          messageId: message.id
+        });
+      }
+      return acc;
+    }, []);
+  }, [messages]);
+
+  const filteredMessages = useMemo(() => {
+    if (messageSearchResults.length > 0) {
+      return messageSearchResults;
+    }
+    
+    return messages.filter(message => {
+      if (searchFilter.type !== 'all' && message.type !== searchFilter.type) {
+        return false;
+      }
+      
+      if (searchFilter.sender && message.sender !== searchFilter.sender) {
+        return false;
+      }
+      
+      if (globalSearchTerm) {
+        const searchLower = globalSearchTerm.toLowerCase();
+        return message.content.toLowerCase().includes(searchLower) ||
+               (message.attachment?.name.toLowerCase().includes(searchLower)) ||
+               message.name.toLowerCase().includes(searchLower);
+      }
+      
+      return true;
+    });
+  }, [messages, searchFilter, globalSearchTerm, messageSearchResults]);
+
+  const performGlobalSearch = useCallback((term: string) => {
+    const results = messages.filter(message => 
+      message.content.toLowerCase().includes(term.toLowerCase()) ||
+      (message.attachment?.name.toLowerCase().includes(term.toLowerCase()))
+    );
+    setMessageSearchResults(results);
+    setCurrentSearchIndex(results.length > 0 ? 0 : -1);
+    return results;
+  }, [messages]);
+
+  const filteredChats = useMemo(() => {
+    return users.filter(chat => {
+      if (activeTab === 'groups') return chat.type === 'group' && !chat.isArchived && !chat.isBlocked;
+      if (activeTab === 'archived') return chat.isArchived;
+      if (activeTab === 'blocked') return chat.isBlocked;
+      return !chat.isArchived && !chat.isBlocked;
+    });
+  }, [users, activeTab]);
+
+  const filteredUsers = useMemo(() => {
+    return filteredChats.filter(chat =>
+      chat.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [filteredChats, searchTerm]);
+
+  // Функції для роботи з файлами
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(true);
   }, []);
 
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    if (!dropZoneRef.current?.contains(e.relatedTarget as Node)) {
+      setIsDragOver(false);
+    }
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length > 0) {
+      handleFiles(files);
+    }
+  }, []);
+
+  const handleFiles = useCallback((files: File[]) => {
+    const file = files[0];
+    if (file) {
+      if (file.size > 50 * 1024 * 1024) {
+        toast.error('Файл занадто великий. Максимальний розмір: 50MB');
+        return;
+      }
+      
+      const uploadId = Date.now().toString();
+      setUploadProgress(prev => ({ ...prev, [uploadId]: 0 }));
+      
+      const simulateUpload = () => {
+        let progress = 0;
+        const interval = setInterval(() => {
+          progress += Math.random() * 10;
+          if (progress >= 100) {
+            clearInterval(interval);
+            setUploadProgress(prev => ({ ...prev, [uploadId]: 100 }));
+            setTimeout(() => {
+              setUploadProgress(prev => {
+                const newProgress = { ...prev };
+                delete newProgress[uploadId];
+                return newProgress;
+              });
+              setAttachment(file);
+            }, 500);
+          } else {
+            setUploadProgress(prev => ({ ...prev, [uploadId]: progress }));
+          }
+        }, 200);
+      };
+      
+      simulateUpload();
+    }
+  }, []);
+
+  const handleFileInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length > 0) {
+      handleFiles(files);
+    }
+  }, [handleFiles]);
+
+  // Компонент для відображення прев'ю файлів
+  const FilePreview = ({ file, onRemove, uploadProgress }: { 
+    file: File; 
+    onRemove: () => void;
+    uploadProgress?: number;
+  }) => {
+    const fileSize = useMemo(() => {
+      const size = file.size;
+      if (size < 1024) return `${size} B`;
+      if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+      return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+    }, [file.size]);
+
+    if (file.type.startsWith('image/')) {
+      return (
+        <div className="relative inline-block">
+          <div className="relative">
+            <img 
+              src={URL.createObjectURL(file)} 
+              alt="Preview" 
+              className="h-20 w-20 object-cover rounded-lg"
+            />
+            {uploadProgress !== undefined && uploadProgress < 100 && (
+              <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
+                <div className="text-white text-xs text-center">
+                  <div className="font-semibold">{uploadProgress}%</div>
+                  <Progress value={uploadProgress} className="w-16 h-1 mt-1" />
+                </div>
+              </div>
+            )}
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onRemove}
+            className="absolute -top-2 -right-2 h-6 w-6 bg-red-500 text-white hover:bg-red-600"
+          >
+            <X className="h-3 w-3" />
+          </Button>
+        </div>
+      );
+    }
+
+    if (file.type.startsWith('video/')) {
+      return (
+        <div className="relative p-3 bg-blue-50 rounded-lg border">
+          <div className="flex items-center gap-3">
+            <VideoIcon className="w-8 h-8 text-blue-600" />
+            <div className="flex-1">
+              <div className="font-medium text-sm text-blue-800">{file.name}</div>
+              <div className="text-xs text-blue-600">{fileSize}</div>
+              {uploadProgress !== undefined && uploadProgress < 100 && (
+                <Progress value={uploadProgress} className="w-32 h-1 mt-1" />
+              )}
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onRemove}
+              className="h-6 w-6 p-0 text-blue-600 hover:text-blue-800"
+            >
+              ×
+            </Button>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg border">
+        <FileText className="w-8 h-8 text-blue-600" />
+        <div className="flex-1">
+          <div className="font-medium text-sm text-blue-800">{file.name}</div>
+          <div className="text-xs text-blue-600">{fileSize}</div>
+          {uploadProgress !== undefined && uploadProgress < 100 && (
+            <Progress value={uploadProgress} className="w-32 h-1 mt-1" />
+          )}
+        </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onRemove}
+          className="h-6 w-6 p-0 text-blue-600 hover:text-blue-800"
+        >
+          ×
+        </Button>
+      </div>
+    );
+  };
+
+  // Компонент для медіа галереї
+  const MediaGallery = () => {
+    const images = allMedia.filter(media => media.type === 'image');
+    const videos = allMedia.filter(media => media.type === 'video');
+    const files = allMedia.filter(media => media.type === 'file');
+    const voiceMessages = allMedia.filter(media => media.type === 'voice');
+
+    const [selectedMedia, setSelectedMedia] = useState<MediaItem | null>(null);
+
+    return (
+      <>
+        <Dialog open={showMediaGallery} onOpenChange={setShowMediaGallery}>
+          <DialogContent className="max-w-6xl h-[90vh]">
+            <DialogHeader>
+              <DialogTitle>Медіа, файли та голосові повідомлення</DialogTitle>
+            </DialogHeader>
+            <Tabs defaultValue="images" className="flex-1 flex flex-col">
+              <TabsList className="grid grid-cols-4 mb-4">
+                <TabsTrigger value="images">
+                  <Image className="h-4 w-4 mr-2" />
+                  Фото ({images.length})
+                </TabsTrigger>
+                <TabsTrigger value="videos">
+                  <VideoIcon className="h-4 w-4 mr-2" />
+                  Відео ({videos.length})
+                </TabsTrigger>
+                <TabsTrigger value="files">
+                  <File className="h-4 w-4 mr-2" />
+                  Файли ({files.length})
+                </TabsTrigger>
+                <TabsTrigger value="voice">
+                  <Mic className="h-4 w-4 mr-2" />
+                  Голосові ({voiceMessages.length})
+                </TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="images" className="flex-1 overflow-auto">
+                {images.length > 0 ? (
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+                    {images.map((media, index) => (
+                      <div 
+                        key={index} 
+                        className="relative group cursor-pointer aspect-square"
+                        onClick={() => setSelectedMedia(media)}
+                      >
+                        <img 
+                          src={media.thumbnail || media.url} 
+                          alt={media.name}
+                          className="w-full h-full object-cover rounded-lg hover:opacity-80 transition-opacity"
+                        />
+                        <div className="absolute bottom-1 left-1 bg-black/50 text-white text-xs px-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">
+                          {media.timestamp}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center text-muted-foreground py-8">
+                    <Image className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                    <p>Немає зображень</p>
+                  </div>
+                )}
+              </TabsContent>
+
+              <TabsContent value="videos" className="flex-1 overflow-auto">
+                {videos.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {videos.map((media, index) => (
+                      <div key={index} className="relative group">
+                        <video 
+                          src={media.url}
+                          className="w-full h-48 object-cover rounded-lg cursor-pointer"
+                          controls
+                        />
+                        <div className="absolute bottom-1 left-1 bg-black/50 text-white text-xs px-1 rounded">
+                          {media.timestamp}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center text-muted-foreground py-8">
+                    <VideoIcon className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                    <p>Немає відео</p>
+                  </div>
+                )}
+              </TabsContent>
+
+              <TabsContent value="files" className="flex-1 overflow-auto">
+                {files.length > 0 ? (
+                  <div className="space-y-3">
+                    {files.map((media, index) => (
+                      <div key={index} className="flex items-center gap-3 p-3 border rounded-lg hover:bg-muted/50">
+                        <FileText className="h-10 w-10 text-blue-600" />
+                        <div className="flex-1">
+                          <div className="font-medium">{media.name}</div>
+                          <div className="text-sm text-muted-foreground">{media.timestamp}</div>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => window.open(media.url, '_blank')}
+                        >
+                          <Download className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center text-muted-foreground py-8">
+                    <File className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                    <p>Немає файлів</p>
+                  </div>
+                )}
+              </TabsContent>
+
+              <TabsContent value="voice" className="flex-1 overflow-auto">
+                {voiceMessages.length > 0 ? (
+                  <div className="space-y-3">
+                    {voiceMessages.map((media, index) => (
+                      <VoiceMessagePlayer 
+                        key={index}
+                        media={media}
+                        isPlaying={playingVoiceMessage === media.messageId}
+                        currentProgress={voiceProgress[media.messageId] || 0}
+                        onPlay={() => handlePlayVoiceMessage(media.messageId)}
+                        onPause={() => handlePauseVoiceMessage()}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center text-muted-foreground py-8">
+                    <Mic className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                    <p>Немає голосових повідомлень</p>
+                  </div>
+                )}
+              </TabsContent>
+            </Tabs>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={!!selectedMedia} onOpenChange={() => setSelectedMedia(null)}>
+          <DialogContent className="max-w-4xl">
+            {selectedMedia && (
+              <div className="relative">
+                {selectedMedia.type === 'image' ? (
+                  <img 
+                    src={selectedMedia.url} 
+                    alt={selectedMedia.name}
+                    className="w-full h-auto max-h-[70vh] object-contain rounded-lg"
+                  />
+                ) : selectedMedia.type === 'video' ? (
+                  <video 
+                    src={selectedMedia.url}
+                    controls
+                    className="w-full h-auto max-h-[70vh] rounded-lg"
+                  />
+                ) : null}
+                <div className="mt-3 flex justify-between items-center">
+                  <div>
+                    <div className="font-medium">{selectedMedia.name}</div>
+                    <div className="text-sm text-muted-foreground">{selectedMedia.timestamp}</div>
+                  </div>
+                  <Button
+                    onClick={() => window.open(selectedMedia.url, '_blank')}
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Завантажити
+                  </Button>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+      </>
+    );
+  };
+
+  // Компонент для відтворення голосових повідомлень
+  const VoiceMessagePlayer = ({ 
+    media, 
+    isPlaying, 
+    currentProgress, 
+    onPlay, 
+    onPause 
+  }: {
+    media: MediaItem;
+    isPlaying: boolean;
+    currentProgress: number;
+    onPlay: () => void;
+    onPause: () => void;
+  }) => {
+    const duration = 30;
+    
+    return (
+      <div className="flex items-center gap-3 p-3 border rounded-lg hover:bg-muted/50">
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={isPlaying ? onPause : onPlay}
+          className="h-12 w-12 rounded-full"
+        >
+          {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
+        </Button>
+        
+        <div className="flex-1">
+          <div className="font-medium text-sm">{media.name}</div>
+          <div className="flex items-center gap-2 mt-1">
+            <Progress value={currentProgress} className="flex-1 h-2" />
+            <span className="text-xs text-muted-foreground w-12">
+              {Math.floor((currentProgress / 100) * duration)}s
+            </span>
+          </div>
+        </div>
+        
+        <div className="text-xs text-muted-foreground">
+          {media.timestamp}
+        </div>
+        
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => window.open(media.url, '_blank')}
+        >
+          <Download className="h-4 w-4" />
+        </Button>
+      </div>
+    );
+  };
+
+  // Функції для роботи з голосовими повідомленнями
+  const handlePlayVoiceMessage = useCallback((messageId: string) => {
+    setPlayingVoiceMessage(messageId);
+    let progress = 0;
+    voiceProgressIntervalRef.current = setInterval(() => {
+      progress += 1;
+      if (progress >= 100) {
+        if (voiceProgressIntervalRef.current) {
+          clearInterval(voiceProgressIntervalRef.current);
+        }
+        setPlayingVoiceMessage(null);
+        setVoiceProgress(prev => ({ ...prev, [messageId]: 0 }));
+      } else {
+        setVoiceProgress(prev => ({ ...prev, [messageId]: progress }));
+      }
+    }, 300);
+  }, []);
+
+  const handlePauseVoiceMessage = useCallback(() => {
+    if (voiceProgressIntervalRef.current) {
+      clearInterval(voiceProgressIntervalRef.current);
+    }
+    setPlayingVoiceMessage(null);
+  }, []);
+
+  // Функції для реакцій
+  const addReaction = useCallback((messageId: string, emoji: string) => {
+    setMessages(prev => prev.map(msg => {
+      if (msg.id === messageId) {
+        const reactions = { ...(msg.reactions || {}) };
+        if (!reactions[emoji]) {
+          reactions[emoji] = [];
+        }
+        if (!reactions[emoji].includes(currentUser.id)) {
+          reactions[emoji].push(currentUser.id);
+        } else {
+          reactions[emoji] = reactions[emoji].filter(id => id !== currentUser.id);
+          if (reactions[emoji].length === 0) {
+            delete reactions[emoji];
+          }
+          if (selectedUser) {
+            sendWebSocketMessage('reaction', {
+              messageId,
+              emoji,
+              action: 'remove',
+              userId: currentUser.id,
+              chatId: selectedUser.id
+            } as ReactionMessage);
+          }
+          return { ...msg, reactions };
+        }
+        return { ...msg, reactions };
+      }
+      return msg;
+    }));
+
+    if (selectedUser) {
+      sendWebSocketMessage('reaction', {
+        messageId,
+        emoji,
+        action: 'add',
+        userId: currentUser.id,
+        chatId: selectedUser.id
+      } as ReactionMessage);
+    }
+  }, [currentUser.id, selectedUser, sendWebSocketMessage]);
+
+  const removeReaction = useCallback((messageId: string, emoji: string) => {
+    setMessages(prev => prev.map(msg => {
+      if (msg.id === messageId) {
+        const reactions = { ...(msg.reactions || {}) };
+        if (reactions[emoji]) {
+          reactions[emoji] = reactions[emoji].filter(id => id !== currentUser.id);
+          if (reactions[emoji].length === 0) {
+            delete reactions[emoji];
+          }
+        }
+        return { ...msg, reactions };
+      }
+      return msg;
+    }));
+
+    if (selectedUser) {
+      sendWebSocketMessage('reaction', {
+        messageId,
+        emoji,
+        action: 'remove',
+        userId: currentUser.id,
+        chatId: selectedUser.id
+      } as ReactionMessage);
+    }
+  }, [currentUser.id, selectedUser, sendWebSocketMessage]);
+
+  // Навігація по результатах пошуку
+  const navigateSearchResults = useCallback((direction: 'next' | 'prev') => {
+    if (messageSearchResults.length === 0) return;
+    
+    let newIndex;
+    if (direction === 'next') {
+      newIndex = (currentSearchIndex + 1) % messageSearchResults.length;
+    } else {
+      newIndex = (currentSearchIndex - 1 + messageSearchResults.length) % messageSearchResults.length;
+    }
+    
+    setCurrentSearchIndex(newIndex);
+    
+    const messageElement = document.querySelector(`[data-message-id="${messageSearchResults[newIndex].id}"]`);
+    if (messageElement) {
+      messageElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      messageElement.classList.add('bg-yellow-100');
+      setTimeout(() => {
+        messageElement.classList.remove('bg-yellow-100');
+      }, 2000);
+    }
+  }, [messageSearchResults, currentSearchIndex]);
+
+  // Функції для редагування повідомлень
+  const startEditing = useCallback((message: Message) => {
+    setEditingMessage(message);
+    setNewMessage(message.content);
+  }, []);
+
+  const cancelEditing = useCallback(() => {
+    setEditingMessage(null);
+    setNewMessage('');
+  }, []);
+
+  const saveEditedMessage = useCallback(() => {
+    if (!editingMessage || !newMessage.trim()) return;
+    
+    setMessages(prev => prev.map(msg => 
+      msg.id === editingMessage.id 
+        ? { ...msg, content: newMessage, isEdited: true }
+        : msg
+    ));
+    
+    setEditingMessage(null);
+    setNewMessage('');
+    toast.success('Повідомлення відредаговано');
+  }, [editingMessage, newMessage]);
+
+  // Функція для вибору чату
+  const handleSelectChat = useCallback((user: ChatUser) => {
+    console.log('Вибір чату:', user.id);
+    
+    setMessages([]);
+    setSelectedUser(user);
+    setReplyingTo(null);
+    setEditingMessage(null);
+    setAttachment(null);
+    setNewMessage('');
+    setMessageSearchResults([]);
+    setCurrentSearchIndex(-1);
+    setGlobalSearchTerm('');
+    setShowGlobalSearch(false);
+    
+    loadChatHistory(user.id);
+    
+    setUsers(prev => prev.map(chat => 
+      chat.id === user.id ? { ...chat, unreadCount: 0 } : chat
+    ));
+
+    sendWebSocketMessage('read_receipt', { chatId: user.id });
+  }, [loadChatHistory, sendWebSocketMessage]);
+
+  // Функція створення групи
+  const createGroup = useCallback(async () => {
+    if (!newGroupData.name || newGroupData.members.length === 0) {
+      toast.error('Введіть назву групи та оберіть учасників');
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/chat/create-group', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          name: newGroupData.name,
+          memberIds: newGroupData.members,
+          description: newGroupData.description,
+          settings: newGroupData.settings
+        })
+      });
+
+      if (response.ok) {
+        await response.json();
+        toast.success(`Група "${newGroupData.name}" успішно створена`);
+        
+        sendWebSocketMessage('chat_list', {});
+        
+        setNewGroupData({ 
+          name: '', 
+          members: [], 
+          description: '',
+          settings: {
+            allowInvites: true,
+            slowMode: false,
+            adminOnlyMessages: false
+          }
+        });
+        setShowCreateGroup(false);
+      } else {
+        toast.error('Помилка створення групи');
+      }
+    } catch (error) {
+      console.error('Error creating group:', error);
+      toast.error('Помилка створення групи');
+    }
+  }, [newGroupData, sendWebSocketMessage]);
+
+  // Функція створення нового чату
+  const createNewChat = useCallback(async (user: ChatUser) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/chat/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          participantId: user.id
+        })
+      });
+
+      if (response.ok) {
+        await response.json();
+        toast.success('Чат створено');
+        
+        sendWebSocketMessage('chat_list', {});
+        
+        setShowCreateGroup(false);
+      } else {
+        toast.error('Помилка створення чату');
+      }
+    } catch (error) {
+      console.error('Error creating chat:', error);
+      toast.error('Помилка створення чату');
+    }
+  }, [sendWebSocketMessage]);
+
+  // Функції керування чатами
+  const toggleMuteChat = useCallback((chatId: string) => {
+    setUsers(prev => prev.map(chat => 
+      chat.id === chatId ? { ...chat, isMuted: !chat.isMuted } : chat
+    ));
+    if (selectedUser?.id === chatId) {
+      setSelectedUser(prev => prev ? { ...prev, isMuted: !prev.isMuted } : null);
+    }
+    toast.info(users.find(chat => chat.id === chatId)?.isMuted ? 'Сповіщення увімкнено' : 'Сповіщення вимкнено');
+  }, [selectedUser, users]);
+
+  const toggleBlockChat = useCallback((chatId: string) => {
+    setUsers(prev => prev.map(chat => 
+      chat.id === chatId ? { ...chat, isBlocked: !chat.isBlocked } : chat
+    ));
+    if (selectedUser?.id === chatId) {
+      setSelectedUser(null);
+    }
+    toast.info(users.find(chat => chat.id === chatId)?.isBlocked ? 'Користувача розблоковано' : 'Користувача заблоковано');
+  }, [selectedUser, users]);
+
+  const archiveChat = useCallback((chatId: string) => {
+    setUsers(prev => prev.map(chat => 
+      chat.id === chatId ? { ...chat, isArchived: true } : chat
+    ));
+    if (selectedUser?.id === chatId) {
+      setSelectedUser(null);
+    }
+    toast.success('Чат архівовано');
+  }, [selectedUser]);
+
+  const unarchiveChat = useCallback((chatId: string) => {
+    setUsers(prev => prev.map(chat => 
+      chat.id === chatId ? { ...chat, isArchived: false } : chat
+    ));
+    toast.success('Чат розархівовано');
+  }, []);
+
+  const deleteChat = useCallback((chatId: string) => {
+    setUsers(prev => prev.filter(chat => chat.id !== chatId));
+    if (selectedUser?.id === chatId) {
+      setSelectedUser(null);
+    }
+    toast.success('Чат видалено');
+  }, [selectedUser]);
+
+  const leaveGroup = useCallback((chatId: string) => {
+    setUsers(prev => prev.filter(chat => chat.id !== chatId));
+    if (selectedUser?.id === chatId) {
+      setSelectedUser(null);
+    }
+    toast.success('Ви покинули групу');
+  }, [selectedUser]);
+
+  // Функції для закріплення повідомлень
+  const pinMessage = useCallback((messageId: string, forBoth: boolean = false) => {
+    setMessages(prev => prev.map(msg => 
+      msg.id === messageId ? { ...msg, isPinned: !msg.isPinned } : msg
+    ));
+    
+    const message = messages.find(msg => msg.id === messageId);
+    const willBePinned = !message?.isPinned;
+    
+    if (!willBePinned) {
+      toast.info('Повідомлення відкріплено');
+    } else {
+      toast.info(forBoth ? 'Повідомлення закріплено для всіх' : 'Повідомлення закріплено у вас');
+      
+      if (forBoth && selectedUser) {
+        sendWebSocketMessage('pin_message', {
+          messageId,
+          chatId: selectedUser.id,
+          forBoth: true
+        });
+      }
+    }
+    
+    setShowPinDialog(false);
+    setMessageToPinId(null);
+  }, [messages, selectedUser, sendWebSocketMessage]);
+
+  const openPinDialog = useCallback((messageId: string) => {
+    setMessageToPinId(messageId);
+    setPinForBoth(false);
+    setShowPinDialog(true);
+  }, []);
+
+  const confirmPinMessage = useCallback(() => {
+    if (messageToPinId) {
+      pinMessage(messageToPinId, pinForBoth);
+    }
+  }, [messageToPinId, pinForBoth, pinMessage]);
+
+  const deleteMessage = useCallback((messageId: string) => {
+    setMessages(prev => prev.filter(msg => msg.id !== messageId));
+    toast.success('Повідомлення видалено');
+  }, []);
+
+  const replyToMessage = useCallback((message: Message) => {
+    setReplyingTo(message);
+  }, []);
+
+  const cancelReply = useCallback(() => {
+    setReplyingTo(null);
+  }, []);
+
+  const startResizing = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizing(true);
+  }, []);
+
+  // Симуляція набору тексту
+  const simulateTyping = useCallback(() => {
+    if (!selectedUser) return;
+    
+    setIsTyping(true);
+    setTypingUser(selectedUser.name);
+
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+
+    typingTimeoutRef.current = setTimeout(() => {
+      setIsTyping(false);
+      setTypingUser('');
+    }, 3000);
+  }, [selectedUser]);
+
+  const sendStopTyping = useCallback(() => {
+    setIsTyping(false);
+    setTypingUser('');
+    
+    if (selectedUser) {
+      sendWebSocketMessage('typing', {
+        chatId: selectedUser.id,
+        isTyping: false,
+        userId: currentUser.id,
+        userName: currentUser.name
+      } as TypingMessage);
+    }
+  }, [selectedUser, sendWebSocketMessage, currentUser]);
+
+  const handleTyping = useCallback(() => {
+    simulateTyping();
+    
+    if (selectedUser) {
+      sendWebSocketMessage('typing', {
+        chatId: selectedUser.id,
+        isTyping: true,
+        userId: currentUser.id,
+        userName: currentUser.name
+      } as TypingMessage);
+
+      setTimeout(() => {
+        sendWebSocketMessage('typing', {
+          chatId: selectedUser.id,
+          isTyping: false,
+          userId: currentUser.id,
+          userName: currentUser.name
+        } as TypingMessage);
+      }, 3000);
+    }
+  }, [simulateTyping, selectedUser, sendWebSocketMessage, currentUser]);
+
+  // Основна функція відправки повідомлень
+  const handleSend = useCallback(() => {
+    if (!newMessage.trim() && !attachment) return;
+
+    if (!selectedUser) {
+      toast.error('Виберіть чат для відправки повідомлення');
+      return;
+    }
+
+    const messageType = attachment ? 
+      (attachment.type.startsWith('image/') ? 'image' :
+       attachment.type.startsWith('video/') ? 'video' : 'file') : 'text';
+
+    const messageId = Date.now().toString();
+    const timestamp = new Date().toLocaleTimeString('uk-UA', {
+      hour: '2-digit', minute: '2-digit'
+    });
+
+    const localMessage: Message = {
+      id: messageId,
+      sender: currentUser.id,
+      name: currentUser.name,
+      content: newMessage,
+      timestamp: timestamp,
+      type: messageType,
+      chatId: selectedUser.id,
+      status: 'sent',
+      replyTo: replyingTo || undefined,
+      attachment: attachment ? {
+        name: attachment.name,
+        url: URL.createObjectURL(attachment),
+        type: attachment.type,
+        size: attachment.size,
+        previewUrl: attachment.type.startsWith('image/') || attachment.type.startsWith('video/') 
+          ? URL.createObjectURL(attachment) 
+          : undefined
+      } : undefined
+    };
+
+    setMessages(prev => [...prev, localMessage]);
+
+    const messageData = {
+      chatId: selectedUser.id,
+      content: newMessage,
+      type: messageType,
+      replyTo: replyingTo,
+      attachment: attachment ? {
+        name: attachment.name,
+        url: 'uploaded-file-url',
+        type: attachment.type,
+        size: attachment.size
+      } : undefined
+    };
+
+    sendWebSocketMessage('message', messageData);
+
+    setNewMessage('');
+    setAttachment(null);
+    setReplyingTo(null);
+    setEditingMessage(null);
+    sendStopTyping();
+
+    setTimeout(() => {
+      scrollToBottom();
+    }, 100);
+  }, [newMessage, attachment, replyingTo, selectedUser, currentUser, sendWebSocketMessage, sendStopTyping]);
+
+  const handleKeyPress = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      if (editingMessage) {
+        saveEditedMessage();
+      } else {
+        handleSend();
+      }
+    } else if (e.key === 'Escape') {
+      if (editingMessage) {
+        cancelEditing();
+      } else if (replyingTo) {
+        cancelReply();
+      }
+    }
+  }, [handleSend, editingMessage, saveEditedMessage, cancelEditing, replyingTo, cancelReply]);
+
+  // ВИПРАВЛЕНА ФУНКЦІЯ СКРОЛУ
+  const scrollToBottom = useCallback(() => {
+    setTimeout(() => {
+      if (messageEndRef.current) {
+        messageEndRef.current.scrollIntoView({ 
+          behavior: 'smooth',
+          block: 'end'
+        });
+      }
+    }, 100);
+  }, []);
+
+  const removeAttachment = useCallback(() => {
+    setAttachment(null);
+  }, []);
+
+  const formatTime = useCallback((seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  }, []);
+
+  const getStatusIcon = useCallback((status: Message['status']) => {
+    switch (status) {
+      case 'sent':
+        return <Check className="h-3 w-3" />;
+      case 'delivered':
+        return <CheckCheck className="h-3 w-3" />;
+      case 'read':
+        return <CheckCheck className="h-3 w-3 text-blue-500" />;
+      default:
+        return <Clock className="h-3 w-3" />;
+    }
+  }, []);
+
+  // Компонент для відображення статусу повідомлення
+  const MessageStatus = ({ status, timestamp, isEdited }: { 
+    status: Message['status']; 
+    timestamp: string;
+    isEdited?: boolean;
+  }) => (
+    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+      <span>{timestamp}</span>
+      {isEdited && <span className="italic">(ред.)</span>}
+      {status && getStatusIcon(status)}
+    </div>
+  );
+
+  // ВИПРАВЛЕНИЙ КОМПОНЕНТ ПОВІДОМЛЕННЯ
+  const MessageItem = useCallback(({ message }: { message: Message }) => {
+    const isOwnMessage = message.sender === currentUser.id;
+    
+    return (
+      <div
+        key={message.id}
+        data-message-id={message.id}
+        className={`flex message-container group mb-3 ${
+          isOwnMessage ? 'justify-end' : 'justify-start'
+        }`}
+      >
+        <div
+          className={`flex items-end max-w-xl gap-2 ${
+            isOwnMessage ? 'flex-row-reverse' : ''
+          }`}
+        >
+          {/* Аватар для чужих повідомлень */}
+          {userSettings.showAvatars && !isOwnMessage && (
+            <Avatar className="h-6 w-6 flex-shrink-0">
+              <AvatarFallback className="text-xs bg-gray-100 text-gray-600">
+                {message.name ? message.name.charAt(0).toUpperCase() : 'U'}
+              </AvatarFallback>
+            </Avatar>
+          )}
+
+          <div
+            className={`flex flex-col ${
+              isOwnMessage ? 'items-end' : 'items-start'
+            }`}
+          >
+            {/* Ім'я для групових чатів */}
+            {selectedUser?.type === 'group' && !isOwnMessage && (
+              <span className="text-xs font-medium text-gray-600 mb-1 ml-1">
+                {message.name}
+              </span>
+            )}
+
+            <div className="flex items-start gap-2">
+              <div
+                className={`px-3 py-2 shadow-md transition-all duration-300 relative max-w-xs ${
+                  isOwnMessage
+                    ? 'bg-blue-600 text-white rounded-tl-2xl rounded-tr-md rounded-br-md rounded-bl-2xl'
+                    : 'bg-white border border-gray-200 text-gray-900 rounded-tr-2xl rounded-tl-md rounded-bl-md rounded-br-2xl'
+                }`}
+                style={{ 
+                  opacity: userSettings.bubbleOpacity,
+                  borderRadius: `var(--bubble-radius, 16px)`,
+                  boxShadow: `var(--message-shadow, 0 2px 8px rgba(0,0,0,0.1))`
+                }}
+              >
+                {/* Reply preview */}
+                {message.replyTo && (
+                  <div className={`mb-2 p-2 rounded-lg border-l-4 ${
+                    isOwnMessage
+                      ? 'bg-blue-500/20 border-l-blue-400'
+                      : 'bg-gray-100 border-l-gray-400'
+                  }`}>
+                    <div className="flex items-center gap-1 mb-1">
+                      <Reply className="h-3 w-3" />
+                      <span className="text-xs font-medium">{message.replyTo.name}</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {message.replyTo.content}
+                    </p>
+                  </div>
+                )}
+
+                {/* Вміст повідомлення */}
+                {message.type === 'voice' ? (
+                  <div className="flex items-center gap-3">
+                    <button 
+                      className="p-2 bg-white/20 rounded-full"
+                      onClick={() => 
+                        playingVoiceMessage === message.id 
+                          ? handlePauseVoiceMessage()
+                          : handlePlayVoiceMessage(message.id)
+                      }
+                    >
+                      {playingVoiceMessage === message.id ? (
+                        <Pause className="h-4 w-4" />
+                      ) : (
+                        <Play className="h-4 w-4" />
+                      )}
+                    </button>
+                    <div className="flex items-center gap-2">
+                      <div className="w-32 h-2 bg-white/30 rounded-full">
+                        <div 
+                          className="h-2 bg-white rounded-full transition-all" 
+                          style={{ width: `${voiceProgress[message.id] || 0}%` }}
+                        />
+                      </div>
+                      <span className="text-sm">
+                        {formatTime(message.voiceMessage?.duration || 0)}
+                      </span>
+                    </div>
+                  </div>
+                ) : message.type === 'image' && message.attachment ? (
+                  <div className="space-y-2">
+                    <img 
+                      src={message.attachment.previewUrl} 
+                      alt={message.attachment.name}
+                      className="max-w-xs rounded-lg cursor-pointer hover:opacity-90"
+                      onClick={() => window.open(message.attachment!.url, '_blank')}
+                    />
+                    {message.content && <p className="text-sm mt-2">{message.content}</p>}
+                  </div>
+                ) : message.type === 'file' && message.attachment ? (
+                  <div className={`flex items-center gap-3 p-2 rounded-lg ${
+                    isOwnMessage ? 'bg-blue-500/20' : 'bg-gray-100'
+                  }`}>
+                    <FileText className="h-8 w-8" />
+                    <div className="flex-1">
+                      <div className="font-medium">{message.attachment.name}</div>
+                      <div className="text-sm opacity-75">
+                        {(message.attachment.size! / 1024).toFixed(1)} KB
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => window.open(message.attachment!.url, '_blank')}
+                    >
+                      <Download className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <p className="text-sm leading-relaxed whitespace-pre-line break-words">
+                    {message.content}
+                  </p>
+                )}
+
+                {/* Reactions */}
+                {message.reactions && Object.keys(message.reactions).length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    {Object.entries(message.reactions).map(([emoji, users]) => (
+                      <button
+                        key={emoji}
+                        onClick={() => 
+                          users.includes(currentUser.id)
+                            ? removeReaction(message.id, emoji)
+                            : addReaction(message.id, emoji)
+                        }
+                        className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs cursor-pointer hover:scale-105 transition-transform ${
+                          users.includes(currentUser.id)
+                            ? 'bg-blue-100 text-blue-700 border-2 border-blue-300'
+                            : 'bg-gray-100 text-gray-700 border border-gray-300 hover:border-gray-400'
+                        }`}
+                        title={`Реагували: ${users.map(userId => 
+                          userId === currentUser.id ? 'Ви' : 
+                          messages.find(m => m.sender === userId)?.name || 'Користувач'
+                        ).join(', ')}`}
+                      >
+                        <span>{emoji}</span>
+                        <span className="font-semibold">{users.length}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Меню повідомлення */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <MoreVertical className="h-3 w-3" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem onClick={() => {
+                    if (message.isPinned) {
+                      pinMessage(message.id, false);
+                    } else {
+                      openPinDialog(message.id);
+                    }
+                  }}>
+                    <Pin className="h-4 w-4 mr-2" />
+                    {message.isPinned ? 'Відкріпити' : 'Закріпити'}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => replyToMessage(message)}>
+                    <Reply className="h-4 w-4 mr-2" />
+                    Відповісти
+                  </DropdownMenuItem>
+                  {message.sender === currentUser.id && (
+                    <DropdownMenuItem onClick={() => startEditing(message)}>
+                      <Edit className="h-4 w-4 mr-2" />
+                      Редагувати
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuItem onClick={() => navigator.clipboard.writeText(message.content)}>
+                    <FileText className="h-4 w-4 mr-2" />
+                    Копіювати текст
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  {message.sender === currentUser.id && (
+                    <DropdownMenuItem 
+                      onClick={() => deleteMessage(message.id)}
+                      className="text-red-600"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Видалити
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+
+            {/* Кнопки реакцій */}
+            <div className={`flex gap-1 mt-1 opacity-0 group-hover:opacity-100 transition-opacity ${
+              isOwnMessage ? 'justify-end' : 'justify-start'
+            }`}>
+              {REACTION_EMOJIS.map(({ emoji, label }) => {
+                const hasReacted = message.reactions?.[emoji]?.includes(currentUser.id);
+                return (
+                  <Button
+                    key={emoji}
+                    variant="ghost"
+                    size="sm"
+                    className={`h-6 w-6 p-0 hover:scale-110 transition-transform ${
+                      hasReacted ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
+                    }`}
+                    onClick={() => 
+                      hasReacted 
+                        ? removeReaction(message.id, emoji)
+                        : addReaction(message.id, emoji)
+                    }
+                    title={label}
+                  >
+                    <span className="text-xs">{emoji}</span>
+                  </Button>
+                );
+              })}
+            </div>
+
+            {/* Статус повідомлення */}
+            <div className={`flex items-center gap-2 mt-1 ${
+              isOwnMessage ? 'justify-end' : 'justify-start'
+            }`}>
+              <MessageStatus 
+                status={message.status} 
+                timestamp={message.timestamp}
+                isEdited={message.isEdited}
+              />
+            </div>
+          </div>
+
+          {/* Аватар для своїх повідомлень */}
+          {userSettings.showAvatars && isOwnMessage && (
+            <Avatar className="h-6 w-6 flex-shrink-0">
+              <AvatarFallback className="text-xs bg-blue-100 text-blue-600">
+                В
+              </AvatarFallback>
+            </Avatar>
+          )}
+        </div>
+      </div>
+    );
+  }, [currentUser.id, selectedUser, userSettings, playingVoiceMessage, voiceProgress, messages]);
+
+  // Оптимізований рендеринг списку повідомлень
+  const renderMessages = useMemo(() => {
+    return filteredMessages.map((message) => (
+      <MessageItem key={message.id} message={message} />
+    ));
+  }, [filteredMessages, MessageItem]);
+
+  // Застосовуємо налаштування до області чату
   useEffect(() => {
-    scrollToBottom();
-  }, [messages, replyingTo]);
+    applySettingsToChatArea(userSettings);
+  }, [userSettings, selectedUser]);
+
+  const applySettingsToChatArea = (settings: ChatSettings) => {
+    const chatArea = chatAreaRef.current;
+    if (!chatArea) return;
+
+    const backgroundPreset = BACKGROUND_PRESETS.find(preset => preset.id === settings.chatBackground);
+    
+    chatArea.className = chatArea.className.replace(/bg-gradient-to-br\sfrom-[\w-]+\sto-[\w-]+/g, '');
+    chatArea.className = chatArea.className.replace(/\bbg-[\w-]+\b/g, '');
+    
+    if (backgroundPreset) {
+      chatArea.classList.add(...backgroundPreset.color.split(' '));
+    }
+
+    const fontSize = settings.fontSize === 'small' ? 'text-sm' : 
+                    settings.fontSize === 'large' ? 'text-lg' : 'text-base';
+    
+    chatArea.className = chatArea.className.replace(/\btext-(sm|base|lg)\b/g, '');
+    chatArea.classList.add(fontSize);
+
+    const blurValue = settings.backgroundBlur === 'light' ? 'backdrop-blur-sm' :
+                     settings.backgroundBlur === 'medium' ? 'backdrop-blur-md' : '';
+    
+    chatArea.className = chatArea.className.replace(/\bbackdrop-blur-(sm|md|lg|xl)\b/g, '');
+    if (blurValue) {
+      chatArea.classList.add(blurValue);
+    }
+
+    const root = document.documentElement;
+    const bubbleRadius = 
+      settings.messageBubbles === 'square' ? '8px' : 
+      settings.messageBubbles === 'minimal' ? '4px' :
+      settings.messageBubbles === 'modern' ? '20px' : '16px';
+    
+    root.style.setProperty('--bubble-radius', bubbleRadius);
+    root.style.setProperty('--bubble-opacity', settings.bubbleOpacity.toString());
+    root.style.setProperty('--message-shadow', settings.messageShadow ? '0 2px 8px rgba(0,0,0,0.1)' : 'none');
+    
+    const messageGap = 
+      settings.messageDensity === 'compact' ? '0.25rem' : 
+      settings.messageDensity === 'cozy' ? '0.5rem' : '1rem';
+    root.style.setProperty('--message-gap', messageGap);
+  };
+
+  // Ініціалізація WebSocket та завантаження даних
+  useEffect(() => {
+    // Додаємо CSS змінні
+    const styleElement = document.createElement('style');
+    styleElement.textContent = cssVariables + chatStyles;
+    document.head.appendChild(styleElement);
+
+    connectWebSocket();
+    loadAvailableUsers();
+    
+    return () => {
+      if (ws) {
+        ws.close();
+      }
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+      }
+      document.head.removeChild(styleElement);
+    };
+  }, []);
 
   // Resize functionality
   useEffect(() => {
@@ -484,791 +2197,1092 @@ const ChatPage = () => {
     };
   }, [isResizing]);
 
-  const connectWebSocket = () => {
-    const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:3001';
-    
-    try {
-      ws.current = new WebSocket(wsUrl);
+  // ВИПРАВЛЕНИЙ USEFFECT ДЛЯ СКРОЛУ
+  useEffect(() => {
+    const scrollContainer = document.querySelector('[data-scroll-area]');
+    if (scrollContainer) {
+      const observer = new MutationObserver(() => {
+        scrollToBottom();
+      });
+      
+      observer.observe(scrollContainer, {
+        childList: true,
+        subtree: true
+      });
+      
+      return () => observer.disconnect();
+    }
+  }, [scrollToBottom]);
 
-      ws.current.onopen = () => {
-        setIsConnected(true);
-        console.log('WebSocket connected');
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, replyingTo, editingMessage, scrollToBottom]);
+
+  const EnhancedChatSettings = ({
+    showChatSettings,
+    setShowChatSettings,
+    chatSettings,
+  }: EnhancedChatSettingsProps) => {
+    const [activeTab, setActiveTab] = useState('appearance');
+    const [localSettings, setLocalSettings] = useState(chatSettings);
+
+    useEffect(() => {
+      if (showChatSettings) {
+        setLocalSettings(userSettings);
+        const savedTab = localStorage.getItem('chat-settings-active-tab');
+        setActiveTab(savedTab || 'appearance');
         
-        if (ws.current && selectedUser) {
-          ws.current.send(JSON.stringify({
-            type: 'user_join',
-            user: currentUser,
-            chatId: selectedUser.id
-          }));
+        setTimeout(() => applySettingsToChatArea(userSettings), 100);
+      }
+    }, [showChatSettings, userSettings]);
+
+    const applySettingsToChatArea = (settings: ChatSettings) => {
+      const chatArea = document.querySelector('.chat-area-preview') as HTMLElement;
+      if (!chatArea) return;
+
+      if (settings.chatBackground !== 'default') {
+        const backgroundPreset = BACKGROUND_PRESETS.find(preset => preset.id === settings.chatBackground);
+        if (backgroundPreset) {
+          chatArea.className = chatArea.className.replace(/bg-gradient-to-br\sfrom-[\w-]+\sto-[\w-]+/g, '');
+          chatArea.className = chatArea.className.replace(/\bbg-[\w-]+\b/g, '');
+          
+          chatArea.classList.add(...backgroundPreset.color.split(' '));
+          chatArea.classList.add('chat-area-preview');
         }
-      };
+      } else {
+        chatArea.className = chatArea.className.replace(/bg-gradient-to-br\sfrom-[\w-]+\sto-[\w-]+/g, '');
+        chatArea.className = chatArea.className.replace(/\bbg-[\w-]+\b/g, '');
+        chatArea.classList.add('chat-area-preview');
+      }
 
-      ws.current.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-        
-        switch (data.type) {
-          case 'message':
-            if (data.message.sender !== currentUser.id) {
-              handleNewMessage(data.message);
-            }
-            break;
-          case 'user_typing':
-            handleUserTyping(data);
-            break;
-          case 'user_stop_typing':
-            handleUserStopTyping();
-            break;
-          case 'user_join':
-            handleUserJoin(data.user);
-            break;
-          case 'user_leave':
-            handleUserLeave(data.userId);
-            break;
-          case 'users_list':
-            setUsers(data.users);
-            break;
-          case 'message_history':
-            setMessages(data.messages);
-            break;
-        }
-      };
+      const blurClass = 
+        settings.backgroundBlur === 'light' ? 'backdrop-blur-sm' :
+        settings.backgroundBlur === 'medium' ? 'backdrop-blur-md' : '';
+      
+      chatArea.className = chatArea.className.replace(/\bbackdrop-blur-(sm|md|lg|xl)\b/g, '');
+      if (blurClass) {
+        chatArea.classList.add(blurClass);
+      }
 
-      ws.current.onclose = () => {
-        setIsConnected(false);
-        console.log('WebSocket disconnected');
-        
-        setTimeout(() => {
-          connectWebSocket();
-        }, 5000);
-      };
+      const fontSize = settings.fontSize === 'small' ? 'text-sm' : 
+                      settings.fontSize === 'large' ? 'text-lg' : 'text-base';
+      
+      chatArea.className = chatArea.className.replace(/\btext-(sm|base|lg)\b/g, '');
+      chatArea.classList.add(fontSize);
 
-      ws.current.onerror = (error) => {
-        console.error('WebSocket error:', error);
-        setIsConnected(false);
-      };
+      const messageGap = 
+        settings.messageDensity === 'compact' ? '0.25rem' : 
+        settings.messageDensity === 'cozy' ? '0.5rem' : '1rem';
+      
+      chatArea.style.setProperty('--message-gap', messageGap);
 
-    } catch (error) {
-      console.error('Failed to connect to WebSocket:', error);
-      loadMockData();
-    }
-  };
+      const bubbleRadius = 
+        settings.messageBubbles === 'square' ? '8px' : 
+        settings.messageBubbles === 'minimal' ? '4px' :
+        settings.messageBubbles === 'modern' ? '20px' : '16px';
+      
+      chatArea.style.setProperty('--bubble-radius', bubbleRadius);
+      chatArea.style.setProperty('--bubble-opacity', settings.bubbleOpacity.toString());
+      
+      if (settings.messageShadow) {
+        chatArea.style.setProperty('--message-shadow', '0 2px 8px rgba(0,0,0,0.1)');
+      } else {
+        chatArea.style.setProperty('--message-shadow', 'none');
+      }
 
-  const loadMockData = () => {
-    if (selectedUser) {
-      setMessages([
-        {
-          id: '1',
-          sender: selectedUser.id === 'supervisor-1' ? 'supervisor-1' : 'student-1',
-          name: selectedUser.id === 'supervisor-1' ? 'проф. Іваненко І.І.' : 'Ви',
-          content: 'Доброго дня! Як просувається ваша дипломна робота?',
-          timestamp: '10:10',
-          type: 'text'
-        },
-        {
-          id: '2',
-          sender: 'student-1',
-          name: 'Ви',
-          content: 'Доброго дня! Працюю над теоретичною частиною, вже майже завершив.',
-          timestamp: '10:15',
-          type: 'text'
-        },
-        {
-          id: '3',
-          sender: selectedUser.id === 'supervisor-1' ? 'supervisor-1' : 'student-2',
-          name: selectedUser.id === 'supervisor-1' ? 'проф. Іваненко І.І.' : 'Марія Коваль',
-          content: 'Чудово! Надішліть мені чернетку, коли буде готово.',
-          timestamp: '10:20',
-          type: 'text',
-          isPinned: true
-        },
-      ]);
-    }
-  };
-
-  // Password strength checker
-  const checkPasswordStrength = (password: string) => {
-    if (password.length < 6) return 'weak';
-    if (password.length < 10) return 'medium';
-    if (/[A-Z]/.test(password) && /[0-9]/.test(password) && /[^A-Za-z0-9]/.test(password)) {
-      return 'strong';
-    }
-    return 'medium';
-  };
-
-  // Generate secure password
-  const generateSecurePassword = () => {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
-    let password = '';
-    for (let i = 0; i < 12; i++) {
-      password += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    setPasswordData(prev => ({ ...prev, password, confirmPassword: password }));
-    toast.success('Згенеровано безпечний пароль');
-  };
-
-  // Enhanced password management - FIXED VERSION
-  const handlePasswordAction = () => {
-    const { type, chatId } = passwordDialog;
-
-    let chatToJoin, chatToChange, chatToRemove;
-
-    switch (type) {
-      case 'join':
-        chatToJoin = users.find(c => c.id === chatId);
-        if (chatToJoin?.privacySettings?.password === passwordData.password) {
-          setSelectedUser(chatToJoin);
-          loadMockData();
-          toast.success('Успішний вхід до групи');
-          closePasswordDialog();
-        } else {
-          toast.error('Невірний пароль');
-        }
-        break;
-
-      case 'set':
-        if (passwordData.password !== passwordData.confirmPassword) {
-          toast.error('Паролі не співпадають');
-          return;
-        }
-        if (passwordData.password.length < 6) {
-          toast.error('Пароль повинен містити щонайменше 6 символів');
-          return;
-        }
-        setGroupPassword(chatId!, passwordData.password);
-        toast.success('Пароль успішно встановлено');
-        closePasswordDialog();
-        break;
-
-      case 'change':
-        chatToChange = users.find(c => c.id === chatId);
-        if (chatToChange?.privacySettings?.password !== passwordData.currentPassword) {
-          toast.error('Поточний пароль невірний');
-          return;
-        }
-        if (passwordData.password !== passwordData.confirmPassword) {
-          toast.error('Нові паролі не співпадають');
-          return;
-        }
-        setGroupPassword(chatId!, passwordData.password);
-        toast.success('Пароль успішно змінено');
-        closePasswordDialog();
-        break;
-
-      case 'remove':
-        chatToRemove = users.find(c => c.id === chatId);
-        if (chatToRemove?.privacySettings?.password !== passwordData.currentPassword) {
-          toast.error('Поточний пароль невірний');
-          return;
-        }
-        removeGroupPassword(chatId!);
-        toast.success('Пароль успішно видалено');
-        closePasswordDialog();
-        break;
-    }
-  };
-
-  const setGroupPassword = (chatId: string, password: string) => {
-    console.log('Setting password for chat:', chatId);
-    
-    setUsers(prev => prev.map(chat => 
-      chat.id === chatId 
-        ? {
-            ...chat,
-            privacySettings: {
-              ...(chat.privacySettings || {
-                isPublic: false,
-                allowInvites: true,
-                showMembers: true
-              }),
-              password,
-              requirePassword: true,
-              encrypted: true
-            },
-            securityLevel: 'high'
-          }
-        : chat
-    ));
-    
-    // FIX: Update selectedUser only if it's the current chat
-    if (selectedUser?.id === chatId) {
-      console.log('Updating selectedUser');
-      setSelectedUser(prev => prev ? {
-        ...prev,
-        privacySettings: {
-          ...(prev.privacySettings || {
-            isPublic: false,
-            allowInvites: true,
-            showMembers: true
-          }),
-          password,
-          requirePassword: true,
-          encrypted: true
-        },
-        securityLevel: 'high'
-      } : null);
-    }
-  };
-
-  const removeGroupPassword = (chatId: string) => {
-    setUsers(prev => prev.map(chat => 
-      chat.id === chatId
-        ? {
-            ...chat,
-            privacySettings: chat.privacySettings ? {
-              ...chat.privacySettings,
-              password: undefined,
-              requirePassword: false,
-              isPublic: true
-            } : undefined,
-            securityLevel: 'medium'
-          }
-        : chat
-    ));
-    
-    // FIX: Update selectedUser only if it's the current chat
-    if (selectedUser?.id === chatId) {
-      setSelectedUser(prev => prev ? {
-        ...prev,
-        privacySettings: prev.privacySettings ? {
-          ...prev.privacySettings,
-          password: undefined,
-          requirePassword: false,
-          isPublic: true
-        } : undefined,
-        securityLevel: 'medium'
-      } : null);
-    }
-  };
-
-  const openPasswordDialog = (type: PasswordDialogType, chatId?: string) => {
-    setPasswordDialog({
-      isOpen: true,
-      type,
-      chatId
-    });
-    setPasswordData({
-      password: '',
-      confirmPassword: '',
-      currentPassword: ''
-    });
-  };
-
-  const closePasswordDialog = () => {
-    setPasswordDialog({ isOpen: false, type: 'join' });
-    setPasswordData({ password: '', confirmPassword: '', currentPassword: '' });
-  };
-
-  // Enhanced group creation with security
-  const createGroup = () => {
-    if (!newGroupData.name || newGroupData.members.length === 0) return;
-
-    const securityLevel = newGroupData.requirePassword && newGroupData.password ? 'high' : 
-                        newGroupData.isPublic ? 'medium' : 'low';
-
-    const newGroup: ChatUser = {
-      id: `group-${Date.now()}`,
-      name: newGroupData.name,
-      avatar: newGroupData.name.substring(0, 2).toUpperCase(),
-      type: 'group',
-      isOnline: true,
-      unreadCount: 0,
-      lastMessage: 'Групу створено',
-      members: allUsers.filter(user => newGroupData.members.includes(user.id)),
-      createdAt: new Date().toISOString(),
-      privacySettings: {
-        isPublic: newGroupData.isPublic,
-        allowInvites: newGroupData.allowInvites,
-        showMembers: newGroupData.showMembers,
-        password: newGroupData.requirePassword ? newGroupData.password : undefined,
-        requirePassword: newGroupData.requirePassword,
-        encrypted: newGroupData.requirePassword
-      },
-      securityLevel
+      const messageContainers = chatArea.querySelectorAll('.preview-message');
+      messageContainers.forEach(container => {
+        (container as HTMLElement).style.marginBottom = messageGap;
+      });
     };
 
-    setUsers(prev => [newGroup, ...prev]);
-    setSelectedUser(newGroup);
-    setNewGroupData({ 
-      name: '', 
-      members: [], 
-      description: '',
-      isPublic: true,
-      allowInvites: true,
-      showMembers: true,
-      requirePassword: false,
-      securityLevel: 'medium'
-    });
-    setShowCreateGroup(false);
-    loadMockData();
-    toast.success(`Група "${newGroupData.name}" успішно створена`);
-  };
+    useEffect(() => {
+      if (showChatSettings) {
+        applySettingsToChatArea(localSettings);
+      }
+    }, [localSettings, showChatSettings]);
 
-  // Enhanced privacy toggle with password protection
-  const toggleGroupPrivacy = (chatId: string) => {
-    const chat = users.find(c => c.id === chatId);
-    if (!chat?.privacySettings) return;
+    useEffect(() => {
+      if (showChatSettings) {
+        localStorage.setItem('chat-settings-active-tab', activeTab);
+      }
+    }, [activeTab, showChatSettings]);
 
-    if (!chat.privacySettings.isPublic && !chat.privacySettings.password) {
-      openPasswordDialog('set', chatId);
-      return;
-    }
-
-    if (chat.privacySettings.isPublic && chat.privacySettings.password) {
-      openPasswordDialog('remove', chatId);
-      return;
-    }
-
-    // Simple toggle for groups without password
-    setUsers(prev => prev.map(chat => 
-      chat.id === chatId && chat.privacySettings 
-        ? { 
-            ...chat, 
-            privacySettings: { 
-              ...chat.privacySettings, 
-              isPublic: !chat.privacySettings.isPublic 
-            },
-            securityLevel: !chat.privacySettings.isPublic ? 'medium' : 'low'
-          } 
-        : chat
-    ));
-  };
-
-  // Copy group invite link
-  const copyGroupLink = (chatId: string) => {
-    const chat = users.find(c => c.id === chatId);
-    if (!chat) return;
-
-    const link = `${window.location.origin}/chat/join/${chatId}`;
-    navigator.clipboard.writeText(link);
-    toast.success('Посилання скопійовано в буфер обміну');
-  };
-
-  // Security badge component
-  const SecurityBadge = ({ level }: { level: 'low' | 'medium' | 'high' }) => {
-    const config = {
-      low: { icon: Shield, color: 'text-gray-500 bg-gray-100', label: 'Низька' },
-      medium: { icon: ShieldCheck, color: 'text-blue-500 bg-blue-100', label: 'Середня' },
-      high: { icon: ShieldAlert, color: 'text-green-500 bg-green-100', label: 'Висока' }
+    const defaultSettings: ChatSettings = {
+      theme: 'system',
+      fontSize: 'medium',
+      messageSound: true,
+      notificationSound: true,
+      autoDownload: true,
+      language: 'uk',
+      chatBackground: 'default',
+      backgroundBlur: 'none',
+      messageBubbles: 'rounded',
+      bubbleOpacity: 0.9,
+      messageShadow: true,
+      messageDensity: 'comfortable',
+      showAvatars: true,
+      showMessageTime: 'always',
+      typingIndicators: true,
+      typingAnimation: 'dots',
+      readReceipts: true,
+      readReceiptsStyle: 'classic',
+      showOnlineStatus: true,
+      showLastSeen: true,
+      privacyMode: 'all',
+      autoDeleteMessages: 'never',
+      autoDeleteMedia: false,
+      emojiStyle: 'native',
+      animatedEmoji: true,
+      emojiSize: 'medium',
+      messageFormatting: true,
+      markdownSupport: true,
+      linkPreview: true,
+      codeHighlighting: true,
     };
 
-    const { icon: Icon, color, label } = config[level];
+    const handleResetSettings = () => {
+      setLocalSettings(defaultSettings);
+      toast.success('Налаштування скинуті до стандартних');
+    };
+
+    const handleSaveSettings = () => {
+      setUserSettings(localSettings);
+      localStorage.setItem('chat-settings', JSON.stringify(localSettings));
+      
+      applySettingsToMainChatArea(localSettings);
+      
+      setShowChatSettings(false);
+      toast.success('Налаштування збережено');
+    };
+
+    const applySettingsToMainChatArea = (settings: ChatSettings) => {
+      const chatArea = document.querySelector('.chat-area') as HTMLElement;
+      if (!chatArea) return;
+
+      if (settings.chatBackground !== 'default') {
+        const backgroundPreset = BACKGROUND_PRESETS.find(preset => preset.id === settings.chatBackground);
+        if (backgroundPreset) {
+          chatArea.className = chatArea.className.replace(/bg-gradient-to-br\sfrom-[\w-]+\sto-[\w-]+/g, '');
+          chatArea.className = chatArea.className.replace(/\bbg-[\w-]+\b/g, '');
+          
+          chatArea.classList.add(...backgroundPreset.color.split(' '));
+          chatArea.classList.add('chat-area');
+        }
+      } else {
+        chatArea.className = chatArea.className.replace(/bg-gradient-to-br\sfrom-[\w-]+\sto-[\w-]+/g, '');
+        chatArea.className = chatArea.className.replace(/\bbg-[\w-]+\b/g, '');
+        chatArea.classList.add('chat-area');
+      }
+
+      const blurValue = settings.backgroundBlur === 'light' ? 'backdrop-blur-sm' :
+                       settings.backgroundBlur === 'medium' ? 'backdrop-blur-md' : '';
+      
+      chatArea.className = chatArea.className.replace(/\bbackdrop-blur-(sm|md|lg|xl)\b/g, '');
+      if (blurValue) {
+        chatArea.classList.add(blurValue);
+      }
+
+      const fontSize = settings.fontSize === 'small' ? 'text-sm' : 
+                      settings.fontSize === 'large' ? 'text-lg' : 'text-base';
+      
+      chatArea.className = chatArea.className.replace(/\btext-(sm|base|lg)\b/g, '');
+      chatArea.classList.add(fontSize);
+
+      const messageGap = 
+        settings.messageDensity === 'compact' ? '0.25rem' : 
+        settings.messageDensity === 'cozy' ? '0.5rem' : '1rem';
+      
+      chatArea.style.setProperty('--message-gap', messageGap);
+
+      const bubbleRadius = 
+        settings.messageBubbles === 'square' ? '8px' : 
+        settings.messageBubbles === 'minimal' ? '4px' :
+        settings.messageBubbles === 'modern' ? '20px' : '16px';
+      
+      chatArea.style.setProperty('--bubble-radius', bubbleRadius);
+      chatArea.style.setProperty('--bubble-opacity', settings.bubbleOpacity.toString());
+      
+      if (settings.messageShadow) {
+        chatArea.style.setProperty('--message-shadow', '0 2px 8px rgba(0,0,0,0.1)');
+      } else {
+        chatArea.style.setProperty('--message-shadow', 'none');
+      }
+
+      const messageContainers = chatArea.querySelectorAll('.message-container');
+      messageContainers.forEach(container => {
+        (container as HTMLElement).style.marginBottom = messageGap;
+      });
+    };
+
+    const updateLocalSettings = (updater: (prev: ChatSettings) => ChatSettings) => {
+      setLocalSettings(prev => {
+        const newSettings = updater(prev);
+        return newSettings;
+      });
+    };
+
+    const DemoMessage = ({ isOwn = false }) => (
+      <div className={`flex preview-message ${isOwn ? 'justify-end' : 'justify-start'}`}>
+        <div className={`max-w-xs px-4 py-2 ${
+          isOwn ? 'bg-blue-600 text-white rounded-tl-2xl rounded-tr-md rounded-br-md rounded-bl-2xl' : 'bg-white border border-gray-200 text-gray-900 rounded-tr-2xl rounded-tl-md rounded-bl-md rounded-br-2xl'
+        }`} style={{
+          opacity: localSettings.bubbleOpacity,
+          boxShadow: `var(--message-shadow, 0 2px 8px rgba(0,0,0,0.1))`,
+        }}>
+          <div className="text-sm">{isOwn ? 'Привіт! Як справи?' : 'Все добре, дякую! Працюю над проектом.'}</div>
+          <div className="text-xs opacity-70 mt-1 flex justify-between items-center">
+            <span>10:30</span>
+            {isOwn && localSettings.readReceipts && (
+              <CheckCheck className="h-3 w-3" />
+            )}
+          </div>
+        </div>
+      </div>
+    );
 
     return (
-      <Badge variant="secondary" className={`gap-1 ${color}`}>
-        <Icon className="h-3 w-3" />
-        {label}
-      </Badge>
+      <Dialog open={showChatSettings} onOpenChange={setShowChatSettings}>
+        <DialogContent className="max-w-[1600px] w-[95vw] h-[95vh] overflow-hidden flex flex-col p-0" onOpenAutoFocus={(e) => e.preventDefault()}>
+          <DialogHeader className="flex-shrink-0 px-8 pt-6 pb-5 border-b bg-gradient-to-r from-background to-muted/30">
+            <DialogTitle className="text-2xl font-semibold flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                <Settings className="h-5 w-5 text-primary" />
+              </div>
+              Налаштування чату
+            </DialogTitle>
+            <DialogDescription className="text-sm text-muted-foreground mt-2">
+              Персоналізуйте зовнішній вигляд та поведінку чату
+            </DialogDescription>
+          </DialogHeader>
+          
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0 px-8">
+            <TabsList className="grid grid-cols-3 md:grid-cols-5 w-full h-auto md:h-12 bg-muted/30 p-1.5 rounded-xl flex-shrink-0 mt-6 mb-4 border gap-1">
+              <TabsTrigger 
+                value="appearance" 
+                className="flex items-center justify-center gap-2 text-xs md:text-sm h-10 md:h-9 data-[state=active]:bg-background data-[state=active]:shadow-md rounded-lg transition-all"
+              >
+                <Palette className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                <span className="font-medium whitespace-nowrap">Вигляд</span>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="messages" 
+                className="flex items-center justify-center gap-2 text-xs md:text-sm h-10 md:h-9 data-[state=active]:bg-background data-[state=active]:shadow-md rounded-lg transition-all"
+              >
+                <MessageCircle className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                <span className="font-medium whitespace-nowrap">Повідомлення</span>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="privacy" 
+                className="flex items-center justify-center gap-2 text-xs md:text-sm h-10 md:h-9 data-[state=active]:bg-background data-[state=active]:shadow-md rounded-lg transition-all"
+              >
+                <Eye className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                <span className="font-medium whitespace-nowrap">Приватність</span>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="emoji" 
+                className="flex items-center justify-center gap-2 text-xs md:text-sm h-10 md:h-9 data-[state=active]:bg-background data-[state=active]:shadow-md rounded-lg transition-all"
+              >
+                <Smile className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                <span className="font-medium whitespace-nowrap">Емодзі</span>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="advanced" 
+                className="flex items-center justify-center gap-2 text-xs md:text-sm h-10 md:h-9 data-[state=active]:bg-background data-[state=active]:shadow-md rounded-lg transition-all"
+              >
+                <Sliders className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                <span className="font-medium whitespace-nowrap">Розширені</span>
+              </TabsTrigger>
+            </TabsList>
+
+            {/* Вигляд */}
+            <TabsContent value="appearance" className="flex-1 flex flex-col min-h-0">
+              <div className="flex-1 overflow-auto pb-6 space-y-6">
+                <div className="grid grid-cols-1 2xl:grid-cols-2 gap-6 max-w-[1400px] mx-auto">
+                  <div className="space-y-6">
+                    <div className="bg-card rounded-xl border shadow-sm p-6 hover:shadow-md transition-shadow">
+                      <h3 className="text-base font-semibold mb-4 flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                          <Image className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                        </div>
+                        <span>Фон чату</span>
+                      </h3>
+                      
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-3 gap-2">
+                          {BACKGROUND_PRESETS_WITH_DEFAULT.map(preset => (
+                            <button
+                              key={preset.id}
+                              className={`relative h-16 rounded-lg border transition-all group ${
+                                localSettings.chatBackground === preset.id 
+                                  ? 'border-blue-500 ring-2 ring-blue-200' 
+                                  : 'border-border hover:border-blue-300'
+                              } ${
+                                preset.id === 'default' 
+                                  ? 'bg-gradient-to-br from-background to-muted' 
+                                  : preset.color
+                              }`}
+                              onClick={() => updateLocalSettings(prev => ({ 
+                                ...prev, 
+                                chatBackground: preset.id
+                              }))}
+                            >
+                              {preset.id === 'default' && (
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                  <div className="text-xs font-medium text-foreground bg-background/80 px-2 py-1 rounded">
+                                    Система
+                                  </div>
+                                </div>
+                              )}
+                              {localSettings.chatBackground === preset.id && (
+                                <div className="absolute top-1 right-1 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
+                                  <Check className="w-2 h-2 text-white" />
+                                </div>
+                              )}
+                              {preset.id !== 'default' && (
+                                <div className="absolute bottom-1 left-1 right-1 bg-black/70 text-white text-xs px-1 rounded text-center truncate">
+                                  {preset.name}
+                                </div>
+                              )}
+                            </button>
+                          ))}
+                        </div>
+
+                        <div className="space-y-3">
+                          <Label className="text-sm font-medium">Розмиття фону</Label>
+                          <div className="flex gap-2 bg-muted/30 p-1.5 rounded-lg">
+                            {(['none', 'light', 'medium'] as const).map(blur => (
+                              <button
+                                key={blur}
+                                onClick={() => updateLocalSettings(prev => ({ ...prev, backgroundBlur: blur }))}
+                                className={`flex-1 py-2.5 px-3 rounded-md text-sm font-medium transition-all ${
+                                  localSettings.backgroundBlur === blur 
+                                    ? 'bg-primary text-primary-foreground shadow-sm' 
+                                    : 'bg-background text-foreground hover:bg-muted'
+                                }`}
+                              >
+                                {blur === 'none' && 'Немає'}
+                                {blur === 'light' && 'Легке'}
+                                {blur === 'medium' && 'Середнє'}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bg-card rounded-xl border shadow-sm p-6 hover:shadow-md transition-shadow">
+                      <h3 className="text-base font-semibold mb-4 flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                          <MessageCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+                        </div>
+                        <span>Стиль повідомлень</span>
+                      </h3>
+                      
+                      <div className="grid grid-cols-2 gap-2">
+                        {([
+                          { id: 'rounded', name: 'Закруглені', desc: 'Класичний стиль' },
+                          { id: 'square', name: 'Квадратні', desc: 'Строгий стиль' },
+                          { id: 'minimal', name: 'Мінімальні', desc: 'Сучасний стиль' },
+                          { id: 'modern', name: 'Сучасні', desc: 'Інноваційний стиль' },
+                        ] as const).map(style => (
+                          <button
+                            key={style.id}
+                            className={`p-3 border rounded-lg text-left transition-all text-xs ${
+                              localSettings.messageBubbles === style.id 
+                                ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-900/20' 
+                                : 'border-border bg-background hover:border-blue-300'
+                            }`}
+                            onClick={() => updateLocalSettings(prev => ({ ...prev, messageBubbles: style.id }))}
+                          >
+                            <div className="flex items-center gap-2 mb-2">
+                              <div className={`text-xs p-2 rounded flex-1 text-center ${
+                                style.id === 'rounded' ? 'rounded-2xl rounded-bl-none bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
+                                style.id === 'square' ? 'rounded-lg bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
+                                style.id === 'minimal' ? 'border-l-2 border-blue-500 bg-transparent text-foreground text-left pl-3' :
+                                'rounded-full bg-gradient-to-r from-blue-100 to-cyan-100 text-blue-800 dark:from-blue-900 dark:to-cyan-900 dark:text-blue-200'
+                              }`}>
+                                Привіт
+                              </div>
+                              {localSettings.messageBubbles === style.id && (
+                                <Check className="w-4 h-4 text-blue-500" />
+                              )}
+                            </div>
+                            <div className="font-medium text-center">{style.name}</div>
+                            <div className="text-muted-foreground text-center">{style.desc}</div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-6">
+                    <div className="bg-card rounded-xl border shadow-sm p-6 hover:shadow-md transition-shadow">
+                      <h3 className="text-base font-semibold mb-4 flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
+                          <Eye className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                        </div>
+                        <span>Попередній перегляд</span>
+                      </h3>
+                      
+                      <div className="space-y-4">
+                        <div 
+                          className="chat-area-preview h-64 overflow-auto rounded-lg border relative p-4 transition-all duration-300 bg-background"
+                        >
+                          <div className="space-y-3">
+                            <DemoMessage isOwn={false} />
+                            <DemoMessage isOwn={true} />
+                            <DemoMessage isOwn={false} />
+                            <DemoMessage isOwn={true} />
+                            <DemoMessage isOwn={false} />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4 p-3 bg-muted/50 rounded-lg">
+                          <div className="text-xs">
+                            <div className="font-medium">Фон</div>
+                            <div className="text-blue-600 dark:text-blue-400">
+                              {BACKGROUND_PRESETS_WITH_DEFAULT.find(p => p.id === localSettings.chatBackground)?.name || 'Системна тема'}
+                            </div>
+                          </div>
+                          <div className="text-xs">
+                            <div className="font-medium">Щільність</div>
+                            <div className="text-blue-600 dark:text-blue-400 capitalize">
+                              {localSettings.messageDensity === 'comfortable' && 'Велика'}
+                              {localSettings.messageDensity === 'cozy' && 'Середня'}
+                              {localSettings.messageDensity === 'compact' && 'Мала'}
+                            </div>
+                          </div>
+                          <div className="text-xs">
+                            <div className="font-medium">Розмиття</div>
+                            <div className="text-blue-600 dark:text-blue-400">
+                              {localSettings.backgroundBlur === 'none' && 'Вимкнено'}
+                              {localSettings.backgroundBlur === 'light' && 'Легке'}
+                              {localSettings.backgroundBlur === 'medium' && 'Середнє'}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="space-y-3">
+                          <Label className="text-sm font-medium">Щільність повідомлень</Label>
+                          <div className="grid grid-cols-3 gap-2">
+                            {(['comfortable', 'cozy', 'compact'] as const).map(density => (
+                              <button
+                                key={density}
+                                onClick={() => updateLocalSettings(prev => ({ ...prev, messageDensity: density }))}
+                                className={`p-3 border rounded-lg text-center transition-all text-sm ${
+                                  localSettings.messageDensity === density 
+                                    ? 'border-primary bg-primary/5 shadow-sm' 
+                                    : 'border-border bg-background hover:border-primary/50'
+                                }`}
+                              >
+                                <div className="font-medium">
+                                  {density === 'comfortable' && 'Велика'}
+                                  {density === 'cozy' && 'Середня'}
+                                  {density === 'compact' && 'Мала'}
+                                </div>
+                                <div className="text-xs text-muted-foreground mt-1">
+                                  {density === 'comfortable' && '1.0rem'}
+                                  {density === 'cozy' && '0.5rem'}
+                                  {density === 'compact' && '0.25rem'}
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bg-card rounded-lg border p-4">
+                      <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                        <Sliders className="h-4 w-4 text-orange-600" />
+                        <span>Додаткові налаштування</span>
+                      </h3>
+                      
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between p-3 bg-muted/50 rounded-md">
+                          <div className="flex items-center gap-2">
+                            <div>
+                              <Label className="text-xs font-medium">Тінь повідомлень</Label>
+                              <p className="text-xs text-muted-foreground">Додати тінь до бульбашок</p>
+                            </div>
+                          </div>
+                          <Switch
+                            checked={localSettings.messageShadow}
+                            onCheckedChange={(checked) => updateLocalSettings(prev => ({ 
+                              ...prev, 
+                              messageShadow: checked 
+                            }))}
+                            className="scale-75"
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <Label className="text-xs font-medium">Прозорість бульбашок</Label>
+                            <span className="text-xs text-blue-600">
+                              {(localSettings.bubbleOpacity * 100).toFixed(0)}%
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 bg-muted/50 p-2 rounded-md">
+                            <span className="text-xs text-muted-foreground w-8">50%</span>
+                            <input
+                              type="range"
+                              min="50"
+                              max="100"
+                              step="5"
+                              value={localSettings.bubbleOpacity * 100}
+                              onChange={(e) => updateLocalSettings(prev => ({ 
+                                ...prev, 
+                                bubbleOpacity: parseInt(e.target.value) / 100 
+                              }))}
+                              className="flex-1 h-1 bg-gradient-to-r from-muted to-blue-300 rounded-full appearance-none [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-blue-500 [&::-webkit-slider-thumb]:cursor-pointer"
+                            />
+                            <span className="text-xs text-muted-foreground w-8">100%</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="messages" className="flex-1 flex flex-col min-h-0">
+              <div className="flex-1 overflow-auto py-4 space-y-4">
+                <div className="grid grid-cols-1 2xl:grid-cols-2 gap-6 max-w-[1400px] mx-auto">
+                  <div className="space-y-4">
+                    <div className="bg-card rounded-lg border p-4">
+                      <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                        <Clock className="h-4 w-4 text-blue-600" />
+                        <span>Відображення часу</span>
+                      </h3>
+                      
+                      <div className="space-y-3">
+                        <div className="grid grid-cols-3 gap-1">
+                          {(['always', 'hover', 'never'] as const).map(time => (
+                            <button
+                              key={time}
+                              onClick={() => updateLocalSettings(prev => ({ ...prev, showMessageTime: time }))}
+                              className={`p-3 border rounded text-center transition-all text-xs ${
+                                localSettings.showMessageTime === time 
+                                  ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-900/20' 
+                                  : 'border-border bg-background hover:border-blue-300'
+                              }`}
+                            >
+                              <div className="font-medium mb-1">
+                                {time === 'always' && 'Завжди'}
+                                {time === 'hover' && 'При наведенні'}
+                                {time === 'never' && 'Ніколи'}
+                              </div>
+                              <div className="text-[10px] text-muted-foreground">
+                                {time === 'always' && 'Постійно'}
+                                {time === 'hover' && 'При наведенні'}
+                                {time === 'never' && 'Приховано'}
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bg-card rounded-lg border p-4">
+                      <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                        <Eye className="h-4 w-4 text-blue-600" />
+                        <span>Відображення елементів</span>
+                      </h3>
+                      
+                      <div className="space-y-2">
+                        {[
+                          {
+                            id: 'showAvatars',
+                            label: 'Показувати аватари',
+                            description: 'Відображати фото користувачів',
+                          },
+                          {
+                            id: 'typingIndicators',
+                            label: 'Індикатор набору',
+                            description: 'Показувати коли хтось друкує',
+                          },
+                          {
+                            id: 'readReceipts',
+                            label: 'Підтвердження прочитання',
+                            description: 'Статус прочитання повідомлень',
+                          }
+                        ].map(setting => (
+                          <div key={setting.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-md">
+                            <div>
+                              <Label className="text-xs font-medium">{setting.label}</Label>
+                              <p className="text-xs text-muted-foreground">{setting.description}</p>
+                            </div>
+                            <Switch
+                              checked={localSettings[setting.id as keyof ChatSettings] as boolean}
+                              onCheckedChange={(checked) => updateLocalSettings(prev => ({ 
+                                ...prev, 
+                                [setting.id]: checked 
+                              }))}
+                              className="scale-75"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="bg-card rounded-lg border p-4">
+                      <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                        <Type className="h-4 w-4 text-purple-600" />
+                        <span>Форматування тексту</span>
+                      </h3>
+                      
+                      <div className="space-y-2">
+                        {[
+                          {
+                            id: 'markdownSupport',
+                            label: 'Підтримка Markdown',
+                            description: '**жирний**, *курсив*, `код`',
+                          },
+                          {
+                            id: 'linkPreview',
+                            label: 'Попередній перегляд посилань',
+                            description: 'Автоматичне відображення посилань',
+                          },
+                          {
+                            id: 'codeHighlighting',
+                            label: 'Підсвічування коду',
+                            description: 'Кольорове підсвічування коду',
+                          },
+                          {
+                            id: 'messageFormatting',
+                            label: 'Форматування повідомлень',
+                            description: 'Всі функції форматування',
+                          }
+                        ].map(setting => (
+                          <div key={setting.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-md">
+                            <div>
+                              <Label className="text-xs font-medium">{setting.label}</Label>
+                              <p className="text-xs text-muted-foreground">{setting.description}</p>
+                            </div>
+                            <Switch
+                              checked={localSettings[setting.id as keyof ChatSettings] as boolean}
+                              onCheckedChange={(checked) => updateLocalSettings(prev => ({ 
+                                ...prev, 
+                                [setting.id]: checked 
+                              }))}
+                              className="scale-75"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="privacy" className="flex-1 flex flex-col min-h-0">
+              <div className="flex-1 overflow-auto py-4 space-y-4">
+                <div className="grid grid-cols-1 2xl:grid-cols-2 gap-6 max-w-[1400px] mx-auto">
+                  <div className="space-y-4">
+                    <div className="bg-card rounded-lg border p-4">
+                      <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                        <User className="h-4 w-4 text-blue-600" />
+                        <span>Статус онлайну</span>
+                      </h3>
+                      
+                      <div className="space-y-2">
+                        {[
+                          {
+                            id: 'showOnlineStatus',
+                            label: 'Показувати статус онлайну',
+                            description: 'Відображати коли ви в мережі',
+                          },
+                          {
+                            id: 'showLastSeen',
+                            label: 'Останній раз в мережі',
+                            description: 'Час останньої активності',
+                          }
+                        ].map(setting => (
+                          <div key={setting.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-md">
+                            <div>
+                              <Label className="text-xs font-medium">{setting.label}</Label>
+                              <p className="text-xs text-muted-foreground">{setting.description}</p>
+                            </div>
+                            <Switch
+                              checked={localSettings[setting.id as keyof ChatSettings] as boolean}
+                              onCheckedChange={(checked) => updateLocalSettings(prev => ({ 
+                                ...prev, 
+                                [setting.id]: checked 
+                              }))}
+                              className="scale-75"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="bg-card rounded-lg border p-4">
+                      <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                        <Shield className="h-4 w-4 text-green-600" />
+                        <span>Конфіденційність</span>
+                      </h3>
+                      
+                      <div className="space-y-3">
+                        <div className="space-y-2">
+                          <Label className="text-xs font-medium">Хто може бачити ваш статус</Label>
+                          <div className="space-y-2">
+                            {([
+                              { id: 'all', name: 'Всім', desc: 'Всім користувачам' },
+                              { id: 'contacts', name: 'Контактам', desc: 'Тільки контактам' },
+                              { id: 'none', name: 'Нікому', desc: 'Приховати статус' },
+                            ] as const).map(mode => (
+                              <button
+                                key={mode.id}
+                                onClick={() => updateLocalSettings(prev => ({ ...prev, privacyMode: mode.id }))}
+                                className={`w-full p-3 border rounded text-left transition-all flex items-center gap-3 text-xs ${
+                                  localSettings.privacyMode === mode.id 
+                                    ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-900/20' 
+                                    : 'border-border bg-background hover:border-blue-300'
+                                }`}
+                              >
+                                <div className="flex-1">
+                                  <div className="font-medium">{mode.name}</div>
+                                  <div className="text-muted-foreground">{mode.desc}</div>
+                                </div>
+                                {localSettings.privacyMode === mode.id && (
+                                  <Check className="w-4 h-4 text-blue-500" />
+                                )}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="bg-card rounded-lg border p-4">
+                      <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                        <Trash2 className="h-4 w-4 text-purple-600" />
+                        <span>Автоматичне видалення</span>
+                      </h3>
+                      
+                      <div className="space-y-3">
+                        <div className="space-y-2">
+                          <Label className="text-xs font-medium">Видаляти повідомлення через</Label>
+                          <div className="grid grid-cols-1 gap-2">
+                            {([
+                              { id: 'never', name: 'Ніколи', desc: 'Зберігати всі повідомлення' },
+                              { id: '1h', name: '1 година', desc: 'Для тимчасових повідомлень' },
+                              { id: '24h', name: '24 години', desc: 'Щоденне очищення' },
+                              { id: '7d', name: '7 днів', desc: 'Щотижневе очищення' },
+                              { id: '30d', name: '30 днів', desc: 'Щомісячне очищення' },
+                            ] as const).map(option => (
+                              <button
+                                key={option.id}
+                                onClick={() => updateLocalSettings(prev => ({ ...prev, autoDeleteMessages: option.id }))}
+                                className={`p-3 border rounded text-left transition-all text-xs ${
+                                  localSettings.autoDeleteMessages === option.id 
+                                    ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-900/20' 
+                                    : 'border-border bg-background hover:border-blue-300'
+                                }`}
+                              >
+                                <div className="font-medium">{option.name}</div>
+                                <div className="text-muted-foreground">{option.desc}</div>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between p-3 bg-muted/50 rounded-md">
+                          <div>
+                            <Label className="text-xs font-medium">Видаляти медіа</Label>
+                            <p className="text-xs text-muted-foreground">Зображення та файли</p>
+                          </div>
+                          <Switch
+                            checked={localSettings.autoDeleteMedia}
+                            onCheckedChange={(checked) => updateLocalSettings(prev => ({ 
+                              ...prev, 
+                              autoDeleteMedia: checked 
+                            }))}
+                            className="scale-75"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="emoji" className="flex-1 flex flex-col min-h-0">
+              <div className="flex-1 overflow-auto py-4 space-y-4">
+                <div className="grid grid-cols-1 2xl:grid-cols-2 gap-6 max-w-[1400px] mx-auto">
+                  <div className="space-y-4">
+                    <div className="bg-card rounded-lg border p-4">
+                      <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                        <Smile className="h-4 w-4 text-blue-600" />
+                        <span>Стиль емодзі</span>
+                      </h3>
+                      
+                      <div className="grid grid-cols-1 gap-2">
+                        {EMOJI_STYLES.map(style => (
+                          <button
+                            key={style.id}
+                            className={`p-3 border rounded text-left transition-all flex items-center gap-3 ${
+                              localSettings.emojiStyle === style.id 
+                                ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-900/20' 
+                                : 'border-border bg-background hover:border-blue-300'
+                            }`}
+                            onClick={() => updateLocalSettings(prev => ({ ...prev, emojiStyle: style.id }))}
+                          >
+                            <div className="text-2xl">{style.preview}</div>
+                            <div className="flex-1">
+                              <div className="font-medium text-sm">{style.name}</div>
+                              <div className="text-xs text-muted-foreground">Стиль відображення емодзі</div>
+                            </div>
+                            {localSettings.emojiStyle === style.id && (
+                              <Check className="w-4 h-4 text-blue-500" />
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="bg-card rounded-lg border p-4">
+                      <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                        <Settings className="h-4 w-4 text-green-600" />
+                        <span>Налаштування емодзі</span>
+                      </h3>
+                      
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between p-3 bg-muted/50 rounded-md">
+                          <div>
+                            <Label className="text-sm font-medium">Анімовані емодзі</Label>
+                            <p className="text-xs text-muted-foreground">Анімації для емодзі</p>
+                          </div>
+                          <Switch
+                            checked={localSettings.animatedEmoji}
+                            onCheckedChange={(checked) => updateLocalSettings(prev => ({ 
+                              ...prev, 
+                              animatedEmoji: checked 
+                            }))}
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label className="text-xs font-medium">Розмір емодзі</Label>
+                          <div className="grid grid-cols-3 gap-1">
+                            {([
+                              { id: 'small', name: 'Малий', size: 'text-base' },
+                              { id: 'medium', name: 'Середній', size: 'text-xl' },
+                              { id: 'large', name: 'Великий', size: 'text-2xl' },
+                            ] as const).map(size => (
+                              <button
+                                key={size.id}
+                                onClick={() => updateLocalSettings(prev => ({ ...prev, emojiSize: size.id }))}
+                                className={`p-2 border rounded text-center transition-all text-xs ${
+                                  localSettings.emojiSize === size.id 
+                                    ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-900/20' 
+                                    : 'border-border bg-background hover:border-blue-300'
+                                }`}
+                              >
+                                <div className={`mb-1 ${size.size}`}>😊</div>
+                                <div className="font-medium">{size.name}</div>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="advanced" className="flex-1 flex flex-col min-h-0">
+              <div className="flex-1 overflow-auto py-4 space-y-4">
+                <div className="grid grid-cols-1 2xl:grid-cols-2 gap-6 max-w-[1400px] mx-auto">
+                  <div className="space-y-4">
+                    <div className="bg-card rounded-lg border p-4">
+                      <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                        <Globe className="h-4 w-4 text-blue-600" />
+                        <span>Мова та інтерфейс</span>
+                      </h3>
+                      
+                      <div className="space-y-3">
+                        <div className="space-y-2">
+                          <Label className="text-xs font-medium">Мова інтерфейсу</Label>
+                          <select
+                            value={localSettings.language}
+                            onChange={(e) => updateLocalSettings(prev => ({ 
+                              ...prev, 
+                              language: e.target.value as 'uk' | 'en' 
+                            }))}
+                            className="w-full p-2 border border-border rounded bg-background focus:border-blue-500 text-xs"
+                          >
+                            <option value="uk">Українська</option>
+                            <option value="en">English</option>
+                          </select>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label className="text-xs font-medium">Розмір тексту</Label>
+                          <div className="grid grid-cols-3 gap-1">
+                            {(['small', 'medium', 'large'] as const).map(size => (
+                              <button
+                                key={size}
+                                onClick={() => updateLocalSettings(prev => ({ ...prev, fontSize: size }))}
+                                className={`p-2 border rounded text-center transition-all text-xs ${
+                                  localSettings.fontSize === size 
+                                    ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-900/20' 
+                                    : 'border-border bg-background hover:border-blue-300'
+                                }`}
+                              >
+                                <div className={`font-medium ${
+                                  size === 'small' ? 'text-xs' :
+                                  size === 'medium' ? 'text-sm' : 'text-base'
+                                }`}>
+                                  {size === 'small' && 'Малий'}
+                                  {size === 'medium' && 'Середній'}
+                                  {size === 'large' && 'Великий'}
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="bg-card rounded-lg border p-4">
+                      <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                        <Download className="h-4 w-4 text-green-600" />
+                        <span>Завантаження даних</span>
+                      </h3>
+                      
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between p-3 bg-muted/50 rounded-md">
+                          <div>
+                            <Label className="text-sm font-medium">Авто-завантаження</Label>
+                            <p className="text-xs text-muted-foreground">Файли автоматично</p>
+                          </div>
+                          <Switch
+                            checked={localSettings.autoDownload}
+                            onCheckedChange={(checked) => updateLocalSettings(prev => ({ 
+                              ...prev, 
+                              autoDownload: checked 
+                            }))}
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label className="text-sm font-medium">Звуки та сповіщення</Label>
+                          <div className="space-y-2">
+                            {[
+                              {
+                                id: 'messageSound',
+                                label: 'Звук повідомлень',
+                                description: 'При нових повідомленнях',
+                              },
+                              {
+                                id: 'notificationSound',
+                                label: 'Звук сповіщень',
+                                description: 'Системні сповіщення',
+                              }
+                            ].map(setting => (
+                              <div key={setting.id} className="flex items-center justify-between p-2 bg-muted/50 rounded-md">
+                                <div>
+                                  <Label className="text-xs font-medium">{setting.label}</Label>
+                                  <p className="text-xs text-muted-foreground">{setting.description}</p>
+                                </div>
+                                <Switch
+                                  checked={localSettings[setting.id as keyof ChatSettings] as boolean}
+                                  onCheckedChange={(checked) => updateLocalSettings(prev => ({ 
+                                    ...prev, 
+                                    [setting.id]: checked 
+                                  }))}
+                                  className="scale-75"
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bg-card rounded-lg border p-4">
+                      <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                        <RefreshCw className="h-4 w-4 text-orange-600" />
+                        <span>Скидання налаштувань</span>
+                      </h3>
+                      
+                      <div className="space-y-2">
+                        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
+                          <div className="flex items-start gap-2">
+                            <AlertTriangle className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
+                            <div className="text-sm text-amber-700 dark:text-amber-400">
+                              Скидання налаштувань не можна скасувати.
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <button
+                          onClick={handleResetSettings}
+                          className="w-full p-3 bg-background border border-amber-300 dark:border-amber-600 text-amber-600 dark:text-amber-400 rounded hover:bg-amber-50 dark:hover:bg-amber-900/20 hover:border-amber-400 dark:hover:border-amber-500 transition-all font-medium flex items-center justify-center gap-2"
+                        >
+                          <RefreshCw className="w-4 h-4" />
+                          Скинути до стандартних
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </TabsContent>
+          </Tabs>
+
+          <DialogFooter className="flex gap-3 px-8 py-6 border-t flex-shrink-0 bg-muted/20">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setShowChatSettings(false);
+                applySettingsToMainChatArea(userSettings);
+              }}
+              className="flex-1 h-11 text-sm font-medium"
+            >
+              Скасувати
+            </Button>
+            <Button 
+              onClick={handleSaveSettings}
+              className="flex-1 h-11 text-sm font-medium bg-primary hover:bg-primary/90 shadow-sm"
+            >
+              Зберегти зміни
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     );
-  };
-
-  // Chat management functions
-  const createNewChat = (user: ChatUser) => {
-    const newChat: ChatUser = {
-      ...user,
-      unreadCount: 0,
-      lastMessage: 'Чат створено',
-      isOnline: user.isOnline
-    };
-    setUsers(prev => [newChat, ...prev]);
-    setSelectedUser(newChat);
-    setShowCreateGroup(false);
-    loadMockData();
-  };
-
-  const toggleMuteChat = (chatId: string) => {
-    setUsers(prev => prev.map(chat => 
-      chat.id === chatId ? { ...chat, isMuted: !chat.isMuted } : chat
-    ));
-    if (selectedUser?.id === chatId) {
-      setSelectedUser(prev => prev ? { ...prev, isMuted: !prev.isMuted } : null);
-    }
-  };
-
-  const archiveChat = (chatId: string) => {
-    setUsers(prev => prev.map(chat => 
-      chat.id === chatId ? { ...chat, isArchived: true } : chat
-    ));
-    if (selectedUser?.id === chatId) {
-      setSelectedUser(null);
-    }
-    toast.success('Чат архівовано');
-  };
-
-  const unarchiveChat = (chatId: string) => {
-    setUsers(prev => prev.map(chat => 
-      chat.id === chatId ? { ...chat, isArchived: false } : chat
-    ));
-    toast.success('Чат розархівовано');
-  };
-
-  const deleteChat = (chatId: string) => {
-    setUsers(prev => prev.filter(chat => chat.id !== chatId));
-    if (selectedUser?.id === chatId) {
-      setSelectedUser(null);
-    }
-    toast.success('Чат видалено');
-  };
-
-  const leaveGroup = (chatId: string) => {
-    setUsers(prev => prev.filter(chat => chat.id !== chatId));
-    if (selectedUser?.id === chatId) {
-      setSelectedUser(null);
-    }
-    toast.success('Ви покинули групу');
-  };
-
-  const pinMessage = (messageId: string) => {
-    setMessages(prev => prev.map(msg => 
-      msg.id === messageId ? { ...msg, isPinned: !msg.isPinned } : msg
-    ));
-    toast.success('Повідомлення закріплено');
-  };
-
-  const replyToMessage = (message: Message) => {
-    setReplyingTo(message);
-  };
-
-  const cancelReply = () => {
-    setReplyingTo(null);
-  };
-
-  const startResizing = (e: React.MouseEvent) => {
-    e.preventDefault();
-    setIsResizing(true);
-  };
-
-  const toggleInvites = (chatId: string) => {
-    setUsers(prev => prev.map(chat => 
-      chat.id === chatId && chat.privacySettings 
-        ? { 
-            ...chat, 
-            privacySettings: { 
-              ...chat.privacySettings, 
-              allowInvites: !chat.privacySettings.allowInvites 
-            } 
-          } 
-        : chat
-    ));
-    if (selectedUser?.id === chatId && selectedUser.privacySettings) {
-      setSelectedUser(prev => prev ? { 
-        ...prev, 
-        privacySettings: { 
-          ...prev.privacySettings!, 
-          allowInvites: !prev.privacySettings!.allowInvites 
-        } 
-      } : null);
-    }
-  };
-
-  const toggleMembersVisibility = (chatId: string) => {
-    setUsers(prev => prev.map(chat => 
-      chat.id === chatId && chat.privacySettings 
-        ? { 
-            ...chat, 
-            privacySettings: { 
-              ...chat.privacySettings, 
-              showMembers: !chat.privacySettings.showMembers 
-            } 
-          } 
-        : chat
-    ));
-    if (selectedUser?.id === chatId && selectedUser.privacySettings) {
-      setSelectedUser(prev => prev ? { 
-        ...prev, 
-        privacySettings: { 
-          ...prev.privacySettings!, 
-          showMembers: !prev.privacySettings!.showMembers 
-        } 
-      } : null);
-    }
-  };
-
-  const addMemberByEmail = (chatId: string, email: string) => {
-    const newMember = availableUsers.find(user => user.email === email);
-    if (!newMember) {
-      toast.error('Користувача з такою поштою не знайдено');
-      return;
-    }
-
-    setUsers(prev => prev.map(chat => 
-      chat.id === chatId 
-        ? { 
-            ...chat, 
-            members: [...(chat.members || []), newMember] 
-          } 
-        : chat
-    ));
-    
-    if (selectedUser?.id === chatId) {
-      setSelectedUser(prev => prev ? { 
-        ...prev, 
-        members: [...(prev.members || []), newMember] 
-      } : null);
-    }
-    
-    setNewMemberEmail('');
-    toast.success('Користувача додано до групи');
-  };
-
-  const removeMember = (chatId: string, memberId: string) => {
-    setUsers(prev => prev.map(chat => 
-      chat.id === chatId 
-        ? { 
-            ...chat, 
-            members: chat.members?.filter(m => m.id !== memberId) || [] 
-          } 
-        : chat
-    ));
-    
-    if (selectedUser?.id === chatId) {
-      setSelectedUser(prev => prev ? { 
-        ...prev, 
-        members: prev.members?.filter(m => m.id !== memberId) || [] 
-      } : null);
-    }
-    toast.success('Користувача видалено з групи');
-  };
-
-  // Filter chats based on active tab
-  const filteredChats = users.filter(chat => {
-    if (activeTab === 'groups') return chat.type === 'group' && !chat.isArchived;
-    if (activeTab === 'archived') return chat.isArchived;
-    return !chat.isArchived;
-  });
-
-  const filteredUsers = filteredChats.filter(chat =>
-    chat.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const handleNewMessage = (message: Message) => {
-    setMessages(prev => [...prev, message]);
-  };
-
-  const handleUserTyping = (data: { userId: string; userName: string }) => {
-    setIsTyping(true);
-    setTypingUser(data.userName);
-
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current);
-    }
-
-    typingTimeoutRef.current = setTimeout(() => {
-      setIsTyping(false);
-      setTypingUser('');
-    }, 3000);
-  };
-
-  const handleUserStopTyping = () => {
-    setIsTyping(false);
-    setTypingUser('');
-  };
-
-  const handleUserJoin = (user: ChatUser) => {
-    setUsers(prev => {
-      const existingUser = prev.find(u => u.id === user.id);
-      if (existingUser) {
-        return prev.map(u => u.id === user.id ? { ...u, isOnline: true } : u);
-      }
-      return [...prev, user];
-    });
-  };
-
-  const handleUserLeave = (userId: string) => {
-    setUsers(prev => prev.map(user => 
-      user.id === userId ? { ...user, isOnline: false } : user
-    ));
-  };
-
-  const handleSend = () => {
-    if (!newMessage.trim() && !attachment) return;
-
-    const message: Message = {
-      id: Date.now().toString(),
-      sender: currentUser.id,
-      name: currentUser.name,
-      content: newMessage,
-      timestamp: new Date().toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' }),
-      type: attachment ? 'file' : 'text'
-    };
-
-    // Add reply if exists
-    if (replyingTo) {
-      message.replyTo = {
-        id: replyingTo.id,
-        sender: replyingTo.sender,
-        name: replyingTo.name,
-        content: replyingTo.content
-      };
-    }
-
-    if (attachment) {
-      message.attachment = {
-        name: attachment.name,
-        url: URL.createObjectURL(attachment),
-        type: attachment.type,
-        size: attachment.size
-      };
-    }
-
-    if (ws.current && ws.current.readyState === WebSocket.OPEN) {
-      ws.current.send(JSON.stringify({
-        type: 'message',
-        message,
-        chatId: selectedUser?.id
-      }));
-    } else {
-      handleNewMessage(message);
-    }
-
-    setNewMessage('');
-    setAttachment(null);
-    setReplyingTo(null);
-    sendStopTyping();
-  };
-
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
-      mediaRecorderRef.current = mediaRecorder;
-      audioChunksRef.current = [];
-
-      mediaRecorder.ondataavailable = (event) => {
-        audioChunksRef.current.push(event.data);
-      };
-
-      mediaRecorder.onstop = () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
-        const audioUrl = URL.createObjectURL(audioBlob);
-        
-        const voiceMessage: Message = {
-          id: Date.now().toString(),
-          sender: currentUser.id,
-          name: currentUser.name,
-          content: 'Голосове повідомлення',
-          timestamp: new Date().toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' }),
-          type: 'voice',
-          voiceMessage: {
-            url: audioUrl,
-            duration: recordingTime
-          }
-        };
-
-        if (ws.current && ws.current.readyState === WebSocket.OPEN) {
-          ws.current.send(JSON.stringify({
-            type: 'message',
-            message: voiceMessage,
-            chatId: selectedUser?.id
-          }));
-        } else {
-          handleNewMessage(voiceMessage);
-        }
-
-        stream.getTracks().forEach(track => track.stop());
-      };
-
-      mediaRecorder.start();
-      setIsRecording(true);
-      setRecordingTime(0);
-
-      recordingIntervalRef.current = setInterval(() => {
-        setRecordingTime(prev => prev + 1);
-      }, 1000);
-
-    } catch (error) {
-      console.error('Error starting recording:', error);
-    }
-  };
-
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop();
-      setIsRecording(false);
-      if (recordingIntervalRef.current) {
-        clearInterval(recordingIntervalRef.current);
-      }
-    }
-  };
-
-  const handleTyping = () => {
-    if (ws.current && ws.current.readyState === WebSocket.OPEN) {
-      ws.current.send(JSON.stringify({
-        type: 'user_typing',
-        userId: currentUser.id,
-        userName: currentUser.name,
-        chatId: selectedUser?.id
-      }));
-    }
-  };
-
-  const sendStopTyping = () => {
-    if (ws.current && ws.current.readyState === WebSocket.OPEN) {
-      ws.current.send(JSON.stringify({
-        type: 'user_stop_typing',
-        userId: currentUser.id,
-        chatId: selectedUser?.id
-      }));
-    }
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setAttachment(file);
-    }
-  };
-
-  const scrollToBottom = () => {
-    if (scrollAreaRef.current) {
-      const scrollContainer = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
-      if (scrollContainer) {
-        scrollContainer.scrollTop = scrollContainer.scrollHeight;
-      }
-    }
-  };
-
-  const removeAttachment = () => {
-    setAttachment(null);
-  };
-
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  // Додайте цю функцію для безпечного закриття діалогів
-  const handleDialogClose = (open: boolean) => {
-    if (!open) {
-      closePasswordDialog();
-    }
   };
 
   return (
     <div className="min-h-screen bg-background flex">
-      <div className="hidden md:block">
-        <Sidebar />
-      </div>
-
+      <Sidebar />
+      
       <div className="flex-1 flex flex-col h-screen">
-        <div className="sticky top-0 z-10 bg-[var(--card)] border-b border-[var(--border)]">
-          <Header />
-        </div>
-
+        <Header />
+        
         <main className="flex-1 overflow-hidden">
           <div className="h-full">
             <div className="flex h-full">
               {/* Users sidebar */}
               <div 
                 ref={sidebarRef}
-                className="border-r bg-muted/20 flex flex-col relative"
+                className="border-r bg-background flex flex-col relative"
                 style={{ width: `${sidebarWidth}px` }}
               >
                 {/* Resize handle */}
@@ -1281,7 +3295,16 @@ const ChatPage = () => {
 
                 <div className="p-3 border-b flex-shrink-0">
                   <div className="flex items-center justify-between mb-3">
-                    <h2 className="text-lg font-semibold">Чати</h2>
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-lg font-semibold">Чати</h2>
+                      <div className="flex items-center gap-1">
+                        {isConnected ? (
+                          <Wifi className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <WifiOff className="h-4 w-4 text-red-500" />
+                        )}
+                      </div>
+                    </div>
                     <div className="flex gap-1">
                       <Dialog open={showCreateGroup} onOpenChange={setShowCreateGroup}>
                         <DialogTrigger asChild>
@@ -1294,88 +3317,75 @@ const ChatPage = () => {
                             <DialogTitle>Створити групу</DialogTitle>
                           </DialogHeader>
                           <div className="space-y-4">
-                            <Input
-                              placeholder="Назва групи"
-                              value={newGroupData.name}
-                              onChange={(e) => setNewGroupData(prev => ({...prev, name: e.target.value}))}
-                            />
-                            <Textarea
-                              placeholder="Опис групи (необов'язково)"
-                              value={newGroupData.description}
-                              onChange={(e) => setNewGroupData(prev => ({...prev, description: e.target.value}))}
-                            />
+                            <div className="space-y-2">
+                              <Label htmlFor="group-name">Назва групи</Label>
+                              <Input
+                                id="group-name"
+                                placeholder="Введіть назву групи"
+                                value={newGroupData.name}
+                                onChange={(e) => setNewGroupData(prev => ({...prev, name: e.target.value}))}
+                              />
+                            </div>
                             
-                            <div className="space-y-4">
-                              <div className="flex items-center justify-between">
-                                <Label htmlFor="public-group">Публічна група</Label>
-                                <Switch
-                                  id="public-group"
-                                  checked={newGroupData.isPublic}
-                                  onCheckedChange={(checked: boolean) => setNewGroupData(prev => ({...prev, isPublic: checked}))}
-                                />
-                              </div>
-                              
-                              <div className="flex items-center justify-between">
-                                <Label htmlFor="require-password">Захистити паролем</Label>
-                                <Switch
-                                  id="require-password"
-                                  checked={newGroupData.requirePassword}
-                                  onCheckedChange={(checked: boolean) => setNewGroupData(prev => ({...prev, requirePassword: checked}))}
-                                />
-                              </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="group-description">Опис групи (необов'язково)</Label>
+                              <Textarea
+                                id="group-description"
+                                placeholder="Опишіть групу"
+                                value={newGroupData.description}
+                                onChange={(e) => setNewGroupData(prev => ({...prev, description: e.target.value}))}
+                              />
+                            </div>
 
-                              {newGroupData.requirePassword && (
-                                <div className="space-y-3 p-3 bg-blue-50 rounded-lg">
-                                  <div className="flex items-center justify-between">
-                                    <Label htmlFor="password">Пароль групи</Label>
-                                    <Button
-                                      type="button"
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={generateSecurePassword}
-                                    >
-                                      <Shield className="h-3 w-3 mr-1" />
-                                      Згенерувати
-                                    </Button>
-                                  </div>
-                                  <Input
-                                    id="password"
-                                    type="password"
-                                    placeholder="Введіть пароль"
-                                    value={newGroupData.password || ''}
-                                    onChange={(e) => setNewGroupData(prev => ({...prev, password: e.target.value}))}
+                            <div className="space-y-3">
+                              <Label>Налаштування групи</Label>
+                              <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                  <Label htmlFor="allow-invites" className="text-sm">
+                                    Дозволити запрошення
+                                  </Label>
+                                  <Switch
+                                    id="allow-invites"
+                                    checked={newGroupData.settings.allowInvites}
+                                    onCheckedChange={(checked: boolean) => setNewGroupData(prev => ({
+                                      ...prev,
+                                      settings: { ...prev.settings, allowInvites: checked }
+                                    }))}
                                   />
-                                  {newGroupData.password && (
-                                    <div className="text-xs text-muted-foreground">
-                                      Надійність: {checkPasswordStrength(newGroupData.password)}
-                                    </div>
-                                  )}
                                 </div>
-                              )}
-                              
-                              <div className="flex items-center justify-between">
-                                <Label htmlFor="allow-invites">Дозволити запрошення</Label>
-                                <Switch
-                                  id="allow-invites"
-                                  checked={newGroupData.allowInvites}
-                                  onCheckedChange={(checked: boolean) => setNewGroupData(prev => ({...prev, allowInvites: checked}))}
-                                />
-                              </div>
-                              
-                              <div className="flex items-center justify-between">
-                                <Label htmlFor="show-members">Показувати учасників</Label>
-                                <Switch
-                                  id="show-members"
-                                  checked={newGroupData.showMembers}
-                                  onCheckedChange={(checked: boolean) => setNewGroupData(prev => ({...prev, showMembers: checked}))}
-                                />
+                                <div className="flex items-center justify-between">
+                                  <Label htmlFor="slow-mode" className="text-sm">
+                                    Повільний режим
+                                  </Label>
+                                  <Switch
+                                    id="slow-mode"
+                                    checked={newGroupData.settings.slowMode}
+                                    onCheckedChange={(checked: boolean) => setNewGroupData(prev => ({
+                                      ...prev,
+                                      settings: { ...prev.settings, slowMode: checked }
+                                    }))}
+                                  />
+                                </div>
+                                <div className="flex items-center justify-between">
+                                  <Label htmlFor="admin-only" className="text-sm">
+                                    Лише адміністратори
+                                  </Label>
+                                  <Switch
+                                    id="admin-only"
+                                    checked={newGroupData.settings.adminOnlyMessages}
+                                    onCheckedChange={(checked: boolean) => setNewGroupData(prev => ({
+                                      ...prev,
+                                      settings: { ...prev.settings, adminOnlyMessages: checked }
+                                    }))}
+                                  />
+                                </div>
                               </div>
                             </div>
 
                             <div className="space-y-2">
-                              <h4 className="text-sm font-medium">Учасники:</h4>
+                              <Label>Учасники</Label>
                               {availableUsers.map(user => (
-                                <div key={user.id} className="flex items-center gap-2">
+                                <div key={user.id} className="flex items-center gap-2 p-2 border rounded-lg">
                                   <input
                                     type="checkbox"
                                     checked={newGroupData.members.includes(user.id)}
@@ -1392,20 +3402,37 @@ const ChatPage = () => {
                                         }));
                                       }
                                     }}
+                                    className="rounded"
                                   />
                                   <Avatar className="h-6 w-6">
                                     <AvatarFallback className="text-xs">{user.avatar}</AvatarFallback>
                                   </Avatar>
-                                  <span className="text-sm">{user.name}</span>
+                                  <span className="text-sm flex-1">{user.name}</span>
+                                  <Badge variant="secondary" className="text-xs">
+                                    {user.type === 'supervisor' ? 'Керівник' : 'Студент'}
+                                  </Badge>
                                 </div>
                               ))}
                             </div>
-                            <Button onClick={createGroup} disabled={!newGroupData.name || newGroupData.members.length === 0}>
+                            <Button 
+                              onClick={createGroup} 
+                              disabled={!newGroupData.name || newGroupData.members.length === 0}
+                              className="w-full"
+                            >
                               Створити групу
                             </Button>
                           </div>
                         </DialogContent>
                       </Dialog>
+
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-8 w-8"
+                        onClick={() => setShowChatSettings(true)}
+                      >
+                        <Settings className="h-4 w-4" />
+                      </Button>
 
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -1469,6 +3496,14 @@ const ChatPage = () => {
                     >
                       Архів
                     </Button>
+                    <Button
+                      variant={activeTab === 'blocked' ? 'default' : 'ghost'}
+                      size="sm"
+                      className="flex-1 text-xs h-8"
+                      onClick={() => setActiveTab('blocked')}
+                    >
+                      Заблок.
+                    </Button>
                   </div>
                 </div>
                 
@@ -1477,33 +3512,34 @@ const ChatPage = () => {
                     {filteredUsers.map((user) => (
                       <div
                         key={user.id}
-                        className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors mb-1 group ${
+                        className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-all duration-300 mb-1 group ${
                           selectedUser?.id === user.id
-                            ? 'bg-blue-100 border border-blue-200'
-                            : 'hover:bg-muted'
-                        }`}
-                        onClick={() => {
-                          if (user.type === 'group' && user.privacySettings?.requirePassword) {
-                            openPasswordDialog('join', user.id);
-                          } else {
-                            setSelectedUser(user);
-                            loadMockData();
-                          }
-                        }}
+                            ? 'bg-primary/10 border border-primary/20 shadow-sm'
+                            : 'hover:bg-muted/50'
+                        } ${user.isBlocked ? 'opacity-60' : ''}`}
+                        onClick={() => handleSelectChat(user)}
                       >
-                        <Avatar className="h-8 w-8 flex-shrink-0">
-                          <AvatarFallback
-                            className={`text-xs ${
-                              user.type === 'supervisor'
-                                ? 'bg-green-100 text-green-600'
-                                : user.type === 'group'
-                                ? 'bg-purple-100 text-purple-600'
-                                : 'bg-blue-100 text-blue-600'
-                            }`}
-                          >
-                            {user.avatar}
-                          </AvatarFallback>
-                        </Avatar>
+                        <div className="relative">
+                          <Avatar className="h-8 w-8 flex-shrink-0">
+                            {user.avatarUrl ? (
+                              <AvatarImage src={user.avatarUrl} alt={user.name} />
+                            ) : null}
+                            <AvatarFallback
+                              className={`text-xs ${
+                                user.type === 'supervisor'
+                                  ? 'bg-green-100 text-green-600'
+                                  : user.type === 'group'
+                                  ? 'bg-purple-100 text-purple-600'
+                                  : 'bg-blue-100 text-blue-600'
+                              }`}
+                            >
+                              {user.avatar}
+                            </AvatarFallback>
+                          </Avatar>
+                          {user.isOnline && (
+                            <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 border-2 border-white rounded-full" />
+                          )}
+                        </div>
                         
                         <div className="flex-1 min-w-0" style={{ maxWidth: `${sidebarWidth - 100}px` }}>
                           <div className="flex items-center justify-between">
@@ -1513,12 +3549,9 @@ const ChatPage = () => {
                                 <Users className="h-3 w-3 inline ml-1 text-muted-foreground" />
                               )}
                             </h3>
-                            <div className="flex items-center gap-1">
-                              {user.securityLevel && <SecurityBadge level={user.securityLevel} />}
-                              <span className="text-xs text-muted-foreground flex-shrink-0 ml-1">
-                                {user.lastSeen || '12:30'}
-                              </span>
-                            </div>
+                            <span className="text-xs text-muted-foreground flex-shrink-0 ml-1">
+                              {user.lastSeen || '12:30'}
+                            </span>
                           </div>
                           
                           <div className="flex items-center justify-between mt-0.5">
@@ -1534,8 +3567,8 @@ const ChatPage = () => {
                               {user.isMuted && (
                                 <BellOff className="h-3 w-3 text-muted-foreground" />
                               )}
-                              {user.privacySettings?.requirePassword && (
-                                <Lock className="h-3 w-3 text-orange-500" />
+                              {user.isBlocked && (
+                                <X className="h-3 w-3 text-red-500" />
                               )}
                             </div>
                           </div>
@@ -1552,6 +3585,22 @@ const ChatPage = () => {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent>
+                            {user.type !== 'group' && (
+                              <DropdownMenuItem onClick={() => toggleBlockChat(user.id)}>
+                                {user.isBlocked ? (
+                                  <>
+                                    <UserPlus className="h-4 w-4 mr-2" />
+                                    Розблокувати
+                                  </>
+                                ) : (
+                                  <>
+                                    <X className="h-4 w-4 mr-2" />
+                                    Заблокувати
+                                  </>
+                                )}
+                              </DropdownMenuItem>
+                            )}
+                            
                             <DropdownMenuItem onClick={() => toggleMuteChat(user.id)}>
                               {user.isMuted ? (
                                 <>
@@ -1580,15 +3629,6 @@ const ChatPage = () => {
                             
                             {user.type === 'group' && (
                               <>
-                                <DropdownMenuItem onClick={() => setShowGroupMembers(true)}>
-                                  <UserPlus className="h-4 w-4 mr-2" />
-                                  Додати учасника
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => setShowSecuritySettings(true)}>
-                                  <Shield className="h-4 w-4 mr-2" />
-                                  Налаштування безпеки
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
                                 <DropdownMenuItem 
                                   onClick={() => leaveGroup(user.id)}
                                   className="text-red-600"
@@ -1614,47 +3654,123 @@ const ChatPage = () => {
                 </ScrollArea>
               </div>
 
-              {/* Основна область */}
-              <div className="flex-1 flex flex-col min-h-0">
+              {/* Основна область чату */}
+              <div 
+                ref={chatAreaRef}
+                className={`flex-1 flex flex-col min-h-0 transition-all duration-300 chat-area ${
+                  selectedUser ? '' : 'bg-background'
+                }`}
+              >
                 {selectedUser ? (
                   <>
                     {/* Chat header */}
-                    <div className="flex-shrink-0 border-b bg-background p-4">
+                    <div className="sticky top-0 z-10 flex-shrink-0 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 p-4 shadow-sm">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          <Avatar className="h-10 w-10">
-                            <AvatarFallback
-                              className={`${
-                                selectedUser.type === 'supervisor'
-                                  ? 'bg-green-100 text-green-600'
-                                  : selectedUser.type === 'group'
-                                  ? 'bg-purple-100 text-purple-600'
-                                  : 'bg-blue-100 text-blue-600'
-                              }`}
-                            >
-                              {selectedUser.avatar}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
+                          <div className="relative">
+                            <Avatar className="h-10 w-10">
+                              {selectedUser.avatarUrl ? (
+                                <AvatarImage src={selectedUser.avatarUrl} alt={selectedUser.name} />
+                              ) : null}
+                              <AvatarFallback
+                                className={`${
+                                  selectedUser.type === 'supervisor'
+                                    ? 'bg-green-100 text-green-600'
+                                    : selectedUser.type === 'group'
+                                    ? 'bg-purple-100 text-purple-600'
+                                    : 'bg-blue-100 text-blue-600'
+                                }`}
+                              >
+                                {selectedUser.avatar}
+                              </AvatarFallback>
+                            </Avatar>
+                            {selectedUser.isOnline && (
+                              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 border-2 border-white rounded-full" />
+                            )}
+                          </div>
+                          <div className="relative">
                             <h2 className="text-lg font-semibold">{selectedUser.name}</h2>
                             <div className="flex items-center gap-2">
                               <div className={`w-2 h-2 rounded-full ${
                                 selectedUser.isOnline ? 'bg-green-500' : 'bg-gray-300'
                               }`} />
-                              <span className="text-sm text-muted-foreground">
-                                {selectedUser.type === 'group' 
-                                  ? `${selectedUser.members?.length || 0} учасників`
-                                  : selectedUser.isOnline ? 'В мережі' : 'Не в мережі'
-                                }
-                              </span>
-                              {selectedUser.securityLevel && (
-                                <SecurityBadge level={selectedUser.securityLevel} />
+                              {selectedUser.type === 'group' ? (
+                                <div 
+                                  className="relative"
+                                  onMouseEnter={() => setShowMembersTooltip(true)}
+                                  onMouseLeave={() => setShowMembersTooltip(false)}
+                                >
+                                  <span className="text-sm text-muted-foreground cursor-help underline decoration-dotted">
+                                    {selectedUser.members?.length || 0} учасників
+                                  </span>
+                                  {showMembersTooltip && selectedUser.members && (
+                                    <div className="absolute bottom-full left-0 mb-2 bg-white border border-gray-200 rounded-lg shadow-lg p-3 z-50 min-w-48 max-h-60 overflow-y-auto">
+                                      <div className="text-sm font-semibold mb-2">Учасники групи:</div>
+                                      <div className="space-y-2">
+                                        {selectedUser.members.map((member) => (
+                                          <div key={member.id} className="flex items-center gap-2">
+                                            <Avatar className="h-6 w-6">
+                                              <AvatarFallback
+                                                className={`text-xs ${
+                                                  member.type === 'supervisor'
+                                                    ? 'bg-green-100 text-green-600'
+                                                    : 'bg-blue-100 text-blue-600'
+                                                }`}
+                                              >
+                                                {member.avatar}
+                                              </AvatarFallback>
+                                            </Avatar>
+                                            <div className="flex-1">
+                                              <div className="text-sm font-medium">{member.name}</div>
+                                              <div className="flex items-center gap-1">
+                                                <div className={`w-1.5 h-1.5 rounded-full ${member.isOnline ? 'bg-green-500' : 'bg-gray-300'}`} />
+                                                <span className="text-xs text-muted-foreground">
+                                                  {member.isOnline ? 'онлайн' : 'офлайн'}
+                                                </span>
+                                              </div>
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-sm text-muted-foreground">
+                                  {selectedUser.isOnline ? 'В мережі' : selectedUser.lastSeen || 'Не в мережі'}
+                                </span>
                               )}
                             </div>
                           </div>
                         </div>
                         
                         <div className="flex items-center gap-2">
+                          <Button 
+                            variant="ghost" 
+                            size="icon"
+                            onClick={() => setShowGlobalSearch(true)}
+                          >
+                            <Search className="h-4 w-4" />
+                          </Button>
+
+                          {allMedia.length > 0 && (
+                            <Button 
+                              variant="ghost" 
+                              size="icon"
+                              onClick={() => setShowMediaGallery(true)}
+                            >
+                              <Image className="h-4 w-4" />
+                            </Button>
+                          )}
+
+                          <Button 
+                            variant="ghost" 
+                            size="icon"
+                            onClick={() => setShowDatePicker(true)}
+                          >
+                            <Calendar className="h-4 w-4" />
+                          </Button>
+
                           <Button variant="ghost" size="icon">
                             <Phone className="h-4 w-4" />
                           </Button>
@@ -1674,65 +3790,19 @@ const ChatPage = () => {
                                   <>
                                     <Bell className="h-4 w-4 mr-2" />
                                     Увімкнути сповіщення
-                                  </>
-                                ) : (
-                                  <>
+                                </>
+                              ) : (
+                                <>
                                     <BellOff className="h-4 w-4 mr-2" />
                                     Вимкнути сповіщення
                                   </>
                                 )}
                               </DropdownMenuItem>
                               {selectedUser.type === 'group' && (
-                                <>
-                                  <DropdownMenuItem onClick={() => setShowGroupMembers(true)}>
-                                    <Users className="h-4 w-4 mr-2" />
-                                    Учасники групи
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => setShowSecuritySettings(true)}>
-                                    <Shield className="h-4 w-4 mr-2" />
-                                    Налаштування безпеки
-                                  </DropdownMenuItem>
-                                  <DropdownMenuSeparator />
-                                  <DropdownMenuItem onClick={() => toggleGroupPrivacy(selectedUser.id)}>
-                                    {selectedUser.privacySettings?.isPublic ? (
-                                      <>
-                                        <Lock className="h-4 w-4 mr-2" />
-                                        Зробити приватним
-                                      </>
-                                    ) : (
-                                      <>
-                                        <Unlock className="h-4 w-4 mr-2" />
-                                        Зробити публічним
-                                      </>
-                                    )}
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => toggleInvites(selectedUser.id)}>
-                                    {selectedUser.privacySettings?.allowInvites ? (
-                                      <>
-                                        <UserPlus className="h-4 w-4 mr-2" />
-                                        Заблокувати запрошення
-                                      </>
-                                    ) : (
-                                      <>
-                                        <UserPlus className="h-4 w-4 mr-2" />
-                                        Дозволити запрошення
-                                      </>
-                                    )}
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => toggleMembersVisibility(selectedUser.id)}>
-                                    {selectedUser.privacySettings?.showMembers ? (
-                                      <>
-                                        <EyeOff className="h-4 w-4 mr-2" />
-                                        Приховати учасників
-                                      </>
-                                    ) : (
-                                      <>
-                                        <Eye className="h-4 w-4 mr-2" />
-                                        Показувати учасників
-                                      </>
-                                    )}
-                                  </DropdownMenuItem>
-                                </>
+                                <DropdownMenuItem onClick={() => setShowGroupMembers(true)}>
+                                  <Users className="h-4 w-4 mr-2" />
+                                  Учасники групи
+                                </DropdownMenuItem>
                               )}
                               <DropdownMenuSeparator />
                               <DropdownMenuItem 
@@ -1749,183 +3819,192 @@ const ChatPage = () => {
                           </DropdownMenu>
                         </div>
                       </div>
+
+                      {/* Global Search Bar */}
+                      {showGlobalSearch && (
+                        <div className="mt-3 p-2 bg-blue-50 rounded-lg">
+                          <div className="flex gap-2 mb-2">
+                            <Input
+                              placeholder="Пошук по повідомленнях..."
+                              value={globalSearchTerm}
+                              onChange={(e) => {
+                                setGlobalSearchTerm(e.target.value);
+                                if (e.target.value) {
+                                  performGlobalSearch(e.target.value);
+                                } else {
+                                  setMessageSearchResults([]);
+                                  setCurrentSearchIndex(-1);
+                                }
+                              }}
+                              className="flex-1"
+                            />
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="outline" size="sm">
+                                  <Filter className="h-4 w-4 mr-1" />
+                                  {searchFilter.type === 'all' ? 'Всі' : 
+                                   searchFilter.type === 'text' ? 'Текст' :
+                                   searchFilter.type === 'file' ? 'Файли' :
+                                   searchFilter.type === 'image' ? 'Зображення' :
+                                   searchFilter.type === 'video' ? 'Відео' :
+                                   searchFilter.type === 'voice' ? 'Голосові' : 
+                                   searchFilter.type === 'location' ? 'Локації' : 'Посилання'}
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent>
+                                <DropdownMenuItem onClick={() => setSearchFilter({ type: 'all' })}>
+                                  Всі
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setSearchFilter({ type: 'text' })}>
+                                  Текст
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setSearchFilter({ type: 'file' })}>
+                                  Файли
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setSearchFilter({ type: 'image' })}>
+                                  Зображення
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setSearchFilter({ type: 'video' })}>
+                                  Відео
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setSearchFilter({ type: 'voice' })}>
+                                  Голосові
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setSearchFilter({ type: 'location' })}>
+                                  Локації
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setSearchFilter({ type: 'link' })}>
+                                  Посилання
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => {
+                                setGlobalSearchTerm('');
+                                setShowGlobalSearch(false);
+                                setSearchFilter({ type: 'all' });
+                                setMessageSearchResults([]);
+                                setCurrentSearchIndex(-1);
+                              }}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          
+                          {globalSearchTerm && messageSearchResults.length > 0 && (
+                            <div className="flex items-center justify-between text-xs text-muted-foreground">
+                              <span>Знайдено {messageSearchResults.length} повідомлень</span>
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => navigateSearchResults('prev')}
+                                  disabled={currentSearchIndex <= 0}
+                                  className="h-6 px-2"
+                                >
+                                  ↑ Попереднє
+                                </Button>
+                                <span>{currentSearchIndex + 1} / {messageSearchResults.length}</span>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => navigateSearchResults('next')}
+                                  disabled={currentSearchIndex >= messageSearchResults.length - 1}
+                                  className="h-6 px-2"
+                                >
+                                  Наступне ↓
+                                </Button>
+                              </div>
+                            </div>
+                          )}
+                          
+                          {globalSearchTerm && messageSearchResults.length === 0 && (
+                            <div className="text-xs text-muted-foreground">
+                              Повідомлень не знайдено
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     {/* Messages area */}
-                    <div className="flex-1 flex flex-col min-h-0">
+                    <div 
+                      ref={dropZoneRef}
+                      className={`flex-1 flex flex-col min-h-0 transition-all duration-300 ${
+                        isDragOver ? 'bg-blue-50 border-2 border-dashed border-blue-300' : ''
+                      }`}
+                      onDragOver={handleDragOver}
+                      onDragLeave={handleDragLeave}
+                      onDrop={handleDrop}
+                    >
+                      {isDragOver && (
+                        <div className="absolute inset-0 bg-blue-50/80 z-10 flex items-center justify-center">
+                          <div className="text-center">
+                            <FileText className="h-12 w-12 text-blue-500 mx-auto mb-2" />
+                            <p className="text-lg font-semibold text-blue-600">Перетягніть файли сюди</p>
+                            <p className="text-sm text-blue-500">Максимальний розмір: 50MB</p>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* ВИПРАВЛЕНИЙ SCROLL AREA */}
                       <ScrollArea 
-                        ref={scrollAreaRef}
-                        className="flex-1 px-6 py-4 space-y-4"
+                        className="flex-1 px-6 py-4" 
+                        data-scroll-area="true"
+                        style={{ height: '100%' }}
                       >
                         {/* Pinned messages */}
                         {messages.filter(msg => msg.isPinned).length > 0 && (
-                          <div className="mb-3 p-2 bg-yellow-50 border border-yellow-200 rounded-lg">
-                            <div className="flex items-center gap-2 mb-1">
+                          <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                            <div className="flex items-center gap-2 mb-2">
                               <Pin className="h-3 w-3 text-yellow-600" />
                               <span className="text-xs font-medium text-yellow-800">Закріплені повідомлення</span>
                             </div>
                             {messages.filter(msg => msg.isPinned).map(message => (
-                              <div key={message.id} className="text-xs text-yellow-700 bg-yellow-100 p-1 rounded mb-0.5">
+                              <div key={message.id} className="text-xs text-yellow-700 bg-yellow-100 p-2 rounded mb-1 last:mb-0">
                                 <strong>{message.name}:</strong> {message.content}
                               </div>
                             ))}
                           </div>
                         )}
 
-                        {messages.map((message) => (
-                          <div
-                            key={message.id}
-                            className={`flex ${message.sender === currentUser.id ? 'justify-end' : 'justify-start'}`}
-                          >
-                            <div
-                              className={`flex items-end max-w-xl gap-3 ${
-                                message.sender === currentUser.id ? 'flex-row-reverse' : ''
-                              }`}
-                            >
-                              <Avatar className="h-8 w-8 flex-shrink-0">
-                                <AvatarFallback
-                                  className={`text-xs ${
-                                    message.sender === currentUser.id
-                                      ? 'bg-blue-100 text-blue-600'
-                                      : 'bg-gray-100 text-gray-600'
-                                  }`}
-                                >
-                                  {message.sender === currentUser.id ? 'В' : selectedUser.avatar[0]}
-                                </AvatarFallback>
-                              </Avatar>
-
-                              <div
-                                className={`flex flex-col ${
-                                  message.sender === currentUser.id ? 'items-end' : 'items-start'
-                                }`}
-                              >
-                                <div className="flex items-center gap-2">
-                                  {message.sender !== currentUser.id && (
-                                    <span className="text-xs font-medium text-gray-600">{message.name}</span>
-                                  )}
-                                  <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                      <Button variant="ghost" size="icon" className="h-6 w-6">
-                                        <MoreVertical className="h-3 w-3" />
-                                      </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent>
-                                      <DropdownMenuItem onClick={() => pinMessage(message.id)}>
-                                        <Pin className="h-4 w-4 mr-2" />
-                                        {message.isPinned ? 'Відкріпити' : 'Закріпити'}
-                                      </DropdownMenuItem>
-                                      <DropdownMenuItem onClick={() => replyToMessage(message)}>
-                                        <Reply className="h-4 w-4 mr-2" />
-                                        Відповісти
-                                      </DropdownMenuItem>
-                                      <DropdownMenuItem>
-                                        <FileText className="h-4 w-4 mr-2" />
-                                        Копіювати текст
-                                      </DropdownMenuItem>
-                                      <DropdownMenuSeparator />
-                                      <DropdownMenuItem className="text-red-600">
-                                        <Trash2 className="h-4 w-4 mr-2" />
-                                        Видалити
-                                      </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                  </DropdownMenu>
-                                </div>
-
-                                <div
-                                  className={`rounded-2xl px-4 py-3 shadow-md transition-all duration-300 ${
-                                    message.sender === currentUser.id
-                                      ? 'bg-blue-600 text-white rounded-br-none'
-                                      : 'bg-white border border-gray-200 text-gray-900 rounded-bl-none'
-                                  }`}
-                                >
-                                  {/* Reply preview */}
-                                  {message.replyTo && (
-                                    <div className={`mb-2 p-2 rounded-lg border-l-4 ${
-                                      message.sender === currentUser.id
-                                        ? 'bg-blue-500/20 border-l-blue-400'
-                                        : 'bg-gray-100 border-l-gray-400'
-                                    }`}>
-                                      <div className="flex items-center gap-1 mb-1">
-                                        <Reply className="h-3 w-3" />
-                                        <span className="text-xs font-medium">{message.replyTo.name}</span>
-                                      </div>
-                                      <p className="text-xs text-muted-foreground truncate">
-                                        {message.replyTo.content}
-                                      </p>
-                                    </div>
-                                  )}
-
-                                  {message.type === 'voice' ? (
-                                    <div className="flex items-center gap-3">
-                                      <button className="p-2 bg-white/20 rounded-full">
-                                        <div className="w-4 h-4 bg-white rounded-full" />
-                                      </button>
-                                      <div className="flex items-center gap-2">
-                                        <div className="w-32 h-2 bg-white/30 rounded-full">
-                                          <div 
-                                            className="h-2 bg-white rounded-full" 
-                                            style={{ width: '70%' }}
-                                          />
-                                        </div>
-                                        <span className="text-sm">
-                                          {formatTime(message.voiceMessage?.duration || 0)}
-                                        </span>
-                                      </div>
-                                    </div>
-                                  ) : (
-                                    <p className="text-sm leading-relaxed whitespace-pre-line">
-                                      {message.content}
-                                    </p>
-                                  )}
-
-                                  {message.attachment && (
-                                    <div
-                                      className={`mt-3 p-3 rounded-xl flex items-center gap-2 text-sm font-medium ${
-                                        message.sender === currentUser.id
-                                          ? 'bg-blue-700/50 text-white'
-                                          : 'bg-gray-100 text-gray-800'
-                                      }`}
-                                    >
-                                      <FileText className="w-4 h-4" />
-                                      <div className="flex-1">
-                                        <div className="font-medium">{message.attachment.name}</div>
-                                        <div className="text-xs opacity-75">
-                                          {message.attachment.size && (message.attachment.size / 1024).toFixed(1)} KB
-                                        </div>
-                                      </div>
-                                      <a 
-                                        href={message.attachment.url} 
-                                        download={message.attachment.name}
-                                        className="ml-2 text-xs underline hover:no-underline"
-                                      >
-                                        Завантажити
-                                      </a>
-                                    </div>
-                                  )}
-                                </div>
-
-                                <span className="text-xs text-muted-foreground mt-1">
-                                  {message.timestamp}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
+                        <div className="space-y-1" style={{ gap: 'var(--message-gap, 1rem)' }}>
+                          {renderMessages}
+                        </div>
 
                         {/* Typing indicator */}
-                        {isTyping && (
-                          <div className="flex justify-start">
+                        {isTyping && userSettings.typingIndicators && (
+                          <div className="flex justify-start mt-2">
                             <div className="flex items-end max-w-xl gap-3">
-                              <Avatar className="h-8 w-8">
-                                <AvatarFallback className="text-xs bg-gray-100 text-gray-600">
-                                  {selectedUser.avatar[0]}
-                                </AvatarFallback>
-                              </Avatar>
+                              {userSettings.showAvatars && (
+                                <Avatar className="h-8 w-8">
+                                  <AvatarFallback className="text-xs bg-gray-100 text-gray-600">
+                                    {selectedUser.avatar[0]}
+                                  </AvatarFallback>
+                                </Avatar>
+                              )}
                               <div className="rounded-2xl px-4 py-3 bg-white border border-gray-200 rounded-bl-none">
                                 <div className="flex space-x-1">
-                                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+                                  {userSettings.typingAnimation === 'dots' && (
+                                    <>
+                                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+                                    </>
+                                  )}
+                                  {userSettings.typingAnimation === 'wave' && (
+                                    <div className="flex space-x-1">
+                                      <div className="w-1 h-3 bg-gray-400 rounded-full animate-wave"></div>
+                                      <div className="w-1 h-4 bg-gray-400 rounded-full animate-wave" style={{ animationDelay: '0.1s' }}></div>
+                                      <div className="w-1 h-3 bg-gray-400 rounded-full animate-wave" style={{ animationDelay: '0.2s' }}></div>
+                                      <div className="w-1 h-2 bg-gray-400 rounded-full animate-wave" style={{ animationDelay: '0.3s' }}></div>
+                                    </div>
+                                  )}
+                                  {userSettings.typingAnimation === 'pulse' && (
+                                    <div className="w-8 h-2 bg-gray-400 rounded-full animate-pulse"></div>
+                                  )}
                                 </div>
                                 <span className="text-xs text-muted-foreground">
                                   {typingUser} друкує...
@@ -1934,26 +4013,32 @@ const ChatPage = () => {
                             </div>
                           </div>
                         )}
+                        
+                        <div ref={messageEndRef} />
                       </ScrollArea>
 
-                      {/* Reply preview above input */}
-                      {replyingTo && (
+                      {/* Reply/Edit preview above input */}
+                      {(replyingTo || editingMessage) && (
                         <div className="border-t border-b bg-blue-50 p-3 flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            <Reply className="h-4 w-4 text-blue-600" />
+                            {editingMessage ? (
+                              <Edit className="h-4 w-4 text-blue-600" />
+                            ) : (
+                              <Reply className="h-4 w-4 text-blue-600" />
+                            )}
                             <div>
                               <div className="text-sm font-medium text-blue-800">
-                                Відповідь {replyingTo.name}
+                                {editingMessage ? 'Редагування повідомлення' : `Відповідь ${replyingTo?.name}`}
                               </div>
                               <div className="text-xs text-blue-600 truncate max-w-md">
-                                {replyingTo.content}
+                                {editingMessage ? editingMessage.content : replyingTo?.content}
                               </div>
                             </div>
                           </div>
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={cancelReply}
+                            onClick={editingMessage ? cancelEditing : cancelReply}
                             className="h-6 w-6 text-blue-600 hover:text-blue-800"
                           >
                             <X className="h-4 w-4" />
@@ -1963,20 +4048,13 @@ const ChatPage = () => {
 
                       {/* Input Area */}
                       <div className="border-t p-4 space-y-3 flex-shrink-0 bg-background">
-                        {/* Attachment preview */}
+                        {/* File preview */}
                         {attachment && (
-                          <div className="flex items-center gap-2 p-2 bg-blue-50 rounded-lg">
-                            <FileText className="w-4 h-4 text-blue-600" />
-                            <span className="text-sm text-blue-800 flex-1">{attachment.name}</span>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={removeAttachment}
-                              className="h-6 w-6 p-0 text-blue-600 hover:text-blue-800"
-                            >
-                              ×
-                            </Button>
-                          </div>
+                          <FilePreview 
+                            file={attachment} 
+                            onRemove={removeAttachment}
+                            uploadProgress={Object.values(uploadProgress)[0]}
+                          />
                         )}
 
                         {/* Recording indicator */}
@@ -2012,10 +4090,11 @@ const ChatPage = () => {
                             <label className="cursor-pointer flex items-center">
                               <Paperclip className="h-4 w-4" />
                               <Input 
+                                ref={fileInputRef}
                                 type="file" 
                                 className="hidden" 
-                                onChange={handleFileChange}
-                                accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png"
+                                onChange={handleFileInput}
+                                accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif,.mp4,.avi,.mov,.wav,.mp3"
                               />
                             </label>
                             
@@ -2023,7 +4102,7 @@ const ChatPage = () => {
                               variant="ghost"
                               size="icon"
                               onClick={isRecording ? stopRecording : startRecording}
-                              className={isRecording ? 'text-red-600' : ''}
+                              className={isRecording ? 'text-red-600 animate-pulse' : ''}
                             >
                               {isRecording ? <Square className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
                             </Button>
@@ -2038,17 +4117,21 @@ const ChatPage = () => {
                               }}
                               onKeyDown={handleKeyPress}
                               onBlur={sendStopTyping}
-                              placeholder={replyingTo ? `Відповідь ${replyingTo.name}...` : "Напишіть повідомлення..."}
+                              placeholder={
+                                editingMessage ? "Редагуйте повідомлення..." :
+                                replyingTo ? `Відповідь ${replyingTo.name}...` : 
+                                "Напишіть повідомлення..."
+                              }
                               className="min-h-[60px] resize-none pr-12"
                             />
                           </div>
 
                           <Button 
-                            onClick={handleSend} 
-                            disabled={(!newMessage.trim() && !attachment) || !isConnected}
+                            onClick={editingMessage ? saveEditedMessage : handleSend} 
+                            disabled={(!newMessage.trim() && !attachment)}
                             size="icon"
                           >
-                            <Send className="h-4 w-4" />
+                            {editingMessage ? <Save className="h-4 w-4" /> : <Send className="h-4 w-4" />}
                           </Button>
                         </div>
                       </div>
@@ -2056,7 +4139,7 @@ const ChatPage = () => {
                   </>
                 ) : (
                   // Екран вибору чату
-                  <div className="flex-1 flex flex-col items-center justify-center bg-muted/20">
+                  <div className="flex-1 flex flex-col items-center justify-center bg-background">
                     <div className="text-center max-w-md mx-auto p-8">
                       <div className="w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
                         <MessageCircle className="h-12 w-12 text-blue-600" />
@@ -2092,288 +4175,197 @@ const ChatPage = () => {
       </div>
 
       {/* Dialog for group members */}
-      <Dialog open={showGroupMembers} onOpenChange={setShowGroupMembers}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Учасники групи "{selectedUser?.name}"</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            {/* Додавання учасника по email */}
-            {selectedUser?.privacySettings?.allowInvites && (
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Email учасника"
-                  value={newMemberEmail}
-                  onChange={(e) => setNewMemberEmail(e.target.value)}
-                  type="email"
-                />
-                <Button 
-                  onClick={() => addMemberByEmail(selectedUser.id, newMemberEmail)}
-                  disabled={!newMemberEmail}
-                >
-                  <Mail className="h-4 w-4" />
-                </Button>
-              </div>
-            )}
-            
-            <div className="space-y-3 max-h-96 overflow-y-auto">
-              {selectedUser?.members?.map((member) => (
-                <div key={member.id} className="flex items-center gap-3 p-2 rounded-lg border">
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback
-                      className={`text-xs ${
-                        member.type === 'supervisor'
-                          ? 'bg-green-100 text-green-600'
-                          : 'bg-blue-100 text-blue-600'
-                      }`}
-                    >
-                      {member.avatar}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1">
-                    <div className="font-medium text-sm">{member.name}</div>
-                    <div className="flex items-center gap-2">
-                      <div className={`w-2 h-2 rounded-full ${member.isOnline ? 'bg-green-500' : 'bg-gray-300'}`} />
-                      <span className="text-xs text-muted-foreground">
-                        {member.isOnline ? 'В мережі' : 'Не в мережі'}
-                      </span>
-                    </div>
-                  </div>
-                  {member.type === 'supervisor' && (
-                    <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
-                      Керівник
-                    </span>
-                  )}
-                  {member.id !== currentUser.id && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removeMember(selectedUser.id, member.id)}
-                      className="text-red-600 hover:text-red-800"
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Enhanced Password Dialog - FIXED */}
-      <Dialog open={passwordDialog.isOpen} onOpenChange={handleDialogClose}>
-        <DialogContent>
+      <Dialog 
+        open={showGroupMembers} 
+        onOpenChange={(open) => {
+          setShowGroupMembers(open);
+        }}
+      >
+        <DialogContent className="max-w-md max-h-[80vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>
-              {passwordDialog.type === 'join' && 'Вхід до групи'}
-              {passwordDialog.type === 'set' && 'Встановити пароль'}
-              {passwordDialog.type === 'change' && 'Змінити пароль'}
-              {passwordDialog.type === 'remove' && 'Видалити пароль'}
+              {selectedUser ? `Учасники групи "${selectedUser.name}"` : 'Учасники групи'}
             </DialogTitle>
-            <DialogDescription>
-              {passwordDialog.type === 'join' && 'Ця група захищена паролем. Введіть пароль для входу.'}
-              {passwordDialog.type === 'set' && 'Встановіть пароль для захисту вашої групи.'}
-              {passwordDialog.type === 'change' && 'Змініть пароль для вашої групи.'}
-              {passwordDialog.type === 'remove' && 'Для видалення пароля введіть поточний пароль.'}
-            </DialogDescription>
           </DialogHeader>
-          
-          <div className="space-y-4">
-            {(passwordDialog.type === 'change' || passwordDialog.type === 'remove') && (
-              <div className="space-y-2">
-                <Label htmlFor="current-password">Поточний пароль</Label>
-                <Input
-                  id="current-password"
-                  type="password"
-                  placeholder="Введіть поточний пароль"
-                  value={passwordData.currentPassword}
-                  onChange={(e) => setPasswordData(prev => ({ ...prev, currentPassword: e.target.value }))}
-                />
-              </div>
-            )}
-
-            {(passwordDialog.type === 'set' || passwordDialog.type === 'change') && (
+          <div className="flex-1 overflow-hidden flex flex-col">
+            {selectedUser ? (
               <>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="new-password">
-                      {passwordDialog.type === 'set' ? 'Пароль' : 'Новий пароль'}
-                    </Label>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={generateSecurePassword}
-                    >
-                      <Shield className="h-3 w-3 mr-1" />
-                      Згенерувати
-                    </Button>
+                <div className="mb-4">
+                  <p className="text-sm text-muted-foreground">
+                    {selectedUser.description}
+                  </p>
+                </div>
+                
+                <ScrollArea className="flex-1 border rounded-lg">
+                  <div className="p-4 space-y-3">
+                    {selectedUser.members?.map((member) => (
+                      <div key={member.id} className="flex items-center gap-3 p-2 rounded-lg border bg-background">
+                        <Avatar className="h-8 w-8">
+                          <AvatarFallback
+                            className={`text-xs ${
+                              member.type === 'supervisor'
+                                ? 'bg-green-100 text-green-600'
+                                : 'bg-blue-100 text-blue-600'
+                            }`}
+                          >
+                            {member.avatar}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1">
+                          <div className="font-medium text-sm">{member.name}</div>
+                          <div className="flex items-center gap-2">
+                            <div className={`w-2 h-2 rounded-full ${member.isOnline ? 'bg-green-500' : 'bg-gray-300'}`} />
+                            <span className="text-xs text-muted-foreground">
+                              {member.isOnline ? 'В мережі' : 'Не в мережі'}
+                            </span>
+                          </div>
+                        </div>
+                        {member.type === 'supervisor' && (
+                          <Badge variant="secondary" className="text-xs">
+                            Керівник
+                          </Badge>
+                        )}
+                        {member.id === currentUser.id && (
+                          <Badge variant="outline" className="text-xs">
+                            Ви
+                          </Badge>
+                        )}
+                      </div>
+                    ))}
                   </div>
-                  <Input
-                    id="new-password"
-                    type="password"
-                    placeholder={`Введіть ${passwordDialog.type === 'set' ? 'пароль' : 'новий пароль'}`}
-                    value={passwordData.password}
-                    onChange={(e) => setPasswordData(prev => ({ ...prev, password: e.target.value }))}
-                  />
-                  {passwordData.password && (
-                    <div className="text-xs text-muted-foreground">
-                      Надійність: {checkPasswordStrength(passwordData.password)}
-                    </div>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="confirm-password">Підтвердіть пароль</Label>
-                  <Input
-                    id="confirm-password"
-                    type="password"
-                    placeholder="Підтвердіть пароль"
-                    value={passwordData.confirmPassword}
-                    onChange={(e) => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))}
-                  />
-                  {passwordData.confirmPassword && passwordData.password !== passwordData.confirmPassword && (
-                    <div className="text-xs text-red-500">Паролі не співпадають</div>
-                  )}
-                </div>
+                </ScrollArea>
               </>
-            )}
-
-            {passwordDialog.type === 'join' && (
-              <div className="space-y-2">
-                <Label htmlFor="join-password">Пароль групи</Label>
-                <Input
-                  id="join-password"
-                  type="password"
-                  placeholder="Введіть пароль для входу"
-                  value={passwordData.password}
-                  onChange={(e) => setPasswordData(prev => ({ ...prev, password: e.target.value }))}
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter' && passwordData.password) {
-                      handlePasswordAction();
-                    }
-                  }}
-                />
+            ) : (
+              <div className="flex-1 flex items-center justify-center">
+                <p className="text-muted-foreground">Чат не вибрано</p>
               </div>
             )}
           </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={closePasswordDialog}>
-              Скасувати
-            </Button>
-            <Button 
-              onClick={handlePasswordAction}
-              disabled={
-                !passwordData.password ||
-                (passwordDialog.type === 'set' && passwordData.password !== passwordData.confirmPassword) ||
-                (passwordDialog.type === 'change' && (!passwordData.currentPassword || passwordData.password !== passwordData.confirmPassword)) ||
-                (passwordDialog.type === 'remove' && !passwordData.currentPassword)
-              }
-            >
-              {passwordDialog.type === 'join' && 'Увійти'}
-              {passwordDialog.type === 'set' && 'Встановити'}
-              {passwordDialog.type === 'change' && 'Змінити'}
-              {passwordDialog.type === 'remove' && 'Видалити'}
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Security Settings Dialog */}
-      <Dialog open={showSecuritySettings} onOpenChange={setShowSecuritySettings}>
+      {/* Media Gallery */}
+      <MediaGallery />
+
+      {/* Date Picker Dialog */}
+      <Dialog open={showDatePicker} onOpenChange={setShowDatePicker}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Налаштування безпеки</DialogTitle>
+            <DialogTitle>Перейти до дати</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Input
+              type="date"
+              value={selectedDate ? selectedDate.toISOString().split('T')[0] : ''}
+              onChange={(e) => setSelectedDate(new Date(e.target.value))}
+            />
+            <Button 
+              onClick={() => {
+                if (selectedDate) {
+                  const targetDate = selectedDate.toDateString();
+                  const messageIndex = messages.findIndex(msg => {
+                    const messageDate = new Date(msg.timestamp).toDateString();
+                    return messageDate === targetDate;
+                  });
+                  
+                  if (messageIndex !== -1) {
+                    const messageElement = document.querySelector(`[data-message-id="${messages[messageIndex].id}"]`);
+                    if (messageElement) {
+                      messageElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                      setShowDatePicker(false);
+                    }
+                  } else {
+                    toast.info('Повідомлень за цю дату не знайдено');
+                  }
+                }
+              }}
+              disabled={!selectedDate}
+            >
+              Перейти
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Enhanced Chat Settings */}
+      <EnhancedChatSettings
+          showChatSettings={showChatSettings}
+          setShowChatSettings={setShowChatSettings}
+          chatSettings={userSettings}
+          setChatSettings={setUserSettings}
+        />
+
+      {/* Діалог для закріплення повідомлень */}
+      <Dialog open={showPinDialog} onOpenChange={setShowPinDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Закріпити повідомлення</DialogTitle>
             <DialogDescription>
-              Керуйте налаштуваннями безпеки та приватності вашої групи
+              Оберіть, де буде закріплено повідомлення
             </DialogDescription>
           </DialogHeader>
-          
-          {selectedUser?.type === 'group' && (
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label className="text-base">Рівень безпеки</Label>
-                  <p className="text-sm text-muted-foreground">
-                    {selectedUser.securityLevel === 'high' && 'Високий рівень захисту з паролем'}
-                    {selectedUser.securityLevel === 'medium' && 'Середній рівень захисту'}
-                    {selectedUser.securityLevel === 'low' && 'Базовий рівень захисту'}
-                  </p>
-                </div>
-                <SecurityBadge level={selectedUser.securityLevel || 'medium'} />
-              </div>
-
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label>Захист паролем</Label>
-                    <p className="text-sm text-muted-foreground">
-                      {selectedUser.privacySettings?.requirePassword 
-                        ? 'Група захищена паролем' 
-                        : 'Група не захищена паролем'}
-                    </p>
+          <div className="space-y-4 py-4">
+            <div className="space-y-3">
+              <button
+                onClick={() => setPinForBoth(false)}
+                className={`w-full p-4 border-2 rounded-lg text-left transition-all ${
+                  !pinForBoth 
+                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                    !pinForBoth ? 'border-blue-500 bg-blue-500' : 'border-gray-300'
+                  }`}>
+                    {!pinForBoth && <div className="w-2 h-2 bg-white rounded-full" />}
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      if (selectedUser.privacySettings?.requirePassword) {
-                        openPasswordDialog('change', selectedUser.id);
-                      } else {
-                        openPasswordDialog('set', selectedUser.id);
-                      }
-                      setShowSecuritySettings(false);
-                    }}
-                  >
-                    <Key className="h-4 w-4 mr-2" />
-                    {selectedUser.privacySettings?.requirePassword ? 'Змінити пароль' : 'Встановити пароль'}
-                  </Button>
-                </div>
-
-                {selectedUser.privacySettings?.requirePassword && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      openPasswordDialog('remove', selectedUser.id);
-                      setShowSecuritySettings(false);
-                    }}
-                    className="w-full text-red-600 hover:text-red-700"
-                  >
-                    <Lock className="h-4 w-4 mr-2" />
-                    Видалити пароль
-                  </Button>
-                )}
-
-                <div className="flex items-center justify-between">
                   <div>
-                    <Label>Публічна група</Label>
-                    <p className="text-sm text-muted-foreground">
-                      {selectedUser.privacySettings?.isPublic 
-                        ? 'Група видима для всіх' 
-                        : 'Група приватна'}
-                    </p>
+                    <div className="font-semibold">Тільки у себе</div>
+                    <div className="text-sm text-muted-foreground">
+                      Повідомлення буде закріплено лише у вашому чаті
+                    </div>
                   </div>
-                  <Switch
-                    checked={selectedUser.privacySettings?.isPublic || false}
-                    onCheckedChange={() => toggleGroupPrivacy(selectedUser.id)}
-                  />
                 </div>
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => copyGroupLink(selectedUser.id)}
-                  className="w-full"
-                >
-                  <Copy className="h-4 w-4 mr-2" />
-                  Копіювати посилання запрошення
-                </Button>
-              </div>
+              </button>
+              
+              <button
+                onClick={() => setPinForBoth(true)}
+                className={`w-full p-4 border-2 rounded-lg text-left transition-all ${
+                  pinForBoth 
+                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                    pinForBoth ? 'border-blue-500 bg-blue-500' : 'border-gray-300'
+                  }`}>
+                    {pinForBoth && <div className="w-2 h-2 bg-white rounded-full" />}
+                  </div>
+                  <div>
+                    <div className="font-semibold">Для всіх</div>
+                    <div className="text-sm text-muted-foreground">
+                      Повідомлення буде закріплено для всіх учасників чату
+                    </div>
+                  </div>
+                </div>
+              </button>
             </div>
-          )}
+          </div>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowPinDialog(false)}
+            >
+              Скасувати
+            </Button>
+            <Button
+              onClick={confirmPinMessage}
+            >
+              Закріпити
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

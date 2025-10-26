@@ -1,23 +1,30 @@
 // components/VoiceAssistant/VoiceAssistant.tsx
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Mic, MessageCircle } from 'lucide-react';
-import { VoiceAssistantInterface } from './VoiceAssistantInterface';
+import { MessageCircle, Mic, Send, X, Square, Bot, Trash2, Play, Volume2, VolumeX } from 'lucide-react';
 import { useTheme } from '@/context/ThemeContext';
-import { useTranslation } from 'react-i18next';
+import { Input } from '@/components/ui/input';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { cn } from '@/lib/utils';
 
-// Типи для Speech Recognition
-interface SpeechRecognitionEvent extends Event {
-  results: SpeechRecognitionResultList;
-  resultIndex: number;
+interface Message {
+  id: string;
+  content: string;
+  isUser: boolean;
+  timestamp: Date;
 }
 
-interface SpeechRecognitionErrorEvent extends Event {
-  error: string;
-  message?: string;
+interface TourStep {
+  id: string;
+  title: string;
+  description: string;
+  route: string;
+  highlightSelectors: string[];
+  duration: number;
 }
 
+// Speech Recognition інтерфейси
 interface SpeechRecognition extends EventTarget {
   continuous: boolean;
   interimResults: boolean;
@@ -30,362 +37,1867 @@ interface SpeechRecognition extends EventTarget {
   onend: (() => void) | null;
 }
 
+interface SpeechRecognitionEvent extends Event {
+  results: SpeechRecognitionResultList;
+  resultIndex: number;
+}
+
+interface SpeechRecognitionErrorEvent extends Event {
+  error: string;
+  message?: string;
+}
+
 declare global {
   interface Window {
-    SpeechRecognition: new () => SpeechRecognition;
-    webkitSpeechRecognition: new () => SpeechRecognition;
-    voiceAssistantSearch?: (query: string) => void;
-    voiceAssistantToggleSaved?: () => void;
-    voiceAssistantAddResource?: () => void;
+    SpeechRecognition: {
+      new (): SpeechRecognition;
+    };
+    webkitSpeechRecognition: {
+      new (): SpeechRecognition;
+    };
+    // Видаляємо дубльоване оголошення speechSynthesis
   }
 }
 
 export const VoiceAssistant = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { setTheme } = useTheme();
-  const { i18n } = useTranslation();
   
   const [isActive, setIsActive] = useState(false);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [inputMessage, setInputMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState('');
-  const [response, setResponse] = useState('');
+  const [isTourActive, setIsTourActive] = useState(false);
+  const [highlightedElements, setHighlightedElements] = useState<Element[]>([]);
+  const [isSoundEnabled, setIsSoundEnabled] = useState(true);
+  const [isReading, setIsReading] = useState(false);
+  
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const tourTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const finalTranscriptRef = useRef<string>('');
+  const speechSynthesisRef = useRef<SpeechSynthesisUtterance | null>(null);
 
-  // Мапінг голосових команд до шляхів з Sidebar
-  const getNavigationMap = () => {
-    return {
-      // Головне меню
-      'головна': '/dashboard',
-      'дашборд': '/dashboard',
-      'dashboard': '/dashboard',
-      
-      'проекти': '/tracker',
-      'трекер': '/tracker',
-      'завдання': '/tracker',
-      'дипломні': '/tracker',
-      'курсові': '/tracker',
-      
-      'чати': '/chat',
-      'повідомлення': '/chat',
-      'месенджер': '/chat',
-      
-      'календар': '/calendar',
-      'розклад': '/calendar',
-      'події': '/calendar',
-      
-      // Інструменти
-      'ai помічник': '/ai-assistant',
-      'штучний інтелект': '/ai-assistant',
-      'ai': '/ai-assistant',
-      
-      'аналітика': '/analytics',
-      'статистика': '/analytics',
-      
-      'ресурси': '/resources',
-      'матеріали': '/resources',
-      'книги': '/resources',
-      'бібліотека': '/resources',
-      'джерела': '/resources',
-      
-      // Профіль та інше
-      'профіль': '/profile',
-      'налаштування': '/profile',
-      'аккаунт': '/profile',
+  // КОРОТКИЙ ТУР ПО СИСТЕМІ
+  const systemTour: TourStep[] = [
+    {
+      id: 'dashboard',
+      title: 'Головна панель',
+      description: 'Тут ви бачите загальний прогрес, найближчі дедлайни та швидкий доступ до всіх функцій.',
+      route: '/dashboard',
+      highlightSelectors: ['.bg-gradient-to-br', '[data-tour="welcome"]'],
+      duration: 3000
+    },
+    {
+      id: 'projects',
+      title: 'Проекти',
+      description: 'Керуйте всіма навчальними роботами: дипломними, курсовими та звітами.',
+      route: '/tracker',
+      highlightSelectors: ['[data-tour="project-list"]', '[data-tour="create-project"]'],
+      duration: 3000
+    },
+    {
+      id: 'calendar',
+      title: 'Календар',
+      description: 'Плануйте дедлайни, зустрічі та контролюйте всі важливі події.',
+      route: '/calendar',
+      highlightSelectors: ['[data-tour="calendar"]', '[data-tour="add-event"]'],
+      duration: 3000
+    },
+    {
+      id: 'chat',
+      title: 'Чат з керівником',
+      description: 'Спілкуйтесь з науковим керівником, отримуйте feedback та консультації.',
+      route: '/chat',
+      highlightSelectors: ['[data-tour="chat-list"]', '[data-tour="message-input"]'],
+      duration: 2500
+    }
+  ];
 
-      // Створення проектів
-      'створи проект': '/tracker?create=project',
-      'нова курсова': '/tracker?type=coursework',
-      'новий диплом': '/tracker?type=diploma',
-      'нова практика': '/tracker?type=practice'
-    };
-  };
-
-  // Мапінг тем
-  const getThemeMap = () => {
-    return {
-      'світла тема': 'light',
-      'темна тема': 'dark',
-      'рожева тема': 'rose',
-      'мятна тема': 'mint',
-      'світлий режим': 'light',
-      'темний режим': 'dark',
-      'рожевий': 'rose',
-      'мятний': 'mint'
-    };
-  };
-
-  // Мапінг мов
-  const getLanguageMap = () => {
-    return {
-      'українська': 'ua',
-      'українська мова': 'ua',
-      'англійська': 'en',
-      'англійська мова': 'en',
-      'українську': 'ua',
-      'англійську': 'en'
-    };
-  };
-
-  // Функція пошуку шляху за голосовою командою
-  const findRouteByCommand = (command: string): { path: string | null; name: string } => {
-    const navigationMap = getNavigationMap();
-    const normalizedCommand = command.toLowerCase().trim();
+  // Функції для озвучки
+  const speakText = useCallback((text: string, rate: number = 0.9, pitch: number = 1) => {
+    if (!isSoundEnabled || !text.trim() || !window.speechSynthesis) return;
     
-    // Прямий пошук
-    if (navigationMap[normalizedCommand as keyof typeof navigationMap]) {
-      return {
-        path: navigationMap[normalizedCommand as keyof typeof navigationMap],
-        name: command
+    // Зупинити попереднє озвучення
+    window.speechSynthesis.cancel();
+
+    const cleanText = text
+      .replace(/\*\*/g, '') // Видаляємо ** для кращого звучання
+      .replace(/#/g, '') // Видаляємо #
+      .replace(/\n/g, '. ') // Замінюємо переноси на паузи
+      .trim();
+
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    utterance.lang = 'uk-UA';
+    utterance.rate = rate;
+    utterance.pitch = pitch;
+    utterance.volume = 1;
+
+    utterance.onstart = () => {
+      setIsReading(true);
+    };
+
+    utterance.onend = () => {
+      setIsReading(false);
+      speechSynthesisRef.current = null;
+    };
+
+    utterance.onerror = () => {
+      setIsReading(false);
+      speechSynthesisRef.current = null;
+    };
+
+    speechSynthesisRef.current = utterance;
+    window.speechSynthesis.speak(utterance);
+  }, [isSoundEnabled]);
+
+  const stopSpeaking = useCallback(() => {
+    if (window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
+    setIsReading(false);
+    speechSynthesisRef.current = null;
+  }, []);
+
+  const toggleSound = useCallback(() => {
+    if (isSoundEnabled) {
+      stopSpeaking();
+    }
+    setIsSoundEnabled(!isSoundEnabled);
+  }, [isSoundEnabled, stopSpeaking]);
+
+  // Функція для озвучення повідомлення
+  const speakMessage = useCallback((message: Message) => {
+    if (!isSoundEnabled) return;
+
+    const text = message.isUser 
+      ? `Ви сказали: ${message.content}`
+      : message.content;
+
+    speakText(text, 0.9, message.isUser ? 1.1 : 1);
+  }, [isSoundEnabled, speakText]);
+
+  // Функції для туру
+  const highlightElements = useCallback((selectors: string[]) => {
+    highlightedElements.forEach(el => {
+      el.classList.remove('ring-2', 'ring-blue-500', 'ring-offset-2', 'z-50', 'relative');
+    });
+    
+    const elements: Element[] = [];
+    selectors.forEach(selector => {
+      const foundElements = document.querySelectorAll(selector);
+      foundElements.forEach(element => {
+        element.classList.add('ring-2', 'ring-blue-500', 'ring-offset-2', 'z-50', 'relative');
+        elements.push(element);
+      });
+    });
+    
+    setHighlightedElements(elements);
+  }, [highlightedElements]);
+
+  const removeHighlights = useCallback(() => {
+    highlightedElements.forEach(el => {
+      el.classList.remove('ring-2', 'ring-blue-500', 'ring-offset-2', 'z-50', 'relative');
+    });
+    setHighlightedElements([]);
+  }, [highlightedElements]);
+
+  const startTour = useCallback(async () => {
+    setIsTourActive(true);
+    
+    const tourMessage: Message = {
+      id: 'tour-start',
+      content: '🚀 **Починаємо короткий тур по системі!**\n\nЗа 1 хвилину покажу основні розділи.',
+      isUser: false,
+      timestamp: new Date()
+    };
+    
+    setMessages(prev => [...prev, tourMessage]);
+    speakText('Починаємо короткий тур по системі! За хвилину покажу основні розділи.', 0.9, 1);
+    
+    setTimeout(() => {
+      goToTourStep(0);
+    }, 1500);
+  }, [speakText]);
+
+  const goToTourStep = useCallback((stepIndex: number) => {
+    if (stepIndex >= systemTour.length) {
+      endTour();
+      return;
+    }
+
+    const step = systemTour[stepIndex];
+    
+    if (location.pathname !== step.route) {
+      navigate(step.route);
+    }
+
+    setTimeout(() => {
+      highlightElements(step.highlightSelectors);
+      
+      const stepMessage: Message = {
+        id: `tour-step-${step.id}`,
+        content: `## ${step.title}\n\n${step.description}\n\n*${stepIndex + 1}/${systemTour.length}*`,
+        isUser: false,
+        timestamp: new Date()
       };
-    }
-    
-    // Пошук за частиною команди
-    for (const [key, path] of Object.entries(navigationMap)) {
-      if (normalizedCommand.includes(key)) {
-        return { path, name: key };
-      }
-    }
-    
-    return { path: null, name: command };
-  };
-
-  // Функція для зміни теми
-  const handleThemeChange = (themeCommand: string): string => {
-    const themeMap = getThemeMap();
-    const normalizedCommand = themeCommand.toLowerCase().trim();
-    
-    for (const [key, themeValue] of Object.entries(themeMap)) {
-      if (normalizedCommand.includes(key)) {
-        setTheme(themeValue as any);
-        return `Змінюю тему на ${key}`;
-      }
-    }
-    
-    return `Не знайшов тему "${themeCommand}". Доступні: світла, темна, рожева, м'ятна`;
-  };
-
-  // Функція для зміни мови
-  const handleLanguageChange = (languageCommand: string): string => {
-    const languageMap = getLanguageMap();
-    const normalizedCommand = languageCommand.toLowerCase().trim();
-    
-    for (const [key, langValue] of Object.entries(languageMap)) {
-      if (normalizedCommand.includes(key)) {
-        i18n.changeLanguage(langValue);
-        localStorage.setItem('i18nextLng', langValue);
-        return `Змінюю мову на ${key}`;
-      }
-    }
-    
-    return `Не знайшов мову "${languageCommand}". Доступні: українська, англійська`;
-  };
-
-  // Функція для створення проектів
-  const handleCreateProject = (projectType: string): string => {
-    const projectMap = {
-      'курсова': 'coursework',
-      'диплом': 'diploma',
-      'практика': 'practice',
-      'проект': 'project'
-    };
-
-    const normalizedType = projectType.toLowerCase().trim();
-    
-    for (const [key, typeValue] of Object.entries(projectMap)) {
-      if (normalizedType.includes(key)) {
-        navigate(`/tracker?type=${typeValue}`);
-        return `Створюю ${key}`;
-      }
-    }
-    
-    return `Не розпізнав тип проекту "${projectType}". Доступні: курсова, диплом, практика`;
-  };
-
-  // Функції для роботи з ресурсами
-  const handleResourcesSearch = (query: string): string => {
-    if (window.voiceAssistantSearch) {
-      window.voiceAssistantSearch(query);
-      return `Шукаю ресурси за запитом: ${query}`;
-    }
-    return 'Функція пошуку ресурсів недоступна';
-  };
-
-  const handleToggleSaved = (): string => {
-    if (window.voiceAssistantToggleSaved) {
-      window.voiceAssistantToggleSaved();
-      return 'Перемикаю відображення збережених ресурсів';
-    }
-    return 'Функція збереження ресурсів недоступна';
-  };
-
-  const handleAddResource = (): string => {
-    if (window.voiceAssistantAddResource) {
-      window.voiceAssistantAddResource();
-      return 'Відкриваю додавання нового ресурсу';
-    }
-    return 'Функція додавання ресурсів недоступна';
-  };
-
-  const processVoiceCommand = useCallback((command: string) => {
-    const lowerCommand = command.toLowerCase().trim();
-    console.log('Розпізнана команда:', command);
-
-    let commandResponse = '';
-
-    // Спеціальні команди
-    if (lowerCommand.includes('допомога') || lowerCommand.includes('команди')) {
-      commandResponse = 'Доступні команди: "головна", "проекти", "чати", "календар", "ai помічник", "аналітика", "ресурси", "профіль", "створи проект", "світла тема", "темна тема", "українська мова", "англійська мова", "знайди ресурси [запит]", "збережені ресурси", "додати ресурс"';
-    }
-    // Команди тем
-    else if (lowerCommand.includes('тема') || lowerCommand.includes('режим')) {
-      commandResponse = handleThemeChange(command);
-    }
-    // Команди мов
-    else if (lowerCommand.includes('мова') || lowerCommand.includes('мову')) {
-      commandResponse = handleLanguageChange(command);
-    }
-    // Команди створення проектів
-    else if (lowerCommand.includes('створи') || lowerCommand.includes('нова') || lowerCommand.includes('новий')) {
-      if (lowerCommand.includes('проект') || lowerCommand.includes('курсова') || lowerCommand.includes('диплом') || lowerCommand.includes('практика')) {
-        commandResponse = handleCreateProject(command);
-      } else {
-        commandResponse = 'Що саме створити? Скажіть "створи проект", "нова курсова", "новий диплом" або "нова практика"';
-      }
-    }
-    // Команди для ресурсів
-    else if (lowerCommand.includes('знайди') || lowerCommand.includes('шукай') || lowerCommand.includes('пошук')) {
-      const searchQuery = command.replace(/знайди|шукай|пошук|ресурси/gi, '').trim();
-      if (searchQuery) {
-        commandResponse = handleResourcesSearch(searchQuery);
-      } else {
-        commandResponse = 'Що саме знайти? Скажіть "знайди ресурси [запит]"';
-      }
-    }
-    else if (lowerCommand.includes('збережені') || lowerCommand.includes('закладки')) {
-      commandResponse = handleToggleSaved();
-    }
-    else if (lowerCommand.includes('додати ресурс') || lowerCommand.includes('новий ресурс')) {
-      commandResponse = handleAddResource();
-    }
-    // Статус онлайн
-    else if (lowerCommand.includes('статус') || lowerCommand.includes('онлайн') || lowerCommand.includes('офлайн')) {
-      if (lowerCommand.includes('онлайн')) {
-        localStorage.setItem('userStatus', 'online');
-        commandResponse = 'Статус змінено на онлайн';
-      } else if (lowerCommand.includes('офлайн')) {
-        localStorage.setItem('userStatus', 'offline');
-        commandResponse = 'Статус змінено на офлайн';
-      } else {
-        const currentStatus = localStorage.getItem('userStatus') || 'online';
-        commandResponse = `Ваш статус: ${currentStatus === 'online' ? 'онлайн' : 'офлайн'}`;
-      }
-    }
-    else {
-      // Навігаційні команди
-      const { path, name } = findRouteByCommand(command);
       
-      if (path) {
-        commandResponse = `Переходжу до "${name}"`;
-        // Навігація з затримкою для озвучення
-        setTimeout(() => {
-          navigate(path);
-        }, 1500);
-      } else {
-        commandResponse = `Не знайшов розділ "${command}". Скажіть "допомога" для списку команд.`;
-      }
+      setMessages(prev => [...prev, stepMessage]);
+      
+      // Озвучуємо крок туру
+      speakText(
+        `${step.title}. ${step.description}. Крок ${stepIndex + 1} з ${systemTour.length}`,
+        0.8,
+        1
+      );
+
+      tourTimeoutRef.current = setTimeout(() => {
+        goToTourStep(stepIndex + 1);
+      }, step.duration);
+
+    }, 1000);
+  }, [systemTour, location.pathname, navigate, highlightElements, speakText]);
+
+  const endTour = useCallback(() => {
+    setIsTourActive(false);
+    removeHighlights();
+    
+    if (tourTimeoutRef.current) {
+      clearTimeout(tourTimeoutRef.current);
+    }
+    
+    const endMessage: Message = {
+      id: 'tour-end',
+      content: '🎉 **Тур завершено!** Тепер ви знайомі з основними функціями. Для детальнішої інформації питайте мене!',
+      isUser: false,
+      timestamp: new Date()
+    };
+    
+    setMessages(prev => [...prev, endMessage]);
+    speakText('Тур завершено! Тепер ви знайомі з основними функціями. Для детальнішої інформації питайте мене!');
+  }, [removeHighlights, speakText]);
+
+  const cancelTour = useCallback(() => {
+    setIsTourActive(false);
+    removeHighlights();
+    
+    if (tourTimeoutRef.current) {
+      clearTimeout(tourTimeoutRef.current);
+    }
+    
+    const cancelMessage: Message = {
+      id: 'tour-cancel',
+      content: 'Тур скасовано. Якщо потрібна допомога - просто запитайте!',
+      isUser: false,
+      timestamp: new Date()
+    };
+    
+    setMessages(prev => [...prev, cancelMessage]);
+    speakText('Тур скасовано. Якщо потрібна допомога, просто запитайте!');
+  }, [removeHighlights, speakText]);
+
+
+const getAIResponse = async (userMessage: string): Promise<string> => {
+  // Імітація затримки запиту до AI
+  await new Promise(resolve => setTimeout(resolve, 600 + Math.random() * 500));
+  
+  const lowerMessage = userMessage.toLowerCase().trim();
+
+  // === СПЕЦІАЛЬНІ КОМАНДИ (ВИЩИЙ ПРІОРИТЕТ) ===
+  
+  // Тур по системі
+  if (lowerMessage.includes('тур') || lowerMessage.includes('екскурс') || lowerMessage.includes('проведи') || 
+      lowerMessage.includes('ознайом') || lowerMessage.includes('знайомство') || lowerMessage.includes('огляд системи')) {
+    startTour();
+    return 'Запускаю тур по системі! 🚀 Проведу вас по всіх основних розділах платформи та детально розкажу про кожен функціонал. Приготуйтесь до захоплюючої екскурсії!';
+  }
+
+  // === ПРИВІТАННЯ ТА БАЗОВІ КОМАНДИ ===
+  
+  if (lowerMessage.includes('привіт') || lowerMessage.includes('hello') || lowerMessage.includes('hi') || 
+      lowerMessage.includes('доброго дня') || lowerMessage.includes('добрий день') || lowerMessage.includes('вітаю') ||
+      lowerMessage === 'прив' || lowerMessage === 'ку' || lowerMessage === 'йоу') {
+    return `Привіт! 👋 Радий вас бачити! 
+
+Я ваш AI-помічник у системі управління навчальними проектами. Можу:
+• Провести тур по системі 🚀
+• Допомогти з навігацією 🗺️  
+• Відповісти на будь-які питання про функціонал 📚
+• Допомогти з вашими проектами 🎓
+
+Що вас цікавить? Можете просто запитати "Допомога" для повного списку можливостей! 😊`;
+  }
+
+  if (lowerMessage.includes('дякую') || lowerMessage.includes('спасибі') || lowerMessage.includes('thanks') || 
+      lowerMessage.includes('thank you')) {
+    return 'Будь ласка! 😊 Радий, що зміг допомогти. Якщо виникнуть ще питання - просто звертайтесь! Щасливого навчання! 🎓';
+  }
+
+  if (lowerMessage.includes('бувай') || lowerMessage.includes('до побачення') || lowerMessage.includes('пока') || 
+      lowerMessage.includes('goodbye') || lowerMessage.includes('bye')) {
+    return 'До побачення! 👋 Не соромтесь звертатись, якщо знадобиться допомога. Успіхів у навчанні! 🎓';
+  }
+
+  // === ДОПОМОГА ТА ЗАГАЛЬНІ КОМАНДИ ===
+  
+  if (lowerMessage.includes('допомога') || lowerMessage.includes('help') || lowerMessage.includes('що ти вмієш') || 
+      lowerMessage.includes('команди') || lowerMessage === '?' || lowerMessage === 'help' || lowerMessage === 'допоможи') {
+    
+    return `**🎯 ДОСТУПНІ КОМАНДИ ТА МОЖЛИВОСТІ**
+
+**🚀 ШВИДКА НАВІГАЦІЯ:**
+• "Головна" / "Дашборд" - головна панель
+• "Проекти" / "Трекер" - менеджер проектів
+• "Календар" - планування та дедлайни
+• "Чат" - спілкування з керівником
+• "Ресурси" / "Бібліотека" - навчальні матеріали
+• "Аналітика" / "Статистика" - прогрес та звіти
+
+**🎨 ОФОРМЛЕННЯ:**
+• "Світла тема" - класичне світле оформлення
+• "Темна тема" - сучасне темне оформлення
+• "Рожева тема" - творче рожеве оформлення
+• "М'ятна тема" - спокійне зелене оформлення
+
+**📚 ОСНОВНІ ФУНКЦІЇ:**
+• "Як створити проект?" - створення нових робіт
+• "Як планувати час?" - тайм-менеджмент для навчання
+• "Як працює календар?" - управління дедлайнами
+• "Як спілкуватися з керівником?" - комунікація
+• "Де знайти ресурси?" - пошук матеріалів
+
+**🎓 НАВЧАЛЬНІ ПИТАННЯ:**
+• "Як писати дипломну?" - етапи написання
+• "Як готувати курсову?" - структура роботи
+• "Як оформлювати звіт?" - вимоги до оформлення
+• "Як готуватись до захисту?" - підготовка
+
+**🛠️ ТЕХНІЧНІ ПИТАННЯ:**
+• "Навігація" - переміщення по системі
+• "Голосове керування" - використання мікрофона
+• "Експорт даних" - збереження робіт
+• "Сповіщення" - налаштування сповіщень
+
+**💡 ПОРАДИ:**
+• Запитуйте конкретні речі - отримаєте точні відповіді
+• Використовуйте голосовий ввід для швидкості
+• Регулярно перевіряйте календар дедлайнів
+• Зберігайте свої роботи в системі
+
+Не соромтесь експериментувати! Запитайте мене про будь-яку функцію системи! 😊`;
+  }
+
+  // === ЯВНІ НАВІГАЦІЙНІ КОМАНДИ ===
+  
+  if (lowerMessage.includes('перейди в') || lowerMessage.includes('відкрий') || lowerMessage.includes('покажи') || 
+      lowerMessage.includes('перейди до') || lowerMessage.includes('відкрити') || lowerMessage.includes('перейти') ||
+      lowerMessage === 'головна' || lowerMessage === 'проекти' || lowerMessage === 'календар' || 
+      lowerMessage === 'чат' || lowerMessage === 'ресурси' || lowerMessage === 'аналітика' ||
+      lowerMessage === 'дашборд' || lowerMessage === 'трекер' || lowerMessage === 'бібліотека') {
+    
+    if (lowerMessage.includes('головн') || lowerMessage === 'головна' || lowerMessage === 'дашборд') {
+      setTimeout(() => navigate('/dashboard'), 300);
+      return 'Переходжу на головну панель... 🏠 Тут ви побачите загальний прогрес, найближчі дедлайни та швидкий доступ до всіх функцій!';
+    }
+    
+    if (lowerMessage.includes('проект') || lowerMessage === 'проекти' || lowerMessage === 'трекер') {
+      setTimeout(() => navigate('/tracker'), 300);
+      return 'Відкриваю менеджер проектів... 📁 Тут ви керуєте всіма навчальними роботами: дипломними, курсовими та звітами з практики!';
+    }
+    
+    if (lowerMessage.includes('календар') || lowerMessage === 'календар') {
+      setTimeout(() => navigate('/calendar'), 300);
+      return 'Відкриваю календар... 📅 Тут ви плануєте дедлайни, зустрічі та контролюєте всі важливі події!';
+    }
+    
+    if (lowerMessage.includes('ресурс') || lowerMessage === 'ресурси' || lowerMessage === 'бібліотека') {
+      setTimeout(() => navigate('/resources'), 300);
+      return 'Відкриваю бібліотеку ресурсів... 📚 Тут ви знайдете всі необхідні матеріали для успішного навчання!';
+    }
+    
+    if (lowerMessage.includes('аналітик') || lowerMessage === 'аналітика') {
+      setTimeout(() => navigate('/analytics'), 300);
+      return 'Відкриваю аналітику... 📊 Тут ви відстежуєте свій прогрес, продуктивність та отримуєте корисні звіти!';
+    }
+    
+    if (lowerMessage.includes('чат') || lowerMessage === 'чат') {
+      setTimeout(() => navigate('/chat'), 300);
+      return 'Переходжу до чату... 💬 Тут ви спілкуєтесь з науковим керівником, отримуєте feedback та консультації!';
+    }
+  }
+
+  // === КОМАНДИ ТЕМИ ===
+  
+  if (lowerMessage.includes('тема') || lowerMessage.includes('theme') || lowerMessage.includes('оформлення') || 
+      lowerMessage.includes('інтерфейс') || lowerMessage.includes('зовнішній вигляд') || lowerMessage.includes('дизайн')) {
+  
+    if (lowerMessage.includes('світл') || lowerMessage.includes('light') || lowerMessage.includes('біл') || 
+        lowerMessage.includes('day mode') || lowerMessage.includes('day')) {
+      setTheme('light');
+      return 'Увімкнув світлу тему! ☀️ Чіткий контрастний текст, ідеально для роботи при яскравому освітленні та звичайних умовах.';
+    }
+    
+    if (lowerMessage.includes('темн') || lowerMessage.includes('dark') || lowerMessage.includes('нічн') || 
+        lowerMessage.includes('night mode') || lowerMessage.includes('night')) {
+      setTheme('dark');
+      return 'Увімкнув темну тему! 🌙 Зменшене навантаження на очі, економія заряду батареї, ідеально для роботи ввечері та при слабкому освітленні.';
     }
 
-    setResponse(commandResponse);
-    speakResponse(commandResponse);
-  }, [navigate, setTheme, i18n]);
+    if (lowerMessage.includes('рожев') || lowerMessage.includes('rose') || lowerMessage.includes('рожева') || 
+        lowerMessage.includes('pink')) {
+      setTheme('rose');
+      return 'Увімкнув рожеву тему! 🌸 Затишна творча атмосфера, надихає на креативність та роботу над творчими проектами.';
+    }
 
-  const speakResponse = (text: string) => {
-    if ('speechSynthesis' in window) {
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = i18n.language === 'ua' ? 'uk-UA' : 'en-US';
-      utterance.rate = 0.8;
-      window.speechSynthesis.speak(utterance);
+    if (lowerMessage.includes('мятн') || lowerMessage.includes('mint') || lowerMessage.includes('м\'ятн') || 
+        lowerMessage.includes('зелен') || lowerMessage.includes('green')) {
+      setTheme('mint');
+      return 'Увімкнув м\'ятну тему! 🌿 Спокійне оформлення, сприяє концентрації уваги, ідеально для тривалої роботи та навчання.';
+    }
+
+    // Загальне питання про теми
+    return `**Доступні теми оформлення:**
+
+🎨 **Світла тема** - класичне оформлення
+• Команда: "Світла тема" або "Увімкнути світлу тему"
+• Ідеально для: денної роботи, чіткого тексту
+
+🌙 **Темна тема** - сучасне оформлення  
+• Команда: "Темна тема" або "Увімкнути темну тему"
+• Ідеально для: вечірньої роботи, зменшення навантаження на очі
+
+🌸 **Рожева тема** - творче оформлення
+• Команда: "Рожева тема" або "Увімкнути рожеву тему"
+• Ідеально для: креативних проектів, натхнення
+
+🌿 **М'ятна тема** - спокійне оформлення
+• Команда: "М'ятна тема" або "Увімкнути м'ятну тему"
+• Ідеально для: концентрації, тривалої роботи
+
+💡 **Просто скажіть назву бажаної теми!**`;
+  }
+
+  // Прості команди тем
+  if (lowerMessage === 'світла' || lowerMessage === 'light') {
+    setTheme('light');
+    return 'Увімкнув світлу тему! ☀️';
+  }
+  if (lowerMessage === 'темна' || lowerMessage === 'dark') {
+    setTheme('dark');
+    return 'Увімкнув темну тему! 🌙';
+  }
+  if (lowerMessage === 'рожева' || lowerMessage === 'rose') {
+    setTheme('rose');
+    return 'Увімкнув рожеву тему! 🌸';
+  }
+  if (lowerMessage === 'м\'ятна' || lowerMessage === 'мятна' || lowerMessage === 'mint') {
+    setTheme('mint');
+    return 'Увімкнув м\'ятну тему! 🌿';
+  }
+
+  // === НАВІГАЦІЯ ТА ІНТЕРФЕЙС ===
+  
+  if (lowerMessage.includes('навігація') || lowerMessage.includes('навігувати') || 
+      lowerMessage.includes('швидко переходити') || lowerMessage.includes('перехід між розділами') ||
+      lowerMessage.includes('як переходити') || lowerMessage.includes('меню навігації') ||
+      lowerMessage.includes('швидка навігація') || lowerMessage.includes('переміщення по системі') ||
+      lowerMessage.includes('як переміщуватися') || lowerMessage.includes('орієнтування в системі')) {
+  
+    return `**🗺️ ШВИДКА НАВІГАЦІЯ ПО СИСТЕМІ**
+
+**🚀 СПОСОБИ ШВИДКОГО ПЕРЕМІЩЕННЯ:**
+
+1. **ГОЛОСОВІ КОМАНДИ (найшвидший спосіб):**
+   • "Перейди в [назва розділу]" - основний спосіб
+   • "Відкрий [назва розділу]" - альтернатива
+   • "Покажи [назва розділу]" - додатковий варіант
+
+2. **ОСНОВНІ РОЗДІЛИ ДЛЯ ПЕРЕХОДУ:**
+   • "Головна" / "Дашборд" - центральна панель
+   • "Проекти" / "Трекер" - управління роботами
+   • "Календар" - планування та дедлайни
+   • "Чат" - комунікація з керівником
+   • "Ресурси" / "Бібліотека" - матеріали
+   • "Аналітика" - статистика та звіти
+
+3. **ВІЗУАЛЬНА НАВІГАЦІЯ:**
+   • **Бокове меню** - постійний доступ до всіх розділів
+   • **Верхня панель** - пошук та швидкі дії
+   • **Хлібні крихти** - орієнтація в глибині системи
+   • **Іконки** - візуальне розпізнавання функцій
+
+4. **ПОШУК ПО СИСТЕМІ:**
+   • Швидкий пошук функцій та розділів
+   • Автодоповнення запитів
+   • Перехід до знайдених елементів
+
+**🎯 ЕФЕКТИВНІ СТРАТЕГІЇ:**
+• Використовуйте голос для максимальної швидкості
+• Запам'ятайте улюблені розділи
+• Користуйтеся пошуком для складних завдань
+• Використовуйте бокове меню для огляду всіх можливостей
+
+**💡 ПРИКЛАДИ КОМАНД:**
+• "Перейди в проекти" → відкриває менеджер проектів
+• "Відкрий календар" → перехід до планувальника
+• "Покажи ресурси" → відкриває бібліотеку
+
+Спробуйте зараз сказати "Перейди в проекти" для миттєвого переходу!`;
+  }
+
+  // === ПРОЕКТИ ТА РОБОТИ ===
+  
+  if (lowerMessage.includes('проект') || lowerMessage.includes('робот') || lowerMessage.includes('трекер') ||
+      lowerMessage.includes('завдання') || lowerMessage.includes('задача')) {
+    
+    // Створення проекту
+    if (lowerMessage.includes('створити') || lowerMessage.includes('новий') || lowerMessage.includes('додати') ||
+        lowerMessage.includes('як почати') || lowerMessage.includes('почати проект')) {
+      return `**📝 СТВОРЕННЯ НОВОГО ПРОЕКТУ**
+
+**🎯 КРОКИ СТВОРЕННЯ:**
+
+1. **Перейдіть у розділ "Проекти"**
+2. **Натисніть "Створити проект"**
+3. **Оберіть тип проекту:**
+   - 🎓 **Дипломна робота** (бакалавр/магістр)
+   - 📚 **Курсова робота** (семестрова)
+   - 💼 **Звіт з практики** (виробнича/переддипломна)
+   - 🔬 **Наукове дослідження** (індивідуальний проект)
+
+4. **Заповніть основну інформацію:**
+   - Назва проекту (зрозуміла та описова)
+   - Опис та цілі (детальні цілі роботи)
+   - Дедлайни по етапах (реальні терміни)
+   - Науковий керівник (оберіть зі списку)
+   - Додаткові параметри (за потребою)
+
+5. **Створіть структуру роботи:**
+   - Додайте розділи та підрозділи
+   - Встановіть пріоритети завдань
+   - Розподіліть дедлайни по етапах
+
+**💡 КОРИСНІ ПОРАДИ:**
+• Починайте з чіткого плану роботи
+• Встановлюйте реальні дедлайни
+• Одразу призначайте керівника
+• Використовуйте шаблони з розділу "Ресурси"
+
+**🛠️ ЩО ДАЛІ:**
+Після створення ви зможете:
+• Відстежувати прогрес по розділах
+• Додавати файли та матеріали
+• Спілкуватися з керівником
+• Контролювати дедлайни
+• Генерувати звіти
+
+**Готові почати? Перейдіть у "Проекти" та створіть ваш перший проект! 🚀**`;
+    }
+
+    // Загальна інформація про проекти
+    return `**📁 МЕНЕДЖЕР ПРОЕКТІВ**
+
+**🎯 ОСНОВНІ МОЖЛИВОСТІ:**
+
+• **Створення проектів** - дипломні, курсові, звіти
+• **Відстеження прогресу** - візуалізація виконання
+• **Управління файлами** - зручне зберігання матеріалів
+• **Контроль дедлайнів** - своєчасне виконання
+• **Співпраця** - робота з керівником
+
+**📊 ТИПИ ПРОЕКТІВ:**
+• **Дипломні роботи** - бакалаврські, магістерські
+• **Курсові роботи** - семестрові проекти
+• **Звіти з практики** - виробничі, переддипломні
+• **Наукові дослідження** - індивідуальні проекти
+
+**🛠️ ІНСТРУМЕНТИ:**
+• Прогрес-бар виконання
+• Система коментарів та нотаток
+• Шаблони документів
+• Інтеграція з календарем
+• Експорт у різні формати
+
+**💡 ЩО РОБИТИ:**
+• Створюйте нові проекти для кожної роботи
+• Робіть регулярні оновлення прогресу
+• Використовуйте всі доступні інструменти
+• Не забувайте про дедлайни
+
+**Для роботи з проектами перейдіть у відповідний розділ! 📁**`;
+  }
+
+  // === ДИПЛОМНІ ТА КУРСОВІ РОБОТИ ===
+  
+  if (lowerMessage.includes('диплом') || lowerMessage.includes('дипломна') || lowerMessage.includes('магістерська') ||
+      lowerMessage.includes('бакалаврська') || lowerMessage.includes('випускна')) {
+    
+    return `**🎓 ДИПЛОМНА РОБОТА: ПОВНИЙ ГАЙД**
+
+**📚 ЕТАПИ НАПИСАННЯ ДИПЛОМНОЇ:**
+
+1. **🔄 ПІДГОТОВЧИЙ ЕТАП (2-3 тижні):**
+   • Вибір та узгодження теми з керівником
+   • Складання детального плану роботи
+   • Підбір літературних джерел та джерел
+   • Розробка методології дослідження
+
+2. **📖 ТЕОРЕТИЧНА ЧАСТИНА (3-4 тижні):**
+   • Аналіз існуючих досліджень по темі
+   • Формулювання мети, завдань та гіпотез
+   • Розробка теоретичної бази дослідження
+   • Написання огляду літератури
+
+3. **🔬 ПРАКТИЧНА ЧАСТИНА (3-4 тижні):**
+   • Проведення експерименту чи дослідження
+   • Збір та систематизація даних
+   • Аналіз отриманих результатів
+   • Формулювання висновків та рекомендацій
+
+4. **✍️ ЗАВЕРШАЛЬНИЙ ЕТАП (2 тижні):**
+   • Оформлення роботи згідно з вимогами
+   • Підготовка презентації для захисту
+   • Написання автореферату
+   • Підготовка до публічного виступу
+
+**🛠️ ІНСТРУМЕНТИ СИСТЕМИ ДЛЯ ДИПЛОМНОЇ:**
+
+• **📅 Календар** - контроль всіх дедлайнів
+• **📁 Проект** - структурування роботи на розділи
+• **💬 Чат** - постійний зв'язок з керівником
+• **📚 Ресурси** - шаблони, стандарти, приклади
+• **📊 Аналітика** - відстеження прогресу
+
+**💡 КРИТИЧНО ВАЖЛИВО:**
+• Починайте заздалегідь (за 4-6 місяців)
+• Регулярно консультуйтесь з керівником
+• Дотримуйтесь графіка роботи
+• Зберігайте всі проміжні версії
+• Тестуйте презентацію перед захистом
+
+**🚀 ПОЧНІТЬ ПРАЦЮВАТИ:**
+Створіть проект "Дипломна робота" у розділі "Проекти" та почніть планування!`;
+  }
+
+  if (lowerMessage.includes('курсов') || lowerMessage.includes('курсова') || lowerMessage.includes('семестров')) {
+    return `**📚 КУРСОВА РОБОТА: ЕФЕКТИВНИЙ ПІДХІД**
+
+**🎯 СТРУКТУРА КУРСОВОЇ РОБОТИ:**
+
+1. **Титульна сторінка** - формальні дані
+2. **Зміст** - структура роботи
+3. **Вступ** (1-2 сторінки):
+   • Актуальність теми
+   • Мета та завдання дослідження
+   • Об'єкт та предмет дослідження
+
+4. **Основна частина** (15-25 сторінок):
+   • Теоретичний розділ (огляд літератури)
+   • Практичний розділ (власне дослідження)
+   • Аналіз результатів
+
+5. **Висновки** (1-2 сторінки) - підсумки роботи
+6. **Список використаних джерел** - бібліографія
+7. **Додатки** (за потребою) - додаткові матеріали
+
+**⏱️ ТИПОВИЙ ГРАФІК ВИКОНАННЯ:**
+• Тиждень 1: Вибір теми, план, література
+• Тиждень 2-3: Теоретична частина
+• Тиждень 4-5: Практична частина
+• Тиждень 6: Оформлення, коректура
+
+**💡 ПОРАДИ ДЛЯ УСПІХУ:**
+• Оберіть тему, що вас цікавить
+• Узгодьте план з керівником на початку
+• Використовуйте актуальні джерела
+• Дотримуйтесь вимог до оформлення
+• Перевіряйте унікальність тексту
+
+**Створюйте проект "Курсова робота" та почніть роботу вже сьогодні! 📝**`;
+  }
+
+  // === ПЛАНУВАННЯ ЧАСУ ТА ТАЙМ-МЕНЕДЖМЕНТ ===
+  
+  if (lowerMessage.includes('планування часу') || lowerMessage.includes('планувати час') || 
+      lowerMessage.includes('тайм менеджмент') || lowerMessage.includes('ефективно планувати') ||
+      lowerMessage.includes('організація часу') || lowerMessage.includes('графік роботи') ||
+      lowerMessage.includes('розпорядок дня') || lowerMessage.includes('тайм-менеджмент') ||
+      lowerMessage.includes('time management')) {
+    
+    return `**⏰ ЕФЕКТИВНЕ ПЛАНУВАННЯ ЧАСУ ДЛЯ СТУДЕНТА**
+
+**🎯 СТРАТЕГІЇ ПЛАНУВАННЯ:**
+
+1. **📅 ДОВГОСТРОКОВЕ ПЛАНУВАННЯ:**
+   • Розбиття навчального семестру на періоди
+   • Визначення ключових дедлайнів
+   • Планування сесії заздалегідь
+   • Розподіл навантаження по місяцях
+
+2. **📝 СЕРЕДНЬОСТРОКОВЕ ПЛАНУВАННЯ:**
+   • Планування на тиждень вперед
+   • Виділення часових блоків для різних предметів
+   • Врахування занять, роботи, відпочинку
+   • Гнучкий графік з резервом часу
+
+3. **🔄 ЩОДЕННЕ ПЛАНУВАННЯ:**
+   • Список завдань на день
+   • Пріоритети (важливе/термінове)
+   • Часові блоки по 45-90 хвилин
+   • Обов'язкові перерви
+
+**🛠️ ІНСТРУМЕНТИ СИСТЕМИ ДЛЯ ПЛАНУВАННЯ:**
+
+• **📅 Календар** - майстер-план всіх подій
+• **⏱️ Таймери** - контроль часу виконання
+• **📊 Аналітика** - аналіз вашої продуктивності
+• **🔔 Нагадування** - своєчасні сповіщення
+
+**💡 ПЕРЕВІРЕНІ МЕТОДИКИ:**
+
+**🍅 Техніка Pomodoro:**
+• 25 хвилин роботи + 5 хвилин перерви
+• Після 4 циклів - довга перерва (15-30 хв)
+• Ідеально для концентрації
+
+**📋 Матриця Ейзенхауера:**
+• Важливе та термінове - робити відразу
+• Важливе, але не термінове - планувати
+• Термінове, але не важливе - делегувати
+• Не важливе та не термінове - виключати
+
+**🎯 SMART-цілі:**
+• Конкретні (Specific)
+• Вимірювані (Measurable)
+• Досяжні (Achievable)
+• Релевантні (Relevant)
+• Обмежені в часі (Time-bound)
+
+**🚀 ПОЧАТИ ПЛАНУВАННЯ:**
+Перейдіть у "Календар" та створіть ваш перший детальний план на тиждень!`;
+  }
+
+  // === КАЛЕНДАР ТА ДЕДЛАЙНИ ===
+  
+  if (lowerMessage.includes('календар') || lowerMessage.includes('deadline') || lowerMessage.includes('дедлайн') || 
+      lowerMessage.includes('термін') || lowerMessage.includes('встигнути') || lowerMessage.includes('планувальник')) {
+    
+        return `**📅 КАЛЕНДАР ТА УПРАВЛІННЯ ДЕДЛАЙНАМИ**
+
+**🎯 ОСНОВНІ МОЖЛИВОСТІ КАЛЕНДАРЯ:**
+
+• **📅 Перегляд подій** - день, тиждень, місяць, рік
+• **⏰ Створення подій** - навчання, робота, особисте
+• **🔔 Нагадування** - email, push-сповіщення
+• **🎯 Пріоритети** - кольорове кодування завдань
+• **📊 Аналітика** - статистика виконання
+
+**🛠️ ЯК КОРИСТУВАТИСЯ КАЛЕНДАРЕМ:**
+
+1. **СТВОРЕННЯ ПОДІЇ:**
+   • Натисніть "Додати подію"
+   • Заповніть назву, опис, час
+   • Встановіть пріоритет (високий, середній, низький)
+   • Додайте нагадування (за 1 день, 1 тиждень)
+
+2. **ТИПИ ПОДІЙ:**
+   • 🎓 Навчальні (лекції, семінари, консультації)
+   • 📝 Академічні (дедлайни робіт, захисти)
+   • 💼 Особисті (зустрічі, відпочинок)
+   • 🔄 Повторювані (регулярні заняття)
+
+3. **ІНТЕГРАЦІЯ З ПРОЕКТАМИ:**
+   • Автоматичні дедлайни з проектів
+   • Прогрес виконання завдань
+   • Синхронізація даних
+
+**💡 СТРАТЕГІЇ РОБОТИ З ДЕДЛАЙНАМИ:**
+
+**📋 Пріоритетизація:**
+• Критичні дедлайни (червоний)
+• Важливі завдання (жовтий)  
+• Звичайні завдання (зелений)
+• Довгострокові цілі (синій)
+
+**⏱️ Правило 1-3-5:**
+• 1 велике завдання на день
+• 3 середніх завдання
+• 5 дрібних завдання
+
+**🛡️ Запас часу:**
+• +20% до очікуваного часу
+• Буфер для непередбачених обставин
+• Час на перевірку та коректуру
+
+**🚀 ПОЧАТИ РОБОТУ:**
+Перейдіть у "Календар" та запланіть ваш тиждень! Почніть з найважливіших дедлайнів та додайте час для відпочинку.`;
+  }
+
+  // === ЧАТ З КЕРІВНИКОМ ===
+  
+  if (lowerMessage.includes('керівник') || lowerMessage.includes('викладач') || lowerMessage.includes('ментор') || 
+      lowerMessage.includes('науковий') || lowerMessage.includes('куратор') || lowerMessage.includes('супервізор') ||
+      lowerMessage.includes('консультація') || lowerMessage.includes('консультації')) {
+    
+    return `**💬 ЧАТ З НАУКОВИМ КЕРІВНИКОМ**
+
+**🎯 МОЖЛИВОСТІ ЧАТУ:**
+
+• **💬 Миттєві повідомлення** - швидкий обмін думками
+• **📎 Обмін файлами** - чернетки, матеріали, виправлення
+• **📅 Планування зустрічей** - організація консультацій
+• **🔔 Сповіщення** - оперативна інформація про нові повідомлення
+• **📊 Історія листування** - архів всіх обговорень
+
+**🛠️ ЯК ЕФЕКТИВНО СПІЛКУВАТИСЯ:**
+
+1. **ПІДГОТОВКА ДО КОНСУЛЬТАЦІЇ:**
+   • Підготуйте список питань заздалегідь
+   • Надішліть матеріали за 1-2 дні
+   • Чітко сформулюйте проблеми
+   • Запропонуйте варіанти рішень
+
+2. **ФОРМАТИ СПІЛКУВАННЯ:**
+   • **Експрес-консультації** - швидкі питання
+   • **Детальні обговорення** - складні теми
+   • **Перевірка робіт** - feedback по текстам
+   • **Планування** - обговорення наступних кроків
+
+3. **ЕТИКЕТ СПІЛКУВАННЯ:**
+   • Ввічливе звернення
+   • Чіткі та конкретні питання
+   • Пунктуальність у відповідях
+   • Подяка за допомогу
+
+**💡 ПОРАДИ ДЛЯ ЕФЕКТИВНОЇ СПІВПРАЦІ:**
+
+**📝 Підготовка матеріалів:**
+• Наділяйте чітко названі файли
+• Використовуйте коментарі для пояснень
+• Зберігайте всі версії документів
+• Вказуйте конкретні місця для перевірки
+
+**⏰ Таймінг консультацій:**
+• Регулярність (1-2 рази на тиждень)
+• Оптимальна тривалість (30-60 хвилин)
+• Кращі години (коли обидва найбільш продуктивні)
+• Підготовка до кожної зустрічі
+
+**🎯 Ефективність:**
+• Фіксуйте всі рекомендації
+• Ставте конкретні завдання
+• Відстежуйте виконання
+• Звітуйте про прогрес
+
+**🚀 ПОЧАТИ СПІЛКУВАННЯ:**
+Перейдіть у "Чат", оберіть вашого керівника та надішліть перше повідомлення!`;
+  }
+
+  // === РЕСУРСИ ТА БІБЛІОТЕКА ===
+  
+  if (lowerMessage.includes('ресурс') || lowerMessage.includes('матеріал') || lowerMessage.includes('література') || 
+      lowerMessage.includes('джерело') || lowerMessage.includes('книг') || lowerMessage.includes('бібліотека') ||
+      lowerMessage.includes('статт') || lowerMessage.includes('підручник') || lowerMessage.includes('шаблон')) {
+    
+    return `**📚 БІБЛІОТЕКА РЕСУРСІВ**
+
+**🎯 КАТЕГОРІЇ МАТЕРІАЛІВ:**
+
+1. **📖 НАВЧАЛЬНА ЛІТЕРАТУРА:**
+   • Підручники та посібники
+   • Конспекти лекцій
+   • Методичні вказівки
+   • Навчальні плани
+
+2. **🔬 НАУКОВІ МАТЕРІАЛИ:**
+   • Наукові статті та дослідження
+   • Монографії
+   • Збірники конференцій
+   • Дисертації
+
+3. **🎨 ШАБЛОНИ ТА ФОРМИ:**
+   • Шаблони оформлення робіт
+   • Форми звітності
+   • Приклади успішних робіт
+   • Бланки документів
+
+4. **🛠️ ІНСТРУМЕНТИ:**
+   • Програмне забезпечення
+   • Онлайн-інструменти
+   • Корисні посилання
+   • Бази даних
+
+**🔍 ПОШУК ТА ФІЛЬТРАЦІЯ:**
+
+• **📝 Текстовий пошук** - за ключовими словами
+• **📂 Фільтрація** - за категоріями, типами, мовами
+• **⭐ Рейтинг** - популярність матеріалів
+• **🕒 Сортування** - за датою, релевантністю
+
+**💡 ЯК ЕФЕКТИВНО ВИКОРИСТОВУВАТИ:**
+
+**📋 Пошук інформації:**
+• Використовуйте конкретні ключові слова
+• Комбінуйте фільтри для точного результату
+• Зберігайте корисні матеріали в обране
+• Створюйте особисті колекції
+
+**📝 Робота з джерелами:**
+• Перевіряйте актуальність інформації
+• Аналізуйте бібліографію
+• Використовуйте кілька джерел
+• Вейте конспекти
+
+**🚀 ДОДАВАННЯ ВЛАСНИХ МАТЕРІАЛІВ:**
+• Завантажуйте корисні ресурси
+• Діліться власними напрацюваннями
+• Додавайте описи та теги
+• Оцінюйте матеріали інших
+
+**🎯 ПОЧАТИ РОБОТУ:**
+Перейдіть у "Ресурси" та знайдіть матеріали для вашого проекту!`;
+  }
+
+  // === АНАЛІТИКА ТА ЗВІТИ ===
+  
+  if (lowerMessage.includes('анал') || lowerMessage.includes('статистик') || lowerMessage.includes('прогрес') || 
+      lowerMessage.includes('звіт') || lowerMessage.includes('продуктивність') || lowerMessage.includes('метрики') ||
+      lowerMessage.includes('результати') || lowerMessage.includes('ефективність')) {
+    
+    return `**📊 АНАЛІТИКА ТА ЗВІТИ**
+
+**🎯 ЩО ВІДСТЕЖУЄ СИСТЕМА:**
+
+1. **📈 ПРОГРЕС ПРОЕКТІВ:**
+   • Відсоток виконання кожного проекту
+   • Прогрес по розділах та завданнях
+   • Порівняння з запланованими термінами
+   • Тенденції виконання
+
+2. **⏱️ ПРОДУКТИВНІСТЬ:**
+   • Витрачений час на проекти
+   • Активність по днях та тижнях
+   • Ефективність роботи
+   • Аналітика використання часу
+
+3. **📚 НАВЧАЛЬНА ДІЯЛЬНІСТЬ:**
+   • Кількість виконаних завдань
+   • Успішність виконання
+   • Завантаженість по періодах
+   • Баланс навчання та відпочинку
+
+**📋 ТИПИ ЗВІТІВ:**
+
+• **📅 Щоденні звіти** - активність за день
+• **📊 Тижневі огляди** - підсумки тижня
+• **📈 Місячна статистика** - довгострокові тенденції
+• **🎯 Проектні звіти** - детальна інформація по проектах
+
+**💡 ЯК ВИКОРИСТОВУВАТИ АНАЛІТИКУ:**
+
+**📊 Аналіз продуктивності:**
+• Визначайте найефективніші години роботи
+• Аналізуйте фактори, що впливають на продуктивність
+• Виявляйте "вузькі місця" у роботі
+• Коригуйте плани на основі даних
+
+**🎯 Планування покращень:**
+• Ставте реальні цілі на основі статистики
+• Оптимізуйте розподіл часу
+• Вдосконалюйте методи роботи
+• Відстежуйте прогрес удосконалень
+
+**🚀 ЕКСПОРТ ТА СПІЛЬНИЙ ДОСТУП:**
+• Експорт звітів у PDF, Excel
+• Спільний доступ з керівником
+• Автоматичні звіти по розкладу
+• Інтеграція з іншими інструментами
+
+**🎯 ПОЧАТИ АНАЛІЗ:**
+Перейдіть у "Аналітика" та перегляньте вашу статистику за поточний місяць!`;
+  }
+
+  // === ТЕХНІЧНІ ПИТАННЯ ===
+  
+  if (lowerMessage.includes('голосове') || lowerMessage.includes('мікрофон') || lowerMessage.includes('розпізнавання мови') ||
+      lowerMessage.includes('голосовий ввід') || lowerMessage.includes('говор') || lowerMessage.includes('озвуч')) {
+    
+    return `**🎤 ГОЛОСОВЕ КЕРУВАННЯ**
+
+**🎯 МОЖЛИВОСТІ ГОЛОСОВОГО ВВОДУ:**
+
+• **💬 Швидкий ввід текстів** - диктування повідомлень
+• **🚀 Навігація по системі** - голосові команди
+• **📝 Створення завдань** - швидке додавання справ
+• **🔍 Пошук інформації** - голосові запити
+
+**🛠️ ЯК КОРИСТУВАТИСЯ:**
+
+1. **НАЛАШТУВАННЯ:**
+   • Дозвольте доступ до мікрофона в браузері
+   • Оберіть мову розпізнавання (українська)
+   • Навчіть систему розпізнавати ваш голос
+   • Налаштуйте чутливість
+
+2. **ОСНОВНІ КОМАНДИ:**
+   • "Створити проект [назва]" - новий проект
+   • "Додати завдання [текст]" - нове завдання
+   • "Перейди в [розділ]" - навігація
+   • "Пошук [запит]" - пошук інформації
+
+3. **ПРАКТИЧНІ ПОРАДИ:**
+   • Говоріть чітко та природно
+   • Використовуйте паузи між командами
+   • Перевіряйте розпізнаний текст
+   • Користуйтеся в тихому середовищі
+
+**💡 ПЕРЕВАГИ ГОЛОСОВОГО КЕРУВАННЯ:**
+
+• **⚡ Швидкість** - швидше за клавіатурний ввід
+• **🎯 Зручність** - можливість працювати без рук
+• **📝 Точність** - менше помилок при наборі
+• **🔄 Ефективність** - паралельне виконання завдань
+
+**🚀 СПРОБУВАТИ:**
+Натисніть кнопку мікрофона та скажіть "Перейди в проекти"!`;
+  }
+
+  if (lowerMessage.includes('експорт') || lowerMessage.includes('зберегти') || lowerMessage.includes('завантажити') ||
+      lowerMessage.includes('друк') || lowerMessage.includes('pdf') || lowerMessage.includes('backup')) {
+    
+    return `**💾 ЕКСПОРТ ТА ЗБЕРЕЖЕННЯ ДАНИХ**
+
+**🎯 ФОРМАТИ ЕКСПОРТУ:**
+
+1. **📄 ДОКУМЕНТИ:**
+   • PDF - для друку та офіційних документів
+   • DOCX - для подальшого редагування
+   • TXT - простий текст
+   • HTML - веб-версія
+
+2. **📊 ДАНІ:**
+   • Excel (XLSX) - таблиці та аналітика
+   • CSV - універсальний формат даних
+   • JSON - для програмного використання
+   • XML - структуровані дані
+
+3. **🖼️ МУЛЬТИМЕДІА:**
+   • Зображення (PNG, JPG) - графіки, діаграми
+   • Презентації - для захистів
+   • Архіви - повні проекти
+
+**🛠️ ЯК ЕКСПОРТУВАТИ:**
+
+**📋 Проекти та роботи:**
+• Виберіть проект у менеджері проектів
+• Натисніть "Експорт"
+• Оберіть формат експорту
+• Завантажте файл
+
+**📊 Звіти та аналітика:**
+• Перейдіть у розділ "Аналітика"
+• Оберіть період для звіту
+• Натисніть "Згенерувати звіт"
+• Експортуйте у потрібному форматі
+
+**💡 ПОРАДИ:**
+
+**🔒 Резервне копіювання:**
+• Регулярно експортуйте важливі дані
+• Зберігайте копії на різних носіях
+• Архівуйте завершені проекти
+• Використовуйте хмарні сховища
+
+**📁 Організація файлів:**
+• Створюйте зрозумілі назви файлів
+• Використовуйте папки за проектами
+• Додавайте дати до назв файлів
+• Вейте інвентар архівів
+
+**🚀 ЕКСПОРТУВАТИ ЗАРАЗ:**
+Перейдіть у будь-який розділ та знайдіть кнопку "Експорт"!`;
+  }
+
+  // === НАВЧАЛЬНІ ПИТАННЯ ТА МЕТОДИКИ ===
+  
+  if (lowerMessage.includes('метод') || lowerMessage.includes('технік') || lowerMessage.includes('як вчити') ||
+      lowerMessage.includes('як запам') || lowerMessage.includes('ефективне навчання') || lowerMessage.includes('study')) {
+    
+    return `**🎓 ЕФЕКТИВНІ МЕТОДИ НАВЧАННЯ**
+
+**🎯 ПЕРЕВІРЕНІ МЕТОДИКИ:**
+
+1. **🔄 ІНТЕРВАЛЬНЕ ПОВТОРЕННЯ:**
+   • Повторення матеріалу через зростаючі інтервали
+   • Оптимальні інтервали: 1 день, 3 дні, 1 тиждень, 2 тижні
+   • Ефективно для довготривалої пам'яті
+   • Використовуйте картки для повторення
+
+2. **🔗 МНЕМОТЕХНІКИ:**
+   • Асоціації - зв'язування нової інформації з відомою
+   • Акроніми - створення скорочень
+   • Метод віршів - римовані правила
+   • Метод локусів - "палац пам'яті"
+
+3. **📝 КОНСПЕКТУВАННЯ:**
+   • Метод Корнелла - розділення сторінки на зони
+   • Ментальні мапи - візуальне представлення
+   • Схеми та діаграми - графічне структурування
+   • Кольорове кодування - візуальна організація
+
+**💡 ПРАКТИЧНІ ПОРАДИ:**
+
+**⏰ Організація часу:**
+• Навчайтесь короткими сесіями (25-45 хвилин)
+• Робіть регулярні перерви
+• Використовуйте ранкові години для складних тем
+• Повторюйте матеріал перед сном
+
+**🎯 Активне навчання:**
+• Пояснюйте матеріал іншим
+• Створюйте власні приклади
+• Вирішуйте практичні завдання
+• Бережіть участь у дискусіях
+
+**🛠️ ІНСТРУМЕНТИ СИСТЕМИ ДЛЯ НАВЧАННЯ:**
+
+• **📅 Календар** - планування навчальних сесій
+• **📚 Ресурси** - доступ до навчальних матеріалів
+• **📊 Аналітика** - відстеження прогресу
+• **💬 Чат** - обговорення з одногрупниками
+
+**🚀 ПОЧАТИ ЕФЕКТИВНЕ НАВЧАННЯ:**
+Створіть план навчання у календарі та почніть впроваджувати нові методики!`;
+  }
+
+  if (lowerMessage.includes('захист') || lowerMessage.includes('презентація') || lowerMessage.includes('публічний виступ') ||
+      lowerMessage.includes('доповідь') || lowerMessage.includes('виступ')) {
+    
+    return `**🎤 ПІДГОТОВКА ДО ЗАХИСТУ РОБОТИ**
+
+**🎯 ЕТАПИ ПІДГОТОВКИ:**
+
+1. **📝 ПІДГОТОВКА ТЕКСТУ ВИСТУПУ:**
+   • Структура: вступ, основна частина, висновки
+   • Тривалість: 7-10 хвилин для дипломної
+   • Ключові моменти: актуальність, мета, результати
+   • Репетиції: відпрацювання вимови та темпу
+
+2. **🖼️ СТВОРЕННЯ ПРЕЗЕНТАЦІЇ:**
+   • Оптимальна кількість слайдів: 10-15
+   • Структура: титульний, актуальність, мета, методи, результати, висновки
+   • Візуалізація: графіки, діаграми, схеми
+   • Дизайн: професійний, не відволікаючий
+
+3. **🎭 ПІДГОТОВКА ДО ВИСТУПУ:**
+   • Відпрацювання відповідей на питання
+   • Психологічна підготовка
+   • Технічна підготовка (обладнання)
+   • План Б на випадок проблем
+
+**💡 ПОРАДИ ДЛЯ УСПІШНОГО ЗАХИСТУ:**
+
+**🗣️ Техніка виступу:**
+• Чітка вимова та акуратна мова
+• Контакт з аудиторією
+• Впевнена поза та жести
+• Контроль часу виступу
+
+**📊 Робота з презентацією:**
+• Не читайте зі слайдів
+• Використовуйте слайди як план
+• Зосередьтесь на ключових моментах
+• Підготуйте роздаткові матеріали
+
+**❓ Відповіді на питання:**
+• Уважно слухайте питання
+• Давайте чіткі та конкретні відповіді
+• Не бійтеся сказати "не знаю"
+• Використовуйте питання для підкреслення важливості роботи
+
+**🛠️ ІНСТРУМЕНТИ СИСТЕМИ:**
+
+• **📁 Проекти** - зберігання всіх матеріалів
+• **📚 Ресурси** - шаблони презентацій
+• **💬 Чат** - консультації з керівником
+• **📅 Календар** - планування підготовки
+
+**🚀 ПОЧАТИ ПІДГОТОВКУ:**
+Створіть проект "Підготовка до захисту" та почніть планування за 2-3 тижні до захисту!`;
+  }
+
+  // === ПРОБЛЕМИ ТА ВИРІШЕННЯ ===
+  
+  if (lowerMessage.includes('проблем') || lowerMessage.includes('складно') || lowerMessage.includes('не виходить') ||
+      lowerMessage.includes('затримк') || lowerMessage.includes('труднощі') || lowerMessage.includes('не встигаю') ||
+      lowerMessage.includes('пропустив') || lowerMessage.includes('запізнен')) {
+    
+    return `**🆘 ВИРІШЕННЯ ПРОБЛЕМ У НАВЧАННІ**
+
+**🎯 ТИПОВІ ПРОБЛЕМИ ТА РІШЕННЯ:**
+
+1. **⏰ ПРОБЛЕМИ З ЧАСОМ:**
+   • **Симптоми:** постійні запізнення, невстигання
+   • **Рішення:** ретельне планування, буфери часу
+   • **Інструменти:** календар, пріоритетизація
+
+2. **📚 СКЛАДНОСТІ З МАТЕРІАЛОМ:**
+   • **Симптоми:** не розуміння теми, низькі результати
+   • **Рішення:** додаткові джерела, консультації
+   • **Інструменти:** ресурси, чат з керівником
+
+3. **😫 ЕМОЦІЙНІ СКЛАДНОСТІ:**
+   • **Симптоми:** стрес, вигорання, прокрастинація
+   • **Рішення:** баланс навантаження, відпочинок
+   • **Інструменти:** аналітика продуктивності
+
+4. **🛠️ ТЕХНІЧНІ ПРОБЛЕМИ:**
+   • **Симптоми:** проблеми з доступом, втрата даних
+   • **Рішення:** резервне копіювання, техпідтримка
+   • **Інструменти:** експорт даних, налаштування
+
+**💡 ПРАКТИЧНІ КРОКИ:**
+
+**📋 Аналіз проблеми:**
+• Чітко сформулюйте, що саме не виходить
+• Визначте, коли почалася проблема
+• Проаналізуйте, що вже пробували
+• Визначте, які ресурси потрібні
+
+**🎯 Створення плану вирішення:**
+• Розбийте велику проблему на дрібні завдання
+• Встановіть реальні терміни
+• Визначте критерії успіху
+• Підготуйте альтернативні варіанти
+
+**🔄 Моніторинг прогресу:**
+• Регулярно перевіряйте виконання плану
+• Коригуйте підходи за потребою
+• Відзначайте успіхи
+• Аналізуйте, що працює, а що ні
+
+**🛠️ ІНСТРУМЕНТИ СИСТЕМИ ДЛЯ ВИРІШЕННЯ ПРОБЛЕМ:**
+
+• **📊 Аналітика** - об'єктивна оцінка ситуації
+• **📅 Календар** - планування вирішення проблем
+• **💬 Чат** - отримання допомоги від керівника
+• **📁 Проекти** - організація роботи над рішенням
+
+**🚀 ПОЧАТИ ВИРІШЕННЯ:**
+Створіть новий проект "Вирішення проблеми" та почніть планування!`;
+  }
+
+  // === ЗАГАЛЬНІ ПИТАННЯ ПРО СИСТЕМУ ===
+  
+  if (lowerMessage.includes('систем') || lowerMessage.includes('платформ') || lowerMessage.includes('функці') || 
+      lowerMessage.includes('можливост') || lowerMessage.includes('для чого') || lowerMessage.includes('що це') ||
+      lowerMessage.includes('як працює') || lowerMessage.includes('призначення')) {
+    
+    return `**🎓 СИСТЕМА УПРАВЛІННЯ НАВЧАЛЬНИМИ ПРОЕКТАМИ**
+
+**🎯 ОСНОВНЕ ПРИЗНАЧЕННЯ:**
+Наша платформа розроблена для комплексної підтримки студентів у процесі навчання, зокрема при виконанні дипломних, курсових робіт та звітів з практики.
+
+**🌟 КЛЮЧОВІ ПЕРЕВАГИ:**
+
+• **🎯 Централізоване керування** - всі навчальні проекти в одному місці
+• **🤝 Співпраця з керівниками** - ефективна комунікація та консультації
+• **⏰ Контроль дедлайнів** - своєчасне виконання всіх завдань
+• **📚 Доступ до ресурсів** - всі необхідні матеріали під рукою
+• **📊 Аналітика прогресу** - об'єктивне відстеження результатів
+• **🎨 Персоналізація** - індивідуальні налаштування інтерфейсу
+• **🚀 Ефективність** - оптимізація навчального процесу
+• **📱 Доступність** - робота з будь-яких пристроїв
+
+**🛠️ ОСНОВНІ РОЗДІЛИ СИСТЕМИ:**
+
+**🏠 ГОЛОВНА ПАНЕЛЬ (Dashboard)**
+• Огляд усіх активних проектів
+• Найближчі дедлайни та події
+• Швидкий доступ до часто використовуваних функцій
+• Віджети продуктивності та прогресу
+
+**📁 МЕНЕДЖЕР ПРОЕКТІВ (Tracker)**
+• Створення та керування навчальними роботами
+• Відстеження прогресу по розділах
+• Управління файлами та матеріалами
+• Контроль версій документів
+
+**📅 КАЛЕНДАР (Calendar)**
+• Планування навчального процесу
+• Встановлення дедлайнів та нагадувань
+• Організація зустрічей та консультацій
+• Синхронізація з академічним розкладом
+
+**💬 ЧАТ З КЕРІВНИКОМ (Chat)**
+• Безпосередня комунікація з науковим керівником
+• Обмін файлами та матеріалами
+• Отримання feedback та рекомендацій
+• Архівування всіх обговорень
+
+**📚 БІБЛІОТЕКА РЕСУРСІВ (Resources)**
+• Навчальні матеріали та підручники
+• Шаблони документів та форм
+• Наукові статті та дослідження
+• Корисні посилання та інструменти
+
+**📊 АНАЛІТИКА (Analytics)**
+• Статистика продуктивності
+• Прогрес виконання проектів
+• Аналітика витраченого часу
+• Генерація звітів та виставлення оцінок
+
+**🎯 ДЛЯ КОГО ПРИЗНАЧЕНА СИСТЕМА:**
+
+• **🎓 Студенти бакалаврату** - курсові роботи, практика
+• **🎓 Студенти магістратури** - магістерські дисертації
+• **🎓 Аспіранти** - наукові дослідження
+• **👨‍🏫 Викладачі** - керівництво студентськими роботами
+
+**💡 УНІКАЛЬНІ МОЖЛИВОСТІ:**
+
+• **🤖 AI-помічник** - інтелектуальна підтримка 24/7
+• **🎤 Голосове керування** - зручний hands-free ввід
+• **🌙 Темна тема** - зменшення навантаження на очі
+• **📱 Мобільна версія** - робота в дорозі
+• **🔒 Безпека даних** - надійне зберігання інформації
+• **📤 Експорт даних** - збереження результатів у різних форматах
+
+**🚀 ПОЧАТИ РОБОТУ:**
+
+1. **Зареєструйтесь** у системі
+2. **Створіть** ваш перший проект
+3. **Заплануйте** дедлайни у календарі
+4. **Спілкуйтесь** з керівником через чат
+5. **Використовуйте** ресурси для навчання
+6. **Відстежуйте** прогрес у аналітиці
+
+**💬 ДОДАТКОВА ДОПОМОГА:**
+• Скажіть "Допомога" для списку всіх команд
+• Запустіть "Тур по системі" для ознайомлення
+• Звертайтесь до AI-помічника з будь-якими питаннями
+
+**Готові покращити ваш навчальний процес? Почніть прямо зараз! 🚀**`;
+  }
+
+  // === ДОДАТКОВІ ПИТАННЯ ===
+
+  if (lowerMessage.includes('оцінк') || lowerMessage.includes('бал') || lowerMessage.includes('рейтинг') ||
+      lowerMessage.includes('успішність') || lowerMessage.includes('результат')) {
+    
+    return `**📈 СИСТЕМА ОЦІНЮВАННЯ ТА РЕЙТИНГИ**
+
+**🎯 КРИТЕРІЇ ОЦІНЮВАННЯ:**
+
+1. **📊 АКАДЕМІЧНІ ПОКАЗНИКИ:**
+   • Якість виконання робіт
+   • Дотримання дедлайнів
+   • Активність у навчальному процесі
+   • Результати захистів та іспитів
+
+2. **⏱️ ПРОДУКТИВНІСТЬ:**
+   • Регулярність роботи над проектами
+   • Ефективність використання часу
+   • Виконання проміжних завдань
+   • Якість планування
+
+3. **🤝 СПІВПРАЦЯ:**
+   • Активність у спілкуванні з керівником
+   • Участь у групових проектах
+   • Допомога одногрупникам
+   • Конструктивність feedback
+
+**📋 ТИПИ ОЦІНОК:**
+
+• **🔢 Бальна система** - традиційні оцінки
+• **📊 Рейтингові бали** - накопичувальна система
+• **⭐ Зірковий рейтинг** - візуальна оцінка
+• **📈 Прогрес-індекси** - динаміка покращення
+
+**💡 ЯК ПОКРАЩИТИ СВОЇ РЕЗУЛЬТАТИ:**
+
+**📚 Навчальна діяльність:**
+• Регулярно оновлюйте прогрес у проектах
+• Вчасно виконуйте всі завдання
+• Активно беріть участь у консультаціях
+• Використовуйте додаткові матеріали
+
+**⏰ Тайм-менеджмент:**
+• Плануйте роботу заздалегідь
+• Дотримуйтесь встановлених дедлайнів
+• Робіть регулярні оновлення
+• Аналізуйте свою продуктивність
+
+**🛠️ ІНСТРУМЕНТИ ДЛЯ ВІДСТЕЖЕННЯ:**
+
+• **📊 Аналітика** - детальна статистика успішності
+• **📈 Графіки прогресу** - візуалізація результатів
+• **📋 Звіти** - структуровані дані про успішність
+• **🎯 Рекомендації** - індивідуальні поради для покращення
+
+**🚀 ПОЧАТИ АНАЛІЗ:**
+Перейдіть у "Аналітика" для перегляду ваших поточних результатів!`;
+  }
+
+  if (lowerMessage.includes('груп') || lowerMessage.includes('команда') || lowerMessage.includes('спільна робота') ||
+      lowerMessage.includes('колектив') || lowerMessage.includes('одногрупник')) {
+    
+    return `**👥 ГРУПОВА РОБОТА ТА КОМАНДНІ ПРОЕКТИ**
+
+**🎯 МОЖЛИВОСТІ ДЛЯ ГРУПОВОЇ РОБОТИ:**
+
+1. **📁 СПІЛЬНІ ПРОЕКТИ:**
+   • Створення групових проектів
+   • Розподіл обов'язків між учасниками
+   • Спільний доступ до документів
+   • Координація роботи всієї команди
+
+2. **💬 КОМАНДНИЙ ЧАТ:**
+   • Обговорення проектів у реальному часі
+   • Обмін файлами та матеріалами
+   • Координація дедлайнів
+   • Вирішення спортивних питань
+
+3. **📊 СПІЛЬНА АНАЛІТИКА:**
+   • Відстеження прогресу всієї команди
+   • Аналіз внеску кожного учасника
+   • Координація завантаженості
+   • Оптимізація робочих процесів
+
+**🛠️ ІНСТРУМЕНТИ ДЛЯ КОМАНДНОЇ РОБОТИ:**
+
+**📋 Розподіл завдань:**
+• Призначення відповідальних за завдання
+• Встановлення пріоритетів
+• Контроль виконання
+• Звітність про прогрес
+
+**🔄 Процеси співпраці:**
+• Регулярні командні зустрічі
+• Чіткі протоколи роботи
+• Визначення зон відповідальності
+• Механізми вирішення конфліктів
+
+**💡 ПОРАДИ ДЛЯ ЕФЕКТИВНОЇ КОМАНДНОЇ РОБОТИ:**
+
+**👥 Комунікація:**
+• Встановіть чіткі канали зв'язку
+• Регулярно обмінюйтесь інформацією
+• Відкрито обговорюйте проблеми
+• Давайте конструктивний feedback
+
+**📅 Організація:**
+• Створюйте реалістичні плани
+• Розподіляйте навантаження рівномірно
+• Враховуйте індивідуальні можливості
+• Плануйте буфери часу
+
+**🎯 Мотивація:**
+• Відзначайте успіхи команди
+• Підтримуйте один одного
+• Створюйте позитивну атмосферу
+• Навчайтесь на помилках
+
+**🚀 ПОЧАТИ КОМАНДНУ РОБОТУ:**
+Створіть груповий проект та запросіть учасників!`;
+  }
+
+  if (lowerMessage.includes('мобільн') || lowerMessage.includes('телефон') || lowerMessage.includes('планшет') ||
+      lowerMessage.includes('android') || lowerMessage.includes('ios') || lowerMessage.includes('app')) {
+    
+    return `**📱 МОБІЛЬНА ВЕРСІЯ СИСТЕМИ**
+
+**🎯 МОЖЛИВОСТІ МОБІЛЬНОГО ДОДАТКУ:**
+
+1. **📱 ОСНОВНІ ФУНКЦІЇ:**
+   • Повний доступ до всіх проектів
+   • Перегляд та редагування завдань
+   • Спілкування з керівником
+   • Перегляд календаря та дедлайнів
+
+2. **🔔 СПОВІЩЕННЯ:**
+   • Миттєві сповіщення про нові повідомлення
+   • Нагадування про дедлайни
+   • Інформація про оновлення проектів
+   • Персональні рекомендації
+
+3. **📊 ОФЛАЙН-РЕЖИМ:**
+   • Перегляд проектів без інтернету
+   • Створення завдань офлайн
+   • Синхронізація при появі з'єднання
+   • Робота в будь-якому місці
+
+**💡 ПЕРЕВАГИ МОБІЛЬНОЇ ВЕРСІЇ:**
+
+**⚡ Зручність:**
+• Робота в будь-якому місці
+• Миттєвий доступ до інформації
+• Швидке виконання простих завдань
+• Завжди під рукою
+
+**🎯 Продуктивність:**
+• Використання вільного часу
+• Швидке реагування на зміни
+• Мобільне планування
+• Постійний зв'язок з керівником
+
+**🛠️ СУМІСНІСТЬ:**
+• **iOS** - iPhone, iPad
+• **Android** - телефони та планшети
+• **Адаптивний дизайн** - підлаштування під екран
+• **Touch-інтерфейс** - зручне керування
+
+**📲 ЗАВАНТАЖЕННЯ ТА ВСТАНОВЛЕННЯ:**
+
+1. **App Store** - для пристроїв Apple
+2. **Google Play** - для пристроїв Android
+3. **Веб-версія** - для будь-яких пристроїв
+
+**🔒 БЕЗПЕКА:**
+• Захищені з'єднання
+• Біометрична аутентифікація
+• Шифрування даних
+• Контроль доступу
+
+**🚀 ПОЧАТИ ВИКОРИСТОВУВАТИ:**
+Завантажте мобільний додаток з офіційного магазину вашого пристрою!`;
+  }
+
+  // === ПРОГРАМА ЛОЯЛЬНОСТІ ТА МОТИВАЦІЯ ===
+  
+  if (lowerMessage.includes('досягнен') || lowerMessage.includes('нагорода') || lowerMessage.includes('бонус') ||
+      lowerMessage.includes('мотивація') || lowerMessage.includes('репутація') || lowerMessage.includes('achievement')) {
+    
+    return `**🏆 СИСТЕМА МОТИВАЦІЇ ТА ДОСЯГНЕНЬ**
+
+**🎯 ТИПИ ДОСЯГНЕНЬ:**
+
+1. **📚 АКАДЕМІЧНІ ДОСЯГНЕННЯ:**
+   • "Відмінник" - високі оцінки за всі роботи
+   • "Пунктуальний" - своєчасне виконання завдань
+   • "Дослідник" - активне використання ресурсів
+   • "Перфекціоніст" - якісне виконання робіт
+
+2. **⏱️ ПРОДУКТИВНІСТЬ:**
+   • "Марафонець" - довгі сесії продуктивної роботи
+   • "Планувальник" - ефективне використання календаря
+   • "Оптимізатор" - постійне покращення результатів
+   • "Стабільний" - регулярна робота над проектами
+
+3. **🤝 СОЦІАЛЬНІ ДОСЯГНЕННЯ:**
+   • "Комунікатор" - активна співпраця з керівником
+   • "Помічник" - допомога одногрупникам
+   • "Лідер" - успішне керівництво груповими проектами
+   • "Ментор" - наставництво для молодших студентів
+
+**💡 СИСТЕМА НАГОРОД:**
+
+**🏅 Візуальні бейджи:**
+• Рівневі бейджі (початківець, досвідчений, експерт)
+• Тематичні бейджі за типами досягнень
+• Рідкісні бейджі за особливі заслуги
+• Сезонні бейджі за активність у певний період
+
+**📊 Рейтинги та лідеборди:**
+• Загальний рейтинг продуктивності
+• Рейтинг у групі чи потокі
+• Спеціалізовані рейтинги (за предметами)
+• Історична статистика прогресу
+
+**🎯 МОТИВАЦІЙНІ МЕХАНІЗМИ:**
+
+**📈 Прогресивна система:**
+• Накопичення досвіду за активність
+• Підвищення рівнів за досягнення
+• Розблокування нових можливостей
+• Відзначення особистих рекордів
+
+**👥 Соціальна мотивація:**
+• Публічне визнання досягнень
+• Можливість ділитися успіхами
+• Конкурси та змагання
+• Спільні цілі для груп
+
+**💡 ЯК ОТРИМАТИ БІЛЬШЕ ДОСЯГНЕНЬ:**
+
+• **Регулярно працюйте** над проектами
+• **Використовуйте всі функції** системи
+• **Спілкуйтесь** з керівником та одногрупниками
+• **Плануйте** свій час ефективно
+• **Вдосконалюйтесь** постійно
+
+**🚀 ПЕРЕГЛЯНУТИ СВОЇ ДОСЯГНЕННЯ:**
+Перейдіть у профіль для перегляду ваших нагород та прогресу!`;
+  }
+
+  // === ЯКЩО ПИТАННЯ НЕ РОЗПІЗНАНЕ ===
+  
+  return `Дякую за ваше запитання! 🤔 
+
+Я спеціалізуюсь на допомозі з функціоналом нашої системи управління навчальними проектами. 
+
+**🎯 МОЖУ ДОПОМОГТИ ВАМ З:**
+
+• **Навігацією** по розділах системи
+• **Використанням** функцій платформи  
+• **Пошуком інформації** про конкретні можливості
+• **Проведенням туру** для ознайомлення
+• **Вирішенням проблем** у навчанні
+• **Плануванням** навчального процесу
+
+**💡 СПРОБУЙТЕ ЗАПИТАТИ ПРО:**
+
+• Конкретні розділи системи ("Як працює календар?")
+• Навчальні процеси ("Як писати дипломну?")
+• Технічні аспекти ("Як експортувати дані?")
+• Особисту продуктивність ("Як покращити результати?")
+
+**🚀 ШВИДКІ КОМАНДИ:**
+• "Допомога" - повний список можливостей
+• "Тур по системі" - ознайомлення з платформою
+• "Навігація" - способи переміщення
+• [Назва розділу] - швидкий перехід
+
+**📞 ДОДАТКОВА ДОПОМОГА:**
+Якщо ваше питання не стосується функціоналу системи, рекомендую звернутись до:
+• Наукового керівника - академічні питання
+• Адміністрації факультету - організаційні питання
+• Технічної підтримки - технічні проблеми
+
+Не соромтесь експериментувати з різними питаннями про нашу систему! 😊`;
+};
+
+
+  // Основна функція обробки команд
+  const processCommand = async (command: string) => {
+    try {
+      setIsLoading(true);
+      
+      const aiResponse = await getAIResponse(command);
+      
+      const aiMessageObj: Message = {
+        id: (Date.now() + 1).toString(),
+        content: aiResponse,
+        isUser: false,
+        timestamp: new Date()
+      };
+
+      setMessages(prev => [...prev, aiMessageObj]);
+      
+      // Озвучуємо відповідь AI
+      setTimeout(() => {
+        speakMessage(aiMessageObj);
+      }, 500);
+      
+    } catch (error) {
+      console.error('Error processing command:', error);
+      
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        content: 'Вибачте, сталася помилка при обробці запиту. Спробуйте, будь ласка, ще раз.',
+        isUser: false,
+        timestamp: new Date()
+      };
+      
+      setMessages(prev => [...prev, errorMessage]);
+      speakText('Вибачте, сталася помилка при обробці запиту. Спробуйте, будь ласка, ще раз.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const startListening = useCallback(() => {
-    if (recognitionRef.current && !isListening) {
-      try {
-        setTranscript('');
-        setResponse('');
-        recognitionRef.current.lang = i18n.language === 'ua' ? 'uk-UA' : 'en-US';
-        recognitionRef.current.start();
-      } catch (error) {
-        console.error('Помилка запуску прослуховування:', error);
+  const scrollToBottom = () => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ 
+        behavior: 'smooth',
+        block: 'end'
+      });
+    }
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, isLoading, isListening, transcript]);
+
+  // Озвучуємо нові повідомлення
+  useEffect(() => {
+    if (messages.length > 0 && isSoundEnabled) {
+      const lastMessage = messages[messages.length - 1];
+      if (!lastMessage.isUser && !isLoading) {
+        speakMessage(lastMessage);
       }
     }
-  }, [isListening, i18n.language]);
+  }, [messages, isSoundEnabled, isLoading, speakMessage]);
 
-  const stopListening = useCallback(() => {
-    if (recognitionRef.current && isListening) {
+  const checkSpeechRecognitionSupport = () => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const isSupported = !!SpeechRecognition;
+    
+    if (!isSupported) {
+      const errorMessage: Message = {
+        id: Date.now().toString(),
+        content: 'Голосове розпізнавання не підтримується у вашому браузері. Будь ласка, використовуйте Chrome або Edge.',
+        isUser: false,
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, errorMessage]);
+      speakText('Голосове розпізнавання не підтримується у вашому браузері. Будь ласка, використовуйте Chrome або Edge.');
+    }
+    
+    return isSupported;
+  };
+
+  useEffect(() => {
+    if (isActive && messages.length === 0) {
+      const welcomeMessage: Message = {
+        id: '1',
+        content: 'Привіт! 👋 Я ваш AI-помічник. Можу відповісти на будь-які питання про систему, допомогти з навігацією, провести тур або допомогти з використанням функцій платформи.',
+        isUser: false,
+        timestamp: new Date()
+      };
+      
+      setMessages([welcomeMessage]);
+      
+      // Озвучуємо привітання
+      setTimeout(() => {
+        speakMessage(welcomeMessage);
+      }, 500);
+      
+      checkSpeechRecognitionSupport();
+    }
+  }, [isActive, messages.length, speakMessage]);
+
+  // Функція голосового розпізнавання
+  const startListening = () => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    
+    if (!SpeechRecognition) {
+      const errorMessage: Message = {
+        id: Date.now().toString(),
+        content: 'Голосове розпізнавання не підтримується у вашому браузері. Будь ласка, використовуйте Chrome або Edge.',
+        isUser: false,
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, errorMessage]);
+      speakText('Голосове розпізнавання не підтримується у вашому браузері. Будь ласка, використовуйте Chrome або Edge.');
+      return;
+    }
+
+    if (recognitionRef.current) {
       recognitionRef.current.stop();
     }
-  }, [isListening]);
 
-  // Ініціалізація голосового розпізнавання
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      
-      if (SpeechRecognition) {
-        recognitionRef.current = new SpeechRecognition();
-        recognitionRef.current.continuous = false;
-        recognitionRef.current.interimResults = true;
-        recognitionRef.current.lang = i18n.language === 'ua' ? 'uk-UA' : 'en-US';
+    setTranscript('');
+    finalTranscriptRef.current = '';
 
-        recognitionRef.current.onstart = () => {
-          setIsListening(true);
-        };
+    const recognition = new SpeechRecognition();
+    recognitionRef.current = recognition;
+    
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    recognition.lang = 'uk-UA';
 
-        recognitionRef.current.onresult = (event: SpeechRecognitionEvent) => {
-          const currentTranscript = Array.from(event.results)
-            .map((result) => result[0])
-            .map((result) => result.transcript)
-            .join('');
-          
-          setTranscript(currentTranscript);
-        };
+    recognition.onstart = () => {
+      setIsListening(true);
+      setTranscript('');
+      finalTranscriptRef.current = '';
+      speakText('Слухаю вас...', 1.0, 1.1);
+    };
 
-        recognitionRef.current.onerror = (event: SpeechRecognitionErrorEvent) => {
-          console.error('Помилка голосового розпізнавання:', event.error);
-          setIsListening(false);
-        };
+    recognition.onresult = (event: SpeechRecognitionEvent) => {
+      let interimTranscript = '';
+      let finalTranscript = '';
 
-        recognitionRef.current.onend = () => {
-          setIsListening(false);
-        };
+      for (let i = event.resultIndex; i < event.results.length; ++i) {
+        if (event.results[i].isFinal) {
+          finalTranscript += event.results[i][0].transcript;
+        } else {
+          interimTranscript += event.results[i][0].transcript;
+        }
       }
-    }
 
-    return () => {
-      if (recognitionRef.current) {
-        recognitionRef.current.stop();
+      setTranscript(interimTranscript || finalTranscript);
+
+      if (finalTranscript) {
+        finalTranscriptRef.current = finalTranscript;
       }
     };
-  }, [i18n.language]);
 
-  // Обробка транскрипту після закінчення слухання
-  useEffect(() => {
-    if (transcript && !isListening) {
-      processVoiceCommand(transcript);
-    }
-  }, [transcript, isListening, processVoiceCommand]);
+    recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
+      console.error('Speech recognition error:', event.error);
+      setIsListening(false);
+      recognitionRef.current = null;
+      
+      let errorText = 'Помилка розпізнавання мови';
+      
+      switch (event.error) {
+        case 'not-allowed':
+          errorText = 'Дозвіл на мікрофон заблоковано. Дозвольте доступ в налаштуваннях браузера.';
+          break;
+        case 'no-speech':
+          errorText = 'Мова не розпізнана. Перевірте мікрофон та спробуйте ще раз.';
+          break;
+        case 'audio-capture':
+          errorText = 'Не вдалося отримати доступ до мікрофона.';
+          break;
+        case 'network':
+          errorText = 'Помилка мережі при розпізнаванні мови.';
+          break;
+        default:
+          errorText = `Помилка розпізнавання: ${event.error}`;
+      }
+      
+      const errorMessage: Message = {
+        id: Date.now().toString(),
+        content: errorText,
+        isUser: false,
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, errorMessage]);
+      speakText(errorText);
+    };
 
-  const toggleAssistant = () => {
-    const newState = !isActive;
-    setIsActive(newState);
-    
-    if (!newState) {
-      stopListening();
+    recognition.onend = () => {
+      setIsListening(false);
+      recognitionRef.current = null;
+    };
+
+    try {
+      recognition.start();
+      
+      setTimeout(() => {
+        if (isListening && recognitionRef.current === recognition) {
+          recognition.stop();
+        }
+      }, 10000);
+      
+    } catch (error) {
+      console.error('Error starting speech recognition:', error);
+      const errorMessage: Message = {
+        id: Date.now().toString(),
+        content: 'Не вдалося запустити розпізнавання мови. Спробуйте ще раз.',
+        isUser: false,
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, errorMessage]);
+      speakText('Не вдалося запустити розпізнавання мови. Спробуйте ще раз.');
+      setIsListening(false);
     }
   };
 
-  const handleListenToggle = () => {
+  const stopListening = () => {
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+    }
+    setIsListening(false);
+    recognitionRef.current = null;
+  };
+
+  const toggleListening = () => {
     if (isListening) {
       stopListening();
     } else {
@@ -393,29 +1905,364 @@ export const VoiceAssistant = () => {
     }
   };
 
+  // Функція для завершення голосового введення
+  const finishVoiceInput = () => {
+    if (isListening && transcript.trim()) {
+      const userMessageObj: Message = {
+        id: Date.now().toString(),
+        content: transcript,
+        isUser: true,
+        timestamp: new Date()
+      };
+      
+      setMessages(prev => [...prev, userMessageObj]);
+      stopListening();
+      processCommand(transcript);
+      setTranscript('');
+      finalTranscriptRef.current = '';
+    }
+  };
+
+  const handleSendMessage = async () => {
+    if (!inputMessage.trim() || isLoading) return;
+
+    const userMessage = inputMessage.trim();
+    setInputMessage('');
+
+    const userMessageObj: Message = {
+      id: Date.now().toString(),
+      content: userMessage,
+      isUser: true,
+      timestamp: new Date()
+    };
+
+    setMessages(prev => [...prev, userMessageObj]);
+    await processCommand(userMessage);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      
+      if (isListening) {
+        finishVoiceInput();
+      } else {
+        handleSendMessage();
+      }
+    }
+  };
+
+  // Функція закриття чату
+  const closeChat = () => {
+    setIsActive(false);
+    stopSpeaking();
+    
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+    }
+    
+    if (isTourActive) {
+      cancelTour();
+    }
+  };
+
+  const toggleAssistant = () => {
+    if (isActive) {
+      closeChat();
+    } else {
+      setIsActive(true);
+    }
+  };
+
+  // ФУНКЦІЯ ОЧИЩЕННЯ ЧАТУ
+  const clearChat = () => {
+    stopSpeaking();
+    setMessages([{
+      id: '1',
+      content: 'Чат очищено! 🧹 Чим можу допомогти?',
+      isUser: false,
+      timestamp: new Date()
+    }]);
+    speakText('Чат очищено! Чим можу допомогти?');
+  };
+
+  // Обробник кліку поза чатом для закриття
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const chatElement = document.querySelector('[data-voice-assistant]');
+      const buttonElement = document.querySelector('[data-voice-assistant-button]');
+      
+      if (
+        chatElement && 
+        !chatElement.contains(event.target as Node) &&
+        buttonElement &&
+        !buttonElement.contains(event.target as Node) &&
+        isActive
+      ) {
+        closeChat();
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isActive]);
+
+  // Очистити при розмонтуванні
+  useEffect(() => {
+    return () => {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+      stopSpeaking();
+    };
+  }, [stopSpeaking]);
+
   return (
-    <div className="fixed bottom-6 right-6 z-50">
-      {/* Main assistant button */}
+    <div className="fixed bottom-6 right-6 z-50" data-voice-assistant-button>
+      {/* Головна кнопка */}
       <Button
         onClick={toggleAssistant}
-        className={`rounded-full w-14 h-14 transition-all ${
+        className={cn(
+          "rounded-full w-14 h-14 transition-all duration-300 shadow-lg border",
           isActive 
-            ? 'bg-green-500 hover:bg-green-600 text-white' 
-            : 'bg-blue-500 hover:bg-blue-600 text-white'
-        }`}
+            ? "bg-primary hover:bg-primary/90 text-primary-foreground scale-110 shadow-primary/25 border-primary/20" 
+            : "bg-primary hover:bg-primary/90 text-primary-foreground shadow-primary/25 border-primary/20"
+        )}
       >
-        {isActive ? <MessageCircle className="h-6 w-6" /> : <Mic className="h-6 w-6" />}
+        {isActive ? <Bot className="h-6 w-6" /> : <MessageCircle className="h-6 w-6" />}
       </Button>
 
-      {/* Assistant interface */}
+      {/* Чат інтерфейс */}
       {isActive && (
-        <VoiceAssistantInterface 
-          onClose={toggleAssistant}
-          isListening={isListening}
-          transcript={transcript}
-          response={response}
-          onListenToggle={handleListenToggle}
-        />
+        <div 
+          className="absolute bottom-20 right-0 w-96 h-[500px] bg-background border border-border rounded-lg shadow-xl flex flex-col overflow-hidden"
+          data-voice-assistant
+        >
+          {/* Хедер з кнопками */}
+          <div className="flex items-center justify-between p-4 border-b bg-muted/30">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+                <Bot className="h-4 w-4 text-primary-foreground" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-base">AI Помічник</h3>
+                <p className="text-xs text-muted-foreground">
+                  {isTourActive ? '🚀 Тур...' : isListening ? '🎤 Слухає...' : isReading ? '🔊 Озвучує...' : '💬 Готовий допомогти'}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-1">
+              {/* Кнопка озвучки */}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={toggleSound}
+                className={cn(
+                  "h-8 w-8 p-0",
+                  isSoundEnabled 
+                    ? "text-green-600 hover:text-green-700 hover:bg-green-50" 
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                )}
+                title={isSoundEnabled ? "Вимкнути озвучку" : "Увімкнути озвучку"}
+              >
+                {isSoundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+              </Button>
+              
+              {/* Кнопка очищення чату */}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={clearChat}
+                className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground hover:bg-muted"
+                title="Очистити чат"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+              
+              {isTourActive && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={cancelTour}
+                  className="h-7 px-2 text-xs text-destructive border-destructive/20 hover:bg-destructive/10"
+                >
+                  Скасувати
+                </Button>
+              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={closeChat}
+                className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground hover:bg-muted"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+
+          {/* Область повідомлень */}
+          <div className="flex-1 min-h-0">
+            <ScrollArea ref={scrollAreaRef} className="h-full p-4">
+              <div className="space-y-3">
+                {messages.map((message) => (
+                  <div
+                    key={message.id}
+                    className={cn(
+                      "flex transition-all duration-200",
+                      message.isUser ? "justify-end" : "justify-start"
+                    )}
+                  >
+                    <div
+                      className={cn(
+                        "max-w-[85%] rounded-lg px-3 py-2 border",
+                        message.isUser
+                          ? "bg-primary text-primary-foreground border-primary/20"
+                          : "bg-muted text-foreground border-border"
+                      )}
+                    >
+                      <div className="text-sm whitespace-pre-wrap break-words leading-relaxed">
+                        {message.content.split('**').map((part, index) => 
+                          index % 2 === 1 ? (
+                            <strong key={index} className="font-semibold">{part}</strong>
+                          ) : (
+                            part
+                          )
+                        )}
+                      </div>
+                      <p className={cn(
+                        "text-xs mt-1 opacity-70",
+                        message.isUser ? "text-primary-foreground/70" : "text-muted-foreground"
+                      )}>
+                        {message.timestamp.toLocaleTimeString([], { 
+                          hour: '2-digit', 
+                          minute: '2-digit' 
+                        })}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+                
+                {/* Транскрипт під час слухання */}
+                {isListening && transcript && (
+                  <div className="flex justify-start">
+                    <div className="max-w-[85%] rounded-lg px-3 py-2 bg-muted text-foreground border border-border">
+                      <p className="text-sm whitespace-pre-wrap break-words">
+                        {transcript}
+                      </p>
+                      <p className="text-xs mt-1 text-muted-foreground font-medium">
+                        🎤 Слухаю... (Enter для завершення)
+                      </p>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Індикатор завантаження */}
+                {isLoading && (
+                  <div className="flex justify-start">
+                    <div className="max-w-[85%] rounded-lg px-3 py-2 bg-muted text-foreground border border-border">
+                      <div className="flex items-center gap-2">
+                        <div className="flex space-x-1">
+                          <div className="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-bounce"></div>
+                          <div className="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                          <div className="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                        </div>
+                        <span className="text-sm text-muted-foreground">
+                          {isTourActive ? 'Готую наступний крок туру...' : 'AI обробляє запит...'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                <div ref={messagesEndRef} />
+              </div>
+            </ScrollArea>
+          </div>
+
+          {/* Область вводу */}
+          <div className="p-3 border-t bg-background">
+            <div className="flex gap-2 mb-2">
+              <Input
+                value={isListening ? transcript : inputMessage}
+                onChange={(e) => {
+                  if (isListening) {
+                    setTranscript(e.target.value);
+                  } else {
+                    setInputMessage(e.target.value);
+                  }
+                }}
+                onKeyDown={handleKeyDown}
+                placeholder={
+                  isTourActive 
+                    ? "Тур активний..." 
+                    : isListening 
+                    ? "Говоріть... (Enter для завершення)" 
+                    : "Запитайте про систему..."
+                }
+                className="flex-1 text-sm"
+                disabled={isTourActive}
+              />
+              {!isListening ? (
+                <Button
+                  onClick={handleSendMessage}
+                  disabled={!inputMessage.trim() || isLoading || isTourActive}
+                  size="icon"
+                  className="flex-shrink-0"
+                >
+                  <Send className="h-4 w-4" />
+                </Button>
+              ) : (
+                <Button
+                  onClick={finishVoiceInput}
+                  disabled={!transcript.trim() || isLoading}
+                  size="icon"
+                  className="flex-shrink-0 bg-green-600 hover:bg-green-700"
+                >
+                  <Send className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+            
+            <div className="flex gap-2">
+              {/* Кнопка запуску короткого туру */}
+              <Button
+                onClick={startTour}
+                variant="outline"
+                size="sm"
+                className="flex-1 gap-2 text-xs h-8"
+                disabled={isTourActive || isLoading || isListening}
+              >
+                <Play className="h-3 w-3" />
+                Швидкий тур
+              </Button>
+              
+              {/* Кнопка голосового вводу */}
+              <Button
+                onClick={toggleListening}
+                variant={isListening ? "destructive" : "outline"}
+                size="sm"
+                className={cn(
+                  "gap-2 text-xs h-8 transition-all",
+                  isListening && "animate-pulse"
+                )}
+                disabled={isLoading || isTourActive}
+              >
+                {isListening ? (
+                  <>
+                    <Square className="h-3 w-3" />
+                    Скасувати
+                  </>
+                ) : (
+                  <>
+                    <Mic className="h-3 w-3" />
+                    Голос
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

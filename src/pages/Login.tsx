@@ -46,11 +46,12 @@ const LoginPage = () => {
             localStorage.setItem("token", data.token);
             localStorage.setItem("currentUser", JSON.stringify(data.user));
 
-            if (role === "student") {
-                window.location.href = "/dashboard";
-            } else {
-                window.location.href = "/analytics";
-            }
+            // В функції handleLogin у LoginPage.tsx замініть цю частину:
+if (role === "student") {
+    window.location.href = "/dashboard";
+} else {
+    window.location.href = "/teacherdashboard";
+}
         } catch (error) {
             console.error("Network error:", error);
             alert("Помилка мережі. Спробуйте пізніше.");

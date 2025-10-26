@@ -7,8 +7,7 @@ import pool from './db.js';
 import { fileURLToPath } from "url";
 import jwt from 'jsonwebtoken';
 import type { JwtUserPayload } from './types';
-import { Server as SocketIOServer } from 'socket.io';
-
+import ChatWebSocketServer from './websocket-server.ts';
 
 
 // __dirname для ES-модулів
@@ -940,6 +939,691 @@ app.delete("/api/resources/:id", authenticateToken, async (req: Request, res: Re
 });
 
 
+
+// ============ CHAT ENDPOINTS ============
+
+// GET /api/chat - отримати список чатів користувача
+app.get("/api/chat", authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const result = await pool.query(
+      `SELECT 
+        c.id,
+        c.name,
+        c.type,
+        c.avatar_url,
+        c.description,
+        c.last_message,
+        c.last_message_at,
+        c.created_at,
+        cm.unread_count,
+        u.is_online,
+        u.last_seen
+       FROM chat_members cm
+       JOIN chats c ON cm.chat_id = c.id
+       LEFT JOIN users u ON c.type != 'group' AND c.id = (
+         SELECT CASE 
+           WHEN cm1.user_id = $1 THEN cm2.user_id 
+           ELSE cm1.user_id 
+         END
+         FROM chat_members cm1
+         JOIN chat_members cm2 ON cm1.chat_id = cm2.chat_id
+         WHERE cm1.chat_id = c.id AND cm1.user_id != cm2.user_id
+         LIMIT 1
+       )
+       WHERE cm.user_id = $1
+       ORDER BY c.last_message_at DESC NULLS LAST, c.created_at DESC`,
+      [userId]
+    );
+
+    const chats = await Promise.all(result.rows.map(async (row: any) => {
+      let members = [];
+      if (row.type === 'group') {
+        const membersResult = await pool.query(
+          `SELECT u.id, u.name, u.email, u.role, u.avatar_url, u.is_online
+           FROM chat_members cm
+           JOIN users u ON cm.user_id = u.id
+           WHERE cm.chat_id = $1`,
+          [row.id]
+        );
+
+        members = membersResult.rows.map((member: any) => ({
+          id: member.id.toString(),
+          name: member.name,
+          avatar: member.name.split(' ').map((n: string) => n[0]).join('').toUpperCase(),
+          avatarUrl: member.avatar_url ?? undefined,
+          email: member.email,
+          type: member.role === 'teacher' ? 'supervisor' : 'student',
+          isOnline: member.is_online
+        }));
+      }
+
+      return {
+        id: row.id.toString(),
+        name: row.name,
+        avatar: row.name.split(' ').map((n: string) => n[0]).join('').toUpperCase(),
+        avatarUrl: row.avatar_url ?? undefined,
+        type: row.type,
+        isOnline: row.is_online || false,
+        lastSeen: row.last_seen ? new Date(row.last_seen).toLocaleString('uk-UA') : undefined,
+        unreadCount: row.unread_count || 0,
+        lastMessage: row.last_message,
+        members: row.type === 'group' ? members : undefined,
+        createdAt: row.created_at ? new Date(row.created_at).toISOString() : undefined,
+        description: row.description
+      };
+    }));
+
+    res.json(chats);
+  } catch (err) {
+    console.error("Error fetching chats:", err);
+    res.status(500).json({ message: "Database error fetching chats" });
+  }
+});
+
+// GET /api/chat/:chatId/messages - отримати повідомлення чату
+app.get("/api/chat/:chatId/messages", authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const { chatId } = req.params;
+    const { limit = 50, offset = 0 } = req.query;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    // Перевірка доступу до чату
+    const accessCheck = await pool.query(
+      'SELECT 1 FROM chat_members WHERE chat_id = $1 AND user_id = $2',
+      [chatId, userId]
+    );
+
+    if (accessCheck.rows.length === 0) {
+      return res.status(403).json({ message: "No access to this chat" });
+    }
+
+    const result = await pool.query(
+      `SELECT 
+        m.id,
+        m.chat_id as "chatId",
+        m.sender_id as "sender",
+        u.name,
+        m.content,
+        m.message_type as "type",
+        m.reply_to as "replyTo",
+        m.attachment_data as "attachment",
+        m.created_at as "timestamp",
+        false as "isPinned",
+        false as "isEdited",
+        'sent' as "status"
+       FROM chat_messages m
+       JOIN users u ON m.sender_id = u.id
+       WHERE m.chat_id = $1
+       ORDER BY m.created_at DESC
+       LIMIT $2 OFFSET $3`,
+      [chatId, parseInt(limit as string), parseInt(offset as string)]
+    );
+
+    const messages = result.rows.map((row: any) => ({
+      ...row,
+      id: row.id.toString(),
+      sender: row.sender.toString(),
+      timestamp: new Date(row.timestamp).toLocaleTimeString('uk-UA', {
+        hour: '2-digit', minute: '2-digit'
+      })
+    }));
+
+    // Оновлюємо лічильник непрочитаних
+    await pool.query(
+      `UPDATE chat_members 
+       SET unread_count = 0 
+       WHERE chat_id = $1 AND user_id = $2`,
+      [chatId, userId]
+    );
+
+    res.json(messages.reverse()); // Повертаємо в хронологічному порядку
+  } catch (err) {
+    console.error("Error fetching messages:", err);
+    res.status(500).json({ message: "Database error fetching messages" });
+  }
+});
+
+// POST /api/chat/create - створити приватний чат
+app.post("/api/chat/create", authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const { participantId } = req.body;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    if (!participantId) {
+      return res.status(400).json({ message: "Participant ID is required" });
+    }
+
+    // Перевіряємо чи існує вже приватний чат
+    const existingChat = await pool.query(
+      `SELECT c.id FROM chats c
+       JOIN chat_members cm1 ON c.id = cm1.chat_id
+       JOIN chat_members cm2 ON c.id = cm2.chat_id
+       WHERE c.type = 'private' 
+       AND cm1.user_id = $1 AND cm2.user_id = $2`,
+      [userId, participantId]
+    );
+
+    if (existingChat.rows.length > 0) {
+      return res.json({ 
+        chatId: existingChat.rows[0].id.toString(),
+        message: "Chat already exists" 
+      });
+    }
+
+    // Отримуємо ім'я учасника для назви чату
+    const participantResult = await pool.query(
+      'SELECT name FROM users WHERE id = $1',
+      [participantId]
+    );
+
+    if (participantResult.rows.length === 0) {
+      return res.status(404).json({ message: "Participant not found" });
+    }
+
+    const participantName = participantResult.rows[0].name;
+
+    // Створюємо новий чат з назвою тільки учасника
+    const chatResult = await pool.query(
+      `INSERT INTO chats (name, type, created_by, created_at)
+       VALUES ($1, 'private', $2, NOW())
+       RETURNING id`,
+      [participantName, userId] // Тільки ім'я учасника
+    );
+
+    const chatId = chatResult.rows[0].id.toString();
+
+    // Додаємо учасників
+    await pool.query(
+      'INSERT INTO chat_members (chat_id, user_id, joined_at) VALUES ($1, $2, NOW())',
+      [chatId, userId]
+    );
+    await pool.query(
+      'INSERT INTO chat_members (chat_id, user_id, joined_at) VALUES ($1, $2, NOW())',
+      [chatId, participantId]
+    );
+
+    res.status(201).json({ 
+      chatId,
+      message: "Chat created successfully" 
+    });
+  } catch (err) {
+    console.error("Error creating chat:", err);
+    res.status(500).json({ message: "Database error creating chat" });
+  }
+});
+
+// POST /api/chat/create-group - створити груповий чат
+app.post("/api/chat/create-group", authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const { name, memberIds, description, settings } = req.body;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    if (!name || !memberIds || !Array.isArray(memberIds)) {
+      return res.status(400).json({ message: "Name and memberIds are required" });
+    }
+
+    // Створюємо груповий чат
+    const chatResult = await pool.query(
+      `INSERT INTO chats (name, type, description, settings, created_by, created_at)
+       VALUES ($1, 'group', $2, $3, $4, NOW())
+       RETURNING id`,
+      [name, description || '', JSON.stringify(settings || {}), userId]
+    );
+
+    const chatId = chatResult.rows[0].id.toString();
+
+    // Додаємо всіх учасників (включаючи творця)
+    const allMembers = [userId, ...memberIds];
+    
+    for (const memberId of allMembers) {
+      await pool.query(
+        'INSERT INTO chat_members (chat_id, user_id, joined_at) VALUES ($1, $2, NOW())',
+        [chatId, memberId]
+      );
+    }
+
+    res.status(201).json({ 
+      chatId,
+      message: "Group chat created successfully" 
+    });
+  } catch (err) {
+    console.error("Error creating group chat:", err);
+    res.status(500).json({ message: "Database error creating group chat" });
+  }
+});
+
+// POST /api/chat/:chatId/messages - надіслати повідомлення (альтернатива WebSocket)
+app.post("/api/chat/:chatId/messages", authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const { chatId } = req.params;
+    const { content, type = 'text', replyTo, attachment } = req.body;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    if (!content && !attachment) {
+      return res.status(400).json({ message: "Content or attachment is required" });
+    }
+
+    // Перевірка доступу до чату
+    const accessCheck = await pool.query(
+      'SELECT 1 FROM chat_members WHERE chat_id = $1 AND user_id = $2',
+      [chatId, userId]
+    );
+
+    if (accessCheck.rows.length === 0) {
+      return res.status(403).json({ message: "No access to this chat" });
+    }
+
+    // Зберігаємо повідомлення
+    const messageResult = await pool.query(
+      `INSERT INTO chat_messages 
+       (chat_id, sender_id, content, message_type, reply_to, attachment_data, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, NOW())
+       RETURNING id, created_at`,
+      [
+        chatId, 
+        userId, 
+        content, 
+        type, 
+        replyTo ? JSON.stringify(replyTo) : null,
+        attachment ? JSON.stringify(attachment) : null
+      ]
+    );
+
+    const dbMessage = messageResult.rows[0];
+
+    // Оновлюємо останнє повідомлення в чаті
+    await pool.query(
+      `UPDATE chats SET last_message = $1, last_message_at = NOW() WHERE id = $2`,
+      [content || '📎 Вкладення', chatId]
+    );
+
+    // Отримуємо інформацію про відправника
+    const userResult = await pool.query(
+      'SELECT name FROM users WHERE id = $1',
+      [userId]
+    );
+
+    const message = {
+      id: dbMessage.id.toString(),
+      sender: userId.toString(),
+      name: userResult.rows[0].name,
+      content,
+      timestamp: new Date(dbMessage.created_at).toLocaleTimeString('uk-UA', {
+        hour: '2-digit', minute: '2-digit'
+      }),
+      type: type || 'text',
+      chatId,
+      status: 'sent',
+      replyTo,
+      attachment
+    };
+
+    res.status(201).json({ 
+      message: "Message sent successfully",
+      message: message
+    });
+  } catch (err) {
+    console.error("Error sending message:", err);
+    res.status(500).json({ message: "Database error sending message" });
+  }
+});
+
+// PUT /api/messages/:messageId - редагувати повідомлення
+app.put("/api/messages/:messageId", authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const { messageId } = req.params;
+    const { content } = req.body;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    if (!content) {
+      return res.status(400).json({ message: "Content is required" });
+    }
+
+    // Перевіряємо чи користувач є автором повідомлення
+    const messageCheck = await pool.query(
+      'SELECT sender_id FROM chat_messages WHERE id = $1',
+      [messageId]
+    );
+
+    if (messageCheck.rows.length === 0) {
+      return res.status(404).json({ message: "Message not found" });
+    }
+
+    if (messageCheck.rows[0].sender_id !== userId) {
+      return res.status(403).json({ message: "Can only edit your own messages" });
+    }
+
+    // Оновлюємо повідомлення
+    await pool.query(
+      `UPDATE chat_messages 
+       SET content = $1, is_edited = true, updated_at = NOW()
+       WHERE id = $2`,
+      [content, messageId]
+    );
+
+    res.json({ message: "Message updated successfully" });
+  } catch (err) {
+    console.error("Error updating message:", err);
+    res.status(500).json({ message: "Database error updating message" });
+  }
+});
+
+// DELETE /api/messages/:messageId - видалити повідомлення
+app.delete("/api/messages/:messageId", authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const { messageId } = req.params;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    // Перевіряємо чи користувач є автором повідомлення
+    const messageCheck = await pool.query(
+      'SELECT sender_id, chat_id FROM chat_messages WHERE id = $1',
+      [messageId]
+    );
+
+    if (messageCheck.rows.length === 0) {
+      return res.status(404).json({ message: "Message not found" });
+    }
+
+    if (messageCheck.rows[0].sender_id !== userId) {
+      return res.status(403).json({ message: "Can only delete your own messages" });
+    }
+
+    // Видаляємо повідомлення
+    await pool.query('DELETE FROM chat_messages WHERE id = $1', [messageId]);
+
+    res.json({ message: "Message deleted successfully" });
+  } catch (err) {
+    console.error("Error deleting message:", err);
+    res.status(500).json({ message: "Database error deleting message" });
+  }
+});
+
+// POST /api/messages/:messageId/read - позначити повідомлення як прочитане
+app.post("/api/messages/:messageId/read", authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const { messageId } = req.params;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    // Додаємо запис про прочитання
+    await pool.query(
+      `INSERT INTO message_read_receipts (message_id, user_id, read_at)
+       VALUES ($1, $2, NOW())
+       ON CONFLICT (message_id, user_id)
+       DO UPDATE SET read_at = NOW()`,
+      [messageId, userId]
+    );
+
+    res.json({ message: "Message marked as read" });
+  } catch (err) {
+    console.error("Error marking message as read:", err);
+    res.status(500).json({ message: "Database error" });
+  }
+});
+
+// GET /api/chat/:chatId/media - отримати медіафайли чату
+app.get("/api/chat/:chatId/media", authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const { chatId } = req.params;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    // Перевірка доступу до чату
+    const accessCheck = await pool.query(
+      'SELECT 1 FROM chat_members WHERE chat_id = $1 AND user_id = $2',
+      [chatId, userId]
+    );
+
+    if (accessCheck.rows.length === 0) {
+      return res.status(403).json({ message: "No access to this chat" });
+    }
+
+    const result = await pool.query(
+      `SELECT 
+        m.id as message_id,
+        m.attachment_data as attachment,
+        m.message_type as type,
+        m.created_at as timestamp
+       FROM chat_messages m
+       WHERE m.chat_id = $1 
+       AND (m.attachment_data IS NOT NULL OR m.message_type IN ('image', 'video', 'file', 'voice'))
+       ORDER BY m.created_at DESC`,
+      [chatId]
+    );
+
+    const media = result.rows
+      .filter((row: any) => row.attachment || row.type !== 'text')
+      .map((row: any) => {
+        const attachment = row.attachment ? JSON.parse(row.attachment) : null;
+        
+        let mediaType: 'image' | 'video' | 'file' | 'voice' = 'file';
+        if (row.type === 'voice') {
+          mediaType = 'voice';
+        } else if (attachment?.type?.startsWith('image/')) {
+          mediaType = 'image';
+        } else if (attachment?.type?.startsWith('video/')) {
+          mediaType = 'video';
+        }
+
+        return {
+          type: mediaType,
+          url: attachment?.url || '',
+          name: attachment?.name || 'Файл',
+          timestamp: new Date(row.timestamp).toLocaleTimeString('uk-UA', {
+            hour: '2-digit', minute: '2-digit'
+          }),
+          messageId: row.message_id.toString(),
+          thumbnail: attachment?.previewUrl
+        };
+      });
+
+    res.json(media);
+  } catch (err) {
+    console.error("Error fetching media:", err);
+    res.status(500).json({ message: "Database error fetching media" });
+  }
+});
+
+// GET /api/chat/:chatId/search - пошук повідомлень
+app.get("/api/chat/:chatId/search", authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const { chatId } = req.params;
+    const { q, type, sender, date } = req.query;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    if (!q) {
+      return res.status(400).json({ message: "Search query is required" });
+    }
+
+    // Перевірка доступу до чату
+    const accessCheck = await pool.query(
+      'SELECT 1 FROM chat_members WHERE chat_id = $1 AND user_id = $2',
+      [chatId, userId]
+    );
+
+    if (accessCheck.rows.length === 0) {
+      return res.status(403).json({ message: "No access to this chat" });
+    }
+
+    let query = `
+      SELECT 
+        m.id,
+        m.chat_id as "chatId",
+        m.sender_id as "sender",
+        u.name,
+        m.content,
+        m.message_type as "type",
+        m.attachment_data as "attachment",
+        m.created_at as "timestamp"
+      FROM chat_messages m
+      JOIN users u ON m.sender_id = u.id
+      WHERE m.chat_id = $1 AND m.content ILIKE $2
+    `;
+    
+    const params: any[] = [chatId, `%${q}%`];
+    let paramIndex = 3;
+
+    if (type && type !== 'all') {
+      query += ` AND m.message_type = $${paramIndex}`;
+      params.push(type);
+      paramIndex++;
+    }
+
+    if (sender) {
+      query += ` AND m.sender_id = $${paramIndex}`;
+      params.push(sender);
+      paramIndex++;
+    }
+
+    if (date) {
+      query += ` AND DATE(m.created_at) = $${paramIndex}`;
+      params.push(date);
+      paramIndex++;
+    }
+
+    query += ` ORDER BY m.created_at DESC`;
+
+    const result = await pool.query(query, params);
+
+    const messages = result.rows.map((row: any) => ({
+      ...row,
+      id: row.id.toString(),
+      sender: row.sender.toString(),
+      timestamp: new Date(row.timestamp).toLocaleTimeString('uk-UA', {
+        hour: '2-digit', minute: '2-digit'
+      })
+    }));
+
+    res.json(messages);
+  } catch (err) {
+    console.error("Error searching messages:", err);
+    res.status(500).json({ message: "Database error searching messages" });
+  }
+});
+
+// POST /api/upload/chat - завантажити файл для чату
+app.post("/api/upload/chat", authenticateToken, async (req: Request, res: Response) => {
+  try {
+    // Тут має бути логіка завантаження файлів
+    // Для демонстрації повертаємо фейкові дані
+    res.json({
+      url: `/uploads/chat-${Date.now()}.file`,
+      name: req.body.name || 'file',
+      type: req.body.type || 'application/octet-stream',
+      size: req.body.size || 0
+    });
+  } catch (err) {
+    console.error("Error uploading file:", err);
+    res.status(500).json({ message: "Error uploading file" });
+  }
+});
+
+// PUT /api/chat/:chatId/mute - заглушити/відключити сповіщення чату
+app.put("/api/chat/:chatId/mute", authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const { chatId } = req.params;
+    const { muted } = req.body;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    await pool.query(
+      `UPDATE chat_members 
+       SET is_muted = $1 
+       WHERE chat_id = $2 AND user_id = $3`,
+      [muted, chatId, userId]
+    );
+
+    res.json({ 
+      message: muted ? "Chat muted" : "Chat unmuted",
+      muted 
+    });
+  } catch (err) {
+    console.error("Error muting chat:", err);
+    res.status(500).json({ message: "Database error" });
+  }
+});
+
+// DELETE /api/chat/:chatId/leave - покинути груповий чат
+app.delete("/api/chat/:chatId/leave", authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const { chatId } = req.params;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    // Перевіряємо чи це груповий чат
+    const chatCheck = await pool.query(
+      'SELECT type FROM chats WHERE id = $1',
+      [chatId]
+    );
+
+    if (chatCheck.rows.length === 0) {
+      return res.status(404).json({ message: "Chat not found" });
+    }
+
+    if (chatCheck.rows[0].type !== 'group') {
+      return res.status(400).json({ message: "Can only leave group chats" });
+    }
+
+    // Видаляємо користувача з учасників
+    await pool.query(
+      'DELETE FROM chat_members WHERE chat_id = $1 AND user_id = $2',
+      [chatId, userId]
+    );
+
+    res.json({ message: "Left group chat successfully" });
+  } catch (err) {
+    console.error("Error leaving chat:", err);
+    res.status(500).json({ message: "Database error" });
+  }
+});
+
+
 // ===== Serve frontend =====
 const frontendPath = path.join(__dirname, "../dist");
 
@@ -952,6 +1636,9 @@ if (fs.existsSync(frontendPath)) {
 }
 
 // ===== Start server =====
-app.listen(port, '0.0.0.0', () => {
+const server = app.listen(port, '0.0.0.0', () => {
   console.log(`✅ Server running at http://localhost:${port}`);
 });
+
+// Ініціалізація WebSocket сервера
+new ChatWebSocketServer(server);

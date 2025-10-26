@@ -1,9 +1,11 @@
 import { useState } from "react";
+import { TeacherProfileCard } from "@/components/TeacherProfile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Plus, BookOpen, Trophy, Target, Trash2 } from "lucide-react";
+import { Plus, Award, Target, Trash2, Lightbulb } from "lucide-react";
+import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
@@ -22,160 +24,136 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Card, CardContent } from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
-interface StudentInfo {
+interface TeacherInfo {
   name: string;
-  group: string;
-  course: string;
-  faculty: string;
+  title: string;
+  department: string;
   email: string;
   bio: string;
 }
 
-interface Project {
+interface Work {
   id: string;
   title: string;
   type: string;
-  status: string;
+  year: string;
   description: string;
 }
 
-interface Achievement {
+interface Direction {
   id: string;
-  title: string;
-  date: string;
+  area: string;
   description: string;
 }
 
-interface Goal {
+interface FutureTopic {
   id: string;
-  goal: string;
-  deadline: string;
+  topic: string;
   description: string;
 }
 
-const ProfileCard = ({ title, onEdit, children }: { title: string; onEdit?: () => void; children: React.ReactNode }) => {
-  return (
-    <Card className="overflow-hidden border-border/50 shadow-sm hover:shadow-md transition-shadow">
-      <div className="bg-card">
-        <div className="flex items-center justify-between p-6 pb-4">
-          <h2 className="text-2xl font-bold text-foreground">{title}</h2>
-          {onEdit && (
-            <Button onClick={onEdit} variant="outline" size="sm">
-              Редагувати
-            </Button>
-          )}
-        </div>
-        <CardContent className="px-6 pb-6">{children}</CardContent>
-      </div>
-    </Card>
-  );
-};
-
-export default function StudentProfile() {
-  const [studentInfo, setStudentInfo] = useState<StudentInfo>({
-    name: "Петренко Олександра Іванівна",
-    group: "ІС-21",
-    course: "3 курс",
-    faculty: "Факультет інформаційних технологій",
-    email: "petrenko.student@university.edu",
-    bio: "Студентка третього курсу, захоплююсь веб-розробкою та штучним інтелектом.",
+export default function Teacher() {
+  const [teacherInfo, setTeacherInfo] = useState<TeacherInfo>({
+    name: "Іванов Іван Іванович",
+    title: "Доктор наук, професор",
+    department: "Кафедра інформаційних систем",
+    email: "ivanov@university.edu",
+    bio: "Досвідчений викладач з більш ніж 15-річним стажем роботи в галузі інформаційних технологій.",
   });
 
-  const [projects, setProjects] = useState<Project[]>([
+  const [works, setWorks] = useState<Work[]>([
     {
       id: "1",
-      title: "Веб-додаток для управління завданнями",
-      type: "Курсовий проєкт",
-      status: "Завершено",
-      description: "Розробка повнофункціонального веб-додатку з використанням React та Node.js",
+      title: "Розробка інтелектуальних систем",
+      type: "Монографія",
+      year: "2023",
+      description: "Дослідження сучасних підходів до створення AI систем",
     },
   ]);
 
-  const [achievements, setAchievements] = useState<Achievement[]>([
+  const [directions, setDirections] = useState<Direction[]>([
     {
       id: "1",
-      title: "Переможець хакатону HackIT 2024",
-      date: "Березень 2024",
-      description: "Перше місце у номінації 'Найкращий студентський проєкт'",
+      area: "Штучний інтелект та машинне навчання",
+      description: "Дослідження алгоритмів глибокого навчання та їх застосування",
     },
   ]);
 
-  const [goals, setGoals] = useState<Goal[]>([
+  const [futureTopics, setFutureTopics] = useState<FutureTopic[]>([
     {
       id: "1",
-      goal: "Вивчити TypeScript на просунутому рівні",
-      deadline: "Грудень 2025",
-      description: "Пройти курси та створити власний проєкт на TypeScript",
+      topic: "Квантові обчислення в AI",
+      description: "Планую дослідити застосування квантових алгоритмів у машинному навчанні",
     },
   ]);
 
   const [isEditingInfo, setIsEditingInfo] = useState(false);
-  const [editedInfo, setEditedInfo] = useState<StudentInfo>(studentInfo);
+  const [editedInfo, setEditedInfo] = useState<TeacherInfo>(teacherInfo);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<{ type: string; id: string } | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const [newProject, setNewProject] = useState<Omit<Project, "id">>({
+  const [newWork, setNewWork] = useState<Omit<Work, "id">>({
     title: "",
     type: "",
-    status: "",
+    year: "",
     description: "",
   });
 
-  const [newAchievement, setNewAchievement] = useState<Omit<Achievement, "id">>({
-    title: "",
-    date: "",
+  const [newDirection, setNewDirection] = useState<Omit<Direction, "id">>({
+    area: "",
     description: "",
   });
 
-  const [newGoal, setNewGoal] = useState<Omit<Goal, "id">>({
-    goal: "",
-    deadline: "",
+  const [newTopic, setNewTopic] = useState<Omit<FutureTopic, "id">>({
+    topic: "",
     description: "",
   });
 
-  const [projectDialogOpen, setProjectDialogOpen] = useState(false);
-  const [achievementDialogOpen, setAchievementDialogOpen] = useState(false);
-  const [goalDialogOpen, setGoalDialogOpen] = useState(false);
+  const [workDialogOpen, setWorkDialogOpen] = useState(false);
+  const [directionDialogOpen, setDirectionDialogOpen] = useState(false);
+  const [topicDialogOpen, setTopicDialogOpen] = useState(false);
 
   const handleSaveInfo = () => {
-    setStudentInfo(editedInfo);
+    setTeacherInfo(editedInfo);
     setIsEditingInfo(false);
-    alert("Інформацію оновлено");
+    toast.success("Інформацію оновлено");
   };
 
-  const handleAddProject = () => {
-    if (newProject.title && newProject.type && newProject.status) {
-      setProjects([...projects, { ...newProject, id: Date.now().toString() }]);
-      setNewProject({ title: "", type: "", status: "", description: "" });
-      setProjectDialogOpen(false);
-      alert("Проєкт додано");
+  const handleAddWork = () => {
+    if (newWork.title && newWork.type && newWork.year) {
+      setWorks([...works, { ...newWork, id: Date.now().toString() }]);
+      setNewWork({ title: "", type: "", year: "", description: "" });
+      setWorkDialogOpen(false);
+      toast.success("Працю додано");
     }
   };
 
-  const handleAddAchievement = () => {
-    if (newAchievement.title && newAchievement.date) {
-      setAchievements([
-        ...achievements,
-        { ...newAchievement, id: Date.now().toString() },
+  const handleAddDirection = () => {
+    if (newDirection.area && newDirection.description) {
+      setDirections([
+        ...directions,
+        { ...newDirection, id: Date.now().toString() },
       ]);
-      setNewAchievement({ title: "", date: "", description: "" });
-      setAchievementDialogOpen(false);
-      alert("Досягнення додано");
+      setNewDirection({ area: "", description: "" });
+      setDirectionDialogOpen(false);
+      toast.success("Напрямок додано");
     }
   };
 
-  const handleAddGoal = () => {
-    if (newGoal.goal && newGoal.deadline) {
-      setGoals([...goals, { ...newGoal, id: Date.now().toString() }]);
-      setNewGoal({ goal: "", deadline: "", description: "" });
-      setGoalDialogOpen(false);
-      alert("Ціль додано");
+  const handleAddTopic = () => {
+    if (newTopic.topic && newTopic.description) {
+      setFutureTopics([
+        ...futureTopics,
+        { ...newTopic, id: Date.now().toString() },
+      ]);
+      setNewTopic({ topic: "", description: "" });
+      setTopicDialogOpen(false);
+      toast.success("Тему додано");
     }
   };
 
@@ -183,17 +161,17 @@ export default function StudentProfile() {
     if (!itemToDelete) return;
 
     switch (itemToDelete.type) {
-      case "project":
-        setProjects(projects.filter((p) => p.id !== itemToDelete.id));
-        alert("Проєкт видалено");
+      case "work":
+        setWorks(works.filter((w) => w.id !== itemToDelete.id));
+        toast.success("Працю видалено");
         break;
-      case "achievement":
-        setAchievements(achievements.filter((a) => a.id !== itemToDelete.id));
-        alert("Досягнення видалено");
+      case "direction":
+        setDirections(directions.filter((d) => d.id !== itemToDelete.id));
+        toast.success("Напрямок видалено");
         break;
-      case "goal":
-        setGoals(goals.filter((g) => g.id !== itemToDelete.id));
-        alert("Ціль видалено");
+      case "topic":
+        setFutureTopics(futureTopics.filter((t) => t.id !== itemToDelete.id));
+        toast.success("Тему видалено");
         break;
     }
 
@@ -208,18 +186,21 @@ export default function StudentProfile() {
 
   return (
     <div className="min-h-screen bg-background flex">
-      {/* Desktop Sidebar */}
+      {/* Desktop Sidebar - показується тільки на великих екранах */}
       <div className="hidden md:block">
         <Sidebar />
       </div>
 
-      {/* Mobile Sidebar + Overlay */}
+      {/* Mobile Sidebar + Overlay - показується на всіх екранах менше md */}
       {sidebarOpen && (
         <div className="fixed inset-0 z-40 flex md:hidden">
+          {/* Overlay */}
           <div
             className="fixed inset-0 bg-black/50 backdrop-blur-sm"
             onClick={() => setSidebarOpen(false)}
           ></div>
+
+          {/* Sidebar Panel */}
           <div className="relative w-64 bg-background border-r shadow-xl z-50">
             <Sidebar />
             <div className="absolute top-4 right-4">
@@ -232,6 +213,7 @@ export default function StudentProfile() {
       )}
 
       <div className="flex-1 flex flex-col">
+        {/* Header завжди присутній */}
         <Header />
         
         <main className="flex-1">
@@ -240,105 +222,100 @@ export default function StudentProfile() {
               <div className="max-w-7xl mx-auto p-6 lg:p-8 space-y-8">
                 <div className="mb-10">
                   <h1 className="text-4xl font-bold mb-3 text-foreground">
-                    Профіль студента
+                    Профіль викладача
                   </h1>
                   <p className="text-lg text-muted-foreground">
-                    Керуйте своєю інформацією, проєктами та досягненнями
+                    Керуйте своєю інформацією, працями та напрямками досліджень
                   </p>
                 </div>
 
                 {/* Personal Information */}
-                <ProfileCard
+                <TeacherProfileCard
                   title="Особиста інформація"
                   onEdit={() => setIsEditingInfo(true)}
                 >
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-1">
                       <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Ім'я</p>
-                      <p className="text-lg font-semibold">{studentInfo.name}</p>
+                      <p className="text-lg font-semibold">{teacherInfo.name}</p>
                     </div>
                     <div className="space-y-1">
-                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Група</p>
-                      <p className="text-lg font-semibold">{studentInfo.group}</p>
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Посада</p>
+                      <p className="text-lg font-semibold">{teacherInfo.title}</p>
                     </div>
                     <div className="space-y-1">
-                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Курс</p>
-                      <p className="text-lg font-semibold">{studentInfo.course}</p>
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Факультет</p>
-                      <p className="text-lg font-semibold">{studentInfo.faculty}</p>
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Кафедра</p>
+                      <p className="text-lg font-semibold">{teacherInfo.department}</p>
                     </div>
                     <div className="space-y-1">
                       <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Email</p>
-                      <p className="text-lg font-semibold text-primary">{studentInfo.email}</p>
+                      <p className="text-lg font-semibold text-primary">{teacherInfo.email}</p>
                     </div>
                     <div className="space-y-1 md:col-span-2">
-                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Про себе</p>
-                      <p className="text-base leading-relaxed">{studentInfo.bio}</p>
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Біографія</p>
+                      <p className="text-base leading-relaxed">{teacherInfo.bio}</p>
                     </div>
                   </div>
-                </ProfileCard>
+                </TeacherProfileCard>
 
-                {/* Projects */}
-                <ProfileCard title="Мої проєкти">
+                {/* Works and Publications */}
+                <TeacherProfileCard title="Праці та публікації">
                   <div className="space-y-4">
-                    <Dialog open={projectDialogOpen} onOpenChange={setProjectDialogOpen}>
+                    <Dialog open={workDialogOpen} onOpenChange={setWorkDialogOpen}>
                       <DialogTrigger asChild>
                         <Button className="w-full" variant="outline">
                           <Plus className="w-4 h-4 mr-2" />
-                          Додати проєкт
+                          Додати працю
                         </Button>
                       </DialogTrigger>
                       <DialogContent>
                         <DialogHeader>
-                          <DialogTitle>Додати новий проєкт</DialogTitle>
+                          <DialogTitle>Додати нову працю</DialogTitle>
                         </DialogHeader>
                         <div className="space-y-4">
                           <div className="space-y-2">
-                            <Label htmlFor="project-title">Назва</Label>
+                            <Label htmlFor="work-title">Назва</Label>
                             <Input
-                              id="project-title"
-                              value={newProject.title}
+                              id="work-title"
+                              value={newWork.title}
                               onChange={(e) =>
-                                setNewProject({ ...newProject, title: e.target.value })
+                                setNewWork({ ...newWork, title: e.target.value })
                               }
                             />
                           </div>
                           <div className="space-y-2">
-                            <Label htmlFor="project-type">Тип проєкту</Label>
+                            <Label htmlFor="work-type">Тип роботи</Label>
                             <Input
-                              id="project-type"
-                              placeholder="Курсовий, Дипломний, Особистий..."
-                              value={newProject.type}
+                              id="work-type"
+                              placeholder="Монографія, Стаття, Книга..."
+                              value={newWork.type}
                               onChange={(e) =>
-                                setNewProject({ ...newProject, type: e.target.value })
+                                setNewWork({ ...newWork, type: e.target.value })
                               }
                             />
                           </div>
                           <div className="space-y-2">
-                            <Label htmlFor="project-status">Статус</Label>
+                            <Label htmlFor="work-year">Рік</Label>
                             <Input
-                              id="project-status"
-                              placeholder="В процесі, Завершено..."
-                              value={newProject.status}
+                              id="work-year"
+                              value={newWork.year}
                               onChange={(e) =>
-                                setNewProject({ ...newProject, status: e.target.value })
+                                setNewWork({ ...newWork, year: e.target.value })
                               }
                             />
                           </div>
                           <div className="space-y-2">
-                            <Label htmlFor="project-desc">Опис</Label>
+                            <Label htmlFor="work-desc">Опис</Label>
                             <Textarea
-                              id="project-desc"
-                              value={newProject.description}
+                              id="work-desc"
+                              value={newWork.description}
                               onChange={(e) =>
-                                setNewProject({ ...newProject, description: e.target.value })
+                                setNewWork({ ...newWork, description: e.target.value })
                               }
                             />
                           </div>
                           <DialogClose asChild>
-                            <Button onClick={handleAddProject} className="w-full">
+                            <Button onClick={handleAddWork} className="w-full">
                               Зберегти
                             </Button>
                           </DialogClose>
@@ -346,26 +323,26 @@ export default function StudentProfile() {
                       </DialogContent>
                     </Dialog>
 
-                    {projects.map((project) => (
+                    {works.map((work) => (
                       <div
-                        key={project.id}
+                        key={work.id}
                         className="group p-5 bg-card rounded-xl border border-border hover:border-primary/30 hover:shadow-lg transition-all duration-300"
                       >
                         <div className="flex items-start gap-4">
                           <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
-                            <BookOpen className="w-6 h-6 text-primary" />
+                            <Award className="w-6 h-6 text-primary" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <h4 className="font-bold text-lg mb-1 group-hover:text-primary transition-colors">{project.title}</h4>
+                            <h4 className="font-bold text-lg mb-1 group-hover:text-primary transition-colors">{work.title}</h4>
                             <p className="text-sm font-medium text-primary/70 mb-2">
-                              {project.type} • {project.status}
+                              {work.type} • {work.year}
                             </p>
-                            <p className="text-sm text-muted-foreground leading-relaxed">{project.description}</p>
+                            <p className="text-sm text-muted-foreground leading-relaxed">{work.description}</p>
                           </div>
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => openDeleteDialog("project", project.id)}
+                            onClick={() => openDeleteDialog("work", work.id)}
                             className="h-9 w-9 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors opacity-0 group-hover:opacity-100"
                           >
                             <Trash2 className="h-4 w-4" />
@@ -374,58 +351,48 @@ export default function StudentProfile() {
                       </div>
                     ))}
                   </div>
-                </ProfileCard>
+                </TeacherProfileCard>
 
-                {/* Achievements */}
-                <ProfileCard title="Досягнення">
+                {/* Research Directions */}
+                <TeacherProfileCard title="Напрямки наукової роботи">
                   <div className="space-y-4">
-                    <Dialog open={achievementDialogOpen} onOpenChange={setAchievementDialogOpen}>
+                    <Dialog open={directionDialogOpen} onOpenChange={setDirectionDialogOpen}>
                       <DialogTrigger asChild>
                         <Button className="w-full" variant="outline">
                           <Plus className="w-4 h-4 mr-2" />
-                          Додати досягнення
+                          Додати напрямок
                         </Button>
                       </DialogTrigger>
                       <DialogContent>
                         <DialogHeader>
-                          <DialogTitle>Додати досягнення</DialogTitle>
+                          <DialogTitle>Додати науковий напрямок</DialogTitle>
                         </DialogHeader>
                         <div className="space-y-4">
                           <div className="space-y-2">
-                            <Label htmlFor="achievement-title">Назва</Label>
+                            <Label htmlFor="dir-area">Область</Label>
                             <Input
-                              id="achievement-title"
-                              value={newAchievement.title}
+                              id="dir-area"
+                              value={newDirection.area}
                               onChange={(e) =>
-                                setNewAchievement({ ...newAchievement, title: e.target.value })
+                                setNewDirection({ ...newDirection, area: e.target.value })
                               }
                             />
                           </div>
                           <div className="space-y-2">
-                            <Label htmlFor="achievement-date">Дата</Label>
-                            <Input
-                              id="achievement-date"
-                              value={newAchievement.date}
-                              onChange={(e) =>
-                                setNewAchievement({ ...newAchievement, date: e.target.value })
-                              }
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="achievement-desc">Опис</Label>
+                            <Label htmlFor="dir-desc">Опис</Label>
                             <Textarea
-                              id="achievement-desc"
-                              value={newAchievement.description}
+                              id="dir-desc"
+                              value={newDirection.description}
                               onChange={(e) =>
-                                setNewAchievement({
-                                  ...newAchievement,
+                                setNewDirection({
+                                  ...newDirection,
                                   description: e.target.value,
                                 })
                               }
                             />
                           </div>
                           <DialogClose asChild>
-                            <Button onClick={handleAddAchievement} className="w-full">
+                            <Button onClick={handleAddDirection} className="w-full">
                               Зберегти
                             </Button>
                           </DialogClose>
@@ -433,98 +400,9 @@ export default function StudentProfile() {
                       </DialogContent>
                     </Dialog>
 
-                    {achievements.map((achievement) => (
+                    {directions.map((direction) => (
                       <div
-                        key={achievement.id}
-                        className="group p-5 bg-card rounded-xl border border-border hover:border-primary/30 hover:shadow-lg transition-all duration-300"
-                      >
-                        <div className="flex items-start gap-4">
-                          <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
-                            <Trophy className="w-6 h-6 text-primary" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <h4 className="font-bold text-lg mb-2 group-hover:text-primary transition-colors">{achievement.title}</h4>
-                            <p className="text-sm font-medium text-primary/70 mb-2">
-                              {achievement.date}
-                            </p>
-                            <p className="text-sm text-muted-foreground leading-relaxed">
-                              {achievement.description}
-                            </p>
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => openDeleteDialog("achievement", achievement.id)}
-                            className="h-9 w-9 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors opacity-0 group-hover:opacity-100"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </ProfileCard>
-
-                {/* Goals */}
-                <ProfileCard title="Цілі та плани">
-                  <div className="space-y-4">
-                    <Dialog open={goalDialogOpen} onOpenChange={setGoalDialogOpen}>
-                      <DialogTrigger asChild>
-                        <Button className="w-full" variant="outline">
-                          <Plus className="w-4 h-4 mr-2" />
-                          Додати ціль
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle>Додати нову ціль</DialogTitle>
-                        </DialogHeader>
-                        <div className="space-y-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="goal-name">Ціль</Label>
-                            <Input
-                              id="goal-name"
-                              value={newGoal.goal}
-                              onChange={(e) =>
-                                setNewGoal({ ...newGoal, goal: e.target.value })
-                              }
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="goal-deadline">Дедлайн</Label>
-                            <Input
-                              id="goal-deadline"
-                              value={newGoal.deadline}
-                              onChange={(e) =>
-                                setNewGoal({ ...newGoal, deadline: e.target.value })
-                              }
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="goal-desc">Опис</Label>
-                            <Textarea
-                              id="goal-desc"
-                              value={newGoal.description}
-                              onChange={(e) =>
-                                setNewGoal({
-                                  ...newGoal,
-                                  description: e.target.value,
-                                })
-                              }
-                            />
-                          </div>
-                          <DialogClose asChild>
-                            <Button onClick={handleAddGoal} className="w-full">
-                              Зберегти
-                            </Button>
-                          </DialogClose>
-                        </div>
-                      </DialogContent>
-                    </Dialog>
-
-                    {goals.map((goal) => (
-                      <div
-                        key={goal.id}
+                        key={direction.id}
                         className="group p-5 bg-card rounded-xl border border-border hover:border-primary/30 hover:shadow-lg transition-all duration-300"
                       >
                         <div className="flex items-start gap-4">
@@ -532,18 +410,15 @@ export default function StudentProfile() {
                             <Target className="w-6 h-6 text-primary" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <h4 className="font-bold text-lg mb-2 group-hover:text-primary transition-colors">{goal.goal}</h4>
-                            <p className="text-sm font-medium text-primary/70 mb-2">
-                              Дедлайн: {goal.deadline}
-                            </p>
+                            <h4 className="font-bold text-lg mb-2 group-hover:text-primary transition-colors">{direction.area}</h4>
                             <p className="text-sm text-muted-foreground leading-relaxed">
-                              {goal.description}
+                              {direction.description}
                             </p>
                           </div>
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => openDeleteDialog("goal", goal.id)}
+                            onClick={() => openDeleteDialog("direction", direction.id)}
                             className="h-9 w-9 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors opacity-0 group-hover:opacity-100"
                           >
                             <Trash2 className="h-4 w-4" />
@@ -552,7 +427,83 @@ export default function StudentProfile() {
                       </div>
                     ))}
                   </div>
-                </ProfileCard>
+                </TeacherProfileCard>
+
+                {/* Future Topics */}
+                <TeacherProfileCard title="Теми для майбутніх досліджень">
+                  <div className="space-y-4">
+                    <Dialog open={topicDialogOpen} onOpenChange={setTopicDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button className="w-full" variant="outline">
+                          <Plus className="w-4 h-4 mr-2" />
+                          Додати тему
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Додати майбутню тему</DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="topic-name">Тема</Label>
+                            <Input
+                              id="topic-name"
+                              value={newTopic.topic}
+                              onChange={(e) =>
+                                setNewTopic({ ...newTopic, topic: e.target.value })
+                              }
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="topic-desc">Опис</Label>
+                            <Textarea
+                              id="topic-desc"
+                              value={newTopic.description}
+                              onChange={(e) =>
+                                setNewTopic({
+                                  ...newTopic,
+                                  description: e.target.value,
+                                })
+                              }
+                            />
+                          </div>
+                          <DialogClose asChild>
+                            <Button onClick={handleAddTopic} className="w-full">
+                              Зберегти
+                            </Button>
+                          </DialogClose>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+
+                    {futureTopics.map((topic) => (
+                      <div
+                        key={topic.id}
+                        className="group p-5 bg-card rounded-xl border border-border hover:border-primary/30 hover:shadow-lg transition-all duration-300"
+                      >
+                        <div className="flex items-start gap-4">
+                          <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                            <Lightbulb className="w-6 h-6 text-primary" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-bold text-lg mb-2 group-hover:text-primary transition-colors">{topic.topic}</h4>
+                            <p className="text-sm text-muted-foreground leading-relaxed">
+                              {topic.description}
+                            </p>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => openDeleteDialog("topic", topic.id)}
+                            className="h-9 w-9 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors opacity-0 group-hover:opacity-100"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </TeacherProfileCard>
 
                 {/* Edit Info Dialog */}
                 <Dialog open={isEditingInfo} onOpenChange={setIsEditingInfo}>
@@ -572,32 +523,22 @@ export default function StudentProfile() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="edit-group">Група</Label>
+                        <Label htmlFor="edit-title">Посада</Label>
                         <Input
-                          id="edit-group"
-                          value={editedInfo.group}
+                          id="edit-title"
+                          value={editedInfo.title}
                           onChange={(e) =>
-                            setEditedInfo({ ...editedInfo, group: e.target.value })
+                            setEditedInfo({ ...editedInfo, title: e.target.value })
                           }
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="edit-course">Курс</Label>
+                        <Label htmlFor="edit-dept">Кафедра</Label>
                         <Input
-                          id="edit-course"
-                          value={editedInfo.course}
+                          id="edit-dept"
+                          value={editedInfo.department}
                           onChange={(e) =>
-                            setEditedInfo({ ...editedInfo, course: e.target.value })
-                          }
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="edit-faculty">Факультет</Label>
-                        <Input
-                          id="edit-faculty"
-                          value={editedInfo.faculty}
-                          onChange={(e) =>
-                            setEditedInfo({ ...editedInfo, faculty: e.target.value })
+                            setEditedInfo({ ...editedInfo, department: e.target.value })
                           }
                         />
                       </div>
@@ -613,7 +554,7 @@ export default function StudentProfile() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="edit-bio">Про себе</Label>
+                        <Label htmlFor="edit-bio">Біографія</Label>
                         <Textarea
                           id="edit-bio"
                           value={editedInfo.bio}

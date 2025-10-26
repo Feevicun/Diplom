@@ -349,32 +349,6 @@ const Resources = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
 
-  // Додайте цей useEffect в компонент Resources (після інших useEffect)
-useEffect(() => {
-  // Глобальні функції для голосового помічника
-  window.voiceAssistantSearch = (query: string) => {
-    setSearch(query);
-  };
-
-  window.voiceAssistantToggleSaved = () => {
-    setShowOnlySaved(prev => !prev);
-  };
-
-  window.voiceAssistantAddResource = () => {
-    if (user?.role === 'teacher') {
-      setIsAddDialogOpen(true);
-    } else {
-      alert('Тільки викладачі можуть додавати ресурси');
-    }
-  };
-
-  return () => {
-    // Прибираємо функції при розмонтуванні
-    delete window.voiceAssistantSearch;
-    delete window.voiceAssistantToggleSaved;
-    delete window.voiceAssistantAddResource;
-  };
-}, [user?.role]);
 
   // Отримання користувача при завантаженні компонента
   useEffect(() => {

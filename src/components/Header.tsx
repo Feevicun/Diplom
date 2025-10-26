@@ -42,6 +42,7 @@ const Header = () => {
   const { theme, setTheme } = useTheme();
 
   const [firstName, setFirstName] = useState('');
+  const [userRole, setUserRole] = useState<'student' | 'teacher'>('student');
   const [isOnline, setIsOnline] = useState(true);
   const [isCreateMenuOpen, setIsCreateMenuOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -65,6 +66,11 @@ const Header = () => {
         );
       } else {
         setFirstName('');
+      }
+
+      // Встановлюємо роль користувача
+      if (user.role) {
+        setUserRole(user.role);
       }
     }
     
@@ -105,6 +111,15 @@ const Header = () => {
     navigate(`/tracker?type=${type}`);
   };
 
+  const handleProfileClick = () => {
+    // Перенаправляємо на відповідний профіль в залежності від ролі
+    if (userRole === 'teacher') {
+      navigate('/teacher/info');
+    } else {
+      navigate('/profile');
+    }
+  };
+
   const openMobileMenu = () => {
     setIsMobileMenuOpen(true);
     setIsClosing(false);
@@ -124,15 +139,31 @@ const Header = () => {
     }
   };
 
-  const menuItems = [
-    { title: t('sidebar.dashboard'), href: '/dashboard', icon: Home },
-    { title: t('sidebar.projects'), href: '/tracker', icon: FileText },
-    { title: t('sidebar.tasks'), href: '/chat', icon: MessageSquare },
-    { title: t('sidebar.calendar'), href: '/calendar', icon: Calendar },
-    { title: t('sidebar.aiAssistant'), href: '/ai-assistant', icon: Zap, badge: 'BETA' },
-    { title: t('sidebar.analytics'), href: '/analytics', icon: TrendingUp },
-    { title: t('sidebar.resources'), href: '/resources', icon: Book }
-  ];
+  // Визначаємо пункти меню в залежності від ролі
+  const getMenuItems = () => {
+    const baseItems = [
+      { title: t('sidebar.dashboard'), href: userRole === 'teacher' ? '/teacherdashboard' : '/dashboard', icon: Home },
+      { title: t('sidebar.projects'), href: userRole === 'teacher' ? '/teacher/grades' : '/tracker', icon: FileText },
+      { title: t('sidebar.tasks'), href: '/chat', icon: MessageSquare },
+      { title: t('sidebar.calendar'), href: '/calendar', icon: Calendar },
+      { title: t('sidebar.aiAssistant'), href: '/ai-assistant', icon: Zap, badge: 'BETA' },
+      { title: t('sidebar.analytics'), href: '/analytics', icon: TrendingUp },
+      { title: t('sidebar.resources'), href: '/resources', icon: Book }
+    ];
+
+    // Додаємо профіль викладача, якщо це викладач
+    if (userRole === 'teacher') {
+      baseItems.splice(2, 0, { 
+        title: 'Мої студенти', 
+        href: '/teacher/students', 
+        icon: User 
+      });
+    }
+
+    return baseItems;
+  };
+
+  const menuItems = getMenuItems();
 
   return (
     <>
@@ -158,43 +189,45 @@ const Header = () => {
           </div>
 
           <div className="hidden md:flex items-center gap-6 relative">
-            <div ref={menuRef} className="relative">
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-2 w-[110px] justify-center"
-                onClick={() => setIsCreateMenuOpen(!isCreateMenuOpen)}
-              >
-                <Plus className="h-4 w-4" />
-                {t('header.create')}
-              </Button>
+            {userRole === 'student' && (
+              <div ref={menuRef} className="relative">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 w-[110px] justify-center"
+                  onClick={() => setIsCreateMenuOpen(!isCreateMenuOpen)}
+                >
+                  <Plus className="h-4 w-4" />
+                  {t('header.create')}
+                </Button>
 
-              {isCreateMenuOpen && (
-                <div className="absolute right-0 mt-2 w-48 rounded-xl border bg-popover text-popover-foreground shadow-xl z-50 animate-in slide-in-from-top-2 duration-200">
-                  <button
-                    onClick={() => handleCreateSelect('coursework')}
-                    className="w-full text-left px-4 py-3 text-sm rounded-t-xl hover:bg-accent flex items-center gap-3"
-                  >
-                    <BookOpen className="h-4 w-4" />
-                    {t('header.createCoursework')}
-                  </button>
-                  <button
-                    onClick={() => handleCreateSelect('diploma')}
-                    className="w-full text-left px-4 py-3 text-sm hover:bg-accent flex items-center gap-3"
-                  >
-                    <GraduationCap className="h-4 w-4" />
-                    {t('header.createDiploma')}
-                  </button>
-                  <button
-                    onClick={() => handleCreateSelect('practice')}
-                    className="w-full text-left px-4 py-3 text-sm rounded-b-xl hover:bg-accent flex items-center gap-3"
-                  >
-                    <Briefcase className="h-4 w-4" />
-                    {t('header.createPractice')}
-                  </button>
-                </div>
-              )}
-            </div>
+                {isCreateMenuOpen && (
+                  <div className="absolute right-0 mt-2 w-48 rounded-xl border bg-popover text-popover-foreground shadow-xl z-50 animate-in slide-in-from-top-2 duration-200">
+                    <button
+                      onClick={() => handleCreateSelect('coursework')}
+                      className="w-full text-left px-4 py-3 text-sm rounded-t-xl hover:bg-accent flex items-center gap-3"
+                    >
+                      <BookOpen className="h-4 w-4" />
+                      {t('header.createCoursework')}
+                    </button>
+                    <button
+                      onClick={() => handleCreateSelect('diploma')}
+                      className="w-full text-left px-4 py-3 text-sm hover:bg-accent flex items-center gap-3"
+                    >
+                      <GraduationCap className="h-4 w-4" />
+                      {t('header.createDiploma')}
+                    </button>
+                    <button
+                      onClick={() => handleCreateSelect('practice')}
+                      className="w-full text-left px-4 py-3 text-sm rounded-b-xl hover:bg-accent flex items-center gap-3"
+                    >
+                      <Briefcase className="h-4 w-4" />
+                      {t('header.createPractice')}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
 
             <Select
               value={theme}
@@ -223,7 +256,7 @@ const Header = () => {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => navigate('/profile')}
+              onClick={handleProfileClick}
               className="rounded-full"
             >
               <Settings className="h-4 w-4" />
@@ -234,6 +267,9 @@ const Header = () => {
             <div className="hidden sm:flex items-center gap-3">
               <div className="text-right leading-tight">
                 <p className="text-sm font-medium">{firstName}</p>
+                <p className="text-xs text-muted-foreground capitalize">
+                  {userRole === 'teacher' ? 'Викладач' : 'Студент'}
+                </p>
                 <p
                   onClick={toggleOnlineStatus}
                   className="text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
@@ -293,6 +329,9 @@ const Header = () => {
                       {isOnline ? t('header.online') : t('header.offline')}
                     </span>
                   </div>
+                  <span className="text-xs text-muted-foreground capitalize">
+                    {userRole === 'teacher' ? 'Викладач' : 'Студент'}
+                  </span>
                 </div>
               </div>
               <Button

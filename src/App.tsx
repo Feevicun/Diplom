@@ -1,3 +1,4 @@
+// App.tsx
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 
 import Dashboard from './pages/Index';
@@ -12,19 +13,17 @@ import ForgotPasswordPage from './pages/ForgotPass';
 import CalendarPage from './pages/Calendar';
 import Analytics from './pages/Analytics';
 import Resources from './pages/Resources';
+import TeacherDashboard from './pages/TeacherDashboard';
+import TeacherGrades from './pages/TeacherGraders';
+import TeacherInfo from './pages/TeacherInfo'; 
 
 import { ThemeProvider } from './context/ThemeContext';
-import { VoiceAssistantProvider } from './context/VoiceAssistantContext';
-import { VoiceIndicator } from './components/VoiceAssistant/VoiceIndicator';
 import { VoiceAssistant } from './components/VoiceAssistant/VoiceAssistant';
 
 function App() {
   return (
     <ThemeProvider>
-      <VoiceAssistantProvider>
         <Router>
-          {/* Глобальний індикатор голосового помічника */}
-          <VoiceIndicator />
           
           {/* Головний компонент голосового помічника */}
           <VoiceAssistant />
@@ -34,17 +33,26 @@ function App() {
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            
+            {/* Студентські маршрути */}
             <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/chat" element={<Chat />} />
             <Route path="/tracker" element={<ThesisTracker />} />
-            <Route path="/ai-assistant" element={<AIAssistant />} />
             <Route path="/profile" element={<ProfilePage />} />
+            
+            {/* Викладацькі маршрути */}
+            <Route path="/teacherdashboard" element={<TeacherDashboard />} />
+            <Route path="/teacher/grades" element={<TeacherGrades />} />
+            <Route path="/teacher/info" element={<TeacherInfo />} /> {/* Додаємо маршрут */}
+            <Route path="/teacher/students" element={<TeacherDashboard />} /> {/* Тимочасова заглушка */}
+            
+            {/* Спільні маршрути */}
+            <Route path="/chat" element={<Chat />} />
+            <Route path="/ai-assistant" element={<AIAssistant />} />
             <Route path="/calendar" element={<CalendarPage />} />
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/resources" element={<Resources />} />
           </Routes>
         </Router>
-      </VoiceAssistantProvider>
     </ThemeProvider>
   );
 }
