@@ -110,7 +110,7 @@ const Sidebar = () => {
   const teacherMenuItems: MenuItemType[] = [
     { title: 'Панель викладача', href: '/teacherdashboard', icon: Home },
     { title: 'Оцінювання робіт', href: '/teacher/grades', icon: FileText },
-    { title: 'Мої студенти', href: '/teacher/students', icon: Users },
+    { title: 'Заявки студентів', href: '/teacher/students', icon: Users },
     { title: 'Повідомлення', href: '/chat', icon: MessageSquare },
     { title: 'Календар', href: '/calendar', icon: Calendar }
   ];

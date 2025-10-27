@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { TeacherProfileCard } from "@/components/TeacherProfile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Plus, Award, Target, Trash2, Lightbulb } from "lucide-react";
+import { Plus, Award, Target, Trash2, Lightbulb, Edit } from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -42,54 +42,38 @@ interface Work {
   type: string;
   year: string;
   description: string;
+  fileUrl?: string;
+  publicationUrl?: string;
+  createdAt?: string;
 }
 
 interface Direction {
   id: string;
   area: string;
   description: string;
+  createdAt?: string;
 }
 
 interface FutureTopic {
   id: string;
   topic: string;
   description: string;
+  createdAt?: string;
 }
 
 export default function Teacher() {
   const [teacherInfo, setTeacherInfo] = useState<TeacherInfo>({
-    name: "Іванов Іван Іванович",
-    title: "Доктор наук, професор",
-    department: "Кафедра інформаційних систем",
-    email: "ivanov@university.edu",
-    bio: "Досвідчений викладач з більш ніж 15-річним стажем роботи в галузі інформаційних технологій.",
+    name: "",
+    title: "",
+    department: "",
+    email: "",
+    bio: "",
   });
 
-  const [works, setWorks] = useState<Work[]>([
-    {
-      id: "1",
-      title: "Розробка інтелектуальних систем",
-      type: "Монографія",
-      year: "2023",
-      description: "Дослідження сучасних підходів до створення AI систем",
-    },
-  ]);
-
-  const [directions, setDirections] = useState<Direction[]>([
-    {
-      id: "1",
-      area: "Штучний інтелект та машинне навчання",
-      description: "Дослідження алгоритмів глибокого навчання та їх застосування",
-    },
-  ]);
-
-  const [futureTopics, setFutureTopics] = useState<FutureTopic[]>([
-    {
-      id: "1",
-      topic: "Квантові обчислення в AI",
-      description: "Планую дослідити застосування квантових алгоритмів у машинному навчанні",
-    },
-  ]);
+  const [works, setWorks] = useState<Work[]>([]);
+  const [directions, setDirections] = useState<Direction[]>([]);
+  const [futureTopics, setFutureTopics] = useState<FutureTopic[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const [isEditingInfo, setIsEditingInfo] = useState(false);
   const [editedInfo, setEditedInfo] = useState<TeacherInfo>(teacherInfo);
@@ -97,6 +81,7 @@ export default function Teacher() {
   const [itemToDelete, setItemToDelete] = useState<{ type: string; id: string } | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  // Стани для додавання нових елементів
   const [newWork, setNewWork] = useState<Omit<Work, "id">>({
     title: "",
     type: "",
@@ -114,75 +99,460 @@ export default function Teacher() {
     description: "",
   });
 
+  // Стани для редагування існуючих елементів
+  const [editingWork, setEditingWork] = useState<Work | null>(null);
+  const [editingDirection, setEditingDirection] = useState<Direction | null>(null);
+  const [editingTopic, setEditingTopic] = useState<FutureTopic | null>(null);
+
   const [workDialogOpen, setWorkDialogOpen] = useState(false);
   const [directionDialogOpen, setDirectionDialogOpen] = useState(false);
   const [topicDialogOpen, setTopicDialogOpen] = useState(false);
 
-  const handleSaveInfo = () => {
-    setTeacherInfo(editedInfo);
-    setIsEditingInfo(false);
-    toast.success("Інформацію оновлено");
+  // Отримання даних викладача з API
+  useEffect(() => {
+    const fetchTeacherData = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          console.error('No token found');
+          setLoading(false);
+          return;
+        }
+
+        // Отримуємо профіль викладача
+        const profileResponse = await fetch('/api/teacher/profile', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (profileResponse.ok) {
+          const profileData = await profileResponse.json();
+          setTeacherInfo({
+            name: profileData.name,
+            title: profileData.title || "",
+            department: profileData.department || "",
+            email: profileData.email,
+            bio: profileData.bio || "",
+          });
+          setEditedInfo({
+            name: profileData.name,
+            title: profileData.title || "",
+            department: profileData.department || "",
+            email: profileData.email,
+            bio: profileData.bio || "",
+          });
+        } else {
+          console.error('Failed to fetch teacher profile');
+        }
+
+        // Отримуємо роботи викладача
+        const worksResponse = await fetch('/api/teacher/works', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+
+        if (worksResponse.ok) {
+          const worksData = await worksResponse.json();
+          setWorks(worksData);
+        }
+
+        // Отримуємо напрямки досліджень
+        const directionsResponse = await fetch('/api/teacher/directions', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+
+        if (directionsResponse.ok) {
+          const directionsData = await directionsResponse.json();
+          setDirections(directionsData);
+        }
+
+        // Отримуємо майбутні теми
+        const topicsResponse = await fetch('/api/teacher/topics', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+
+        if (topicsResponse.ok) {
+          const topicsData = await topicsResponse.json();
+          setFutureTopics(topicsData);
+        }
+
+      } catch (error) {
+        console.error('Помилка завантаження даних викладача:', error);
+        toast.error("Помилка при завантаженні даних");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTeacherData();
+  }, []);
+
+  const handleSaveInfo = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        toast.error("Необхідно увійти в систему");
+        return;
+      }
+
+      const response = await fetch('/api/teacher/profile', {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title: editedInfo.title,
+          bio: editedInfo.bio,
+        }),
+      });
+
+      if (response.ok) {
+        setTeacherInfo(editedInfo);
+        setIsEditingInfo(false);
+        toast.success("Інформацію оновлено");
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to update profile');
+      }
+    } catch (error) {
+      console.error('Помилка оновлення профілю:', error);
+      toast.error("Помилка при оновленні профілю");
+    }
   };
 
-  const handleAddWork = () => {
+  // Функції для робіт
+  const handleAddWork = async () => {
     if (newWork.title && newWork.type && newWork.year) {
-      setWorks([...works, { ...newWork, id: Date.now().toString() }]);
-      setNewWork({ title: "", type: "", year: "", description: "" });
-      setWorkDialogOpen(false);
-      toast.success("Працю додано");
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          toast.error("Необхідно увійти в систему");
+          return;
+        }
+
+        const response = await fetch('/api/teacher/works', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(newWork),
+        });
+
+        if (response.ok) {
+          const savedWork = await response.json();
+          setWorks([...works, savedWork.work]);
+          setNewWork({ title: "", type: "", year: "", description: "" });
+          setWorkDialogOpen(false);
+          toast.success("Працю додано");
+        } else {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to add work');
+        }
+      } catch (error) {
+        console.error('Помилка додавання роботи:', error);
+        toast.error("Помилка при додаванні роботи");
+      }
+    } else {
+      toast.error("Будь ласка, заповніть обов'язкові поля: назва, тип та рік");
     }
   };
 
-  const handleAddDirection = () => {
+  const handleEditWork = async () => {
+    if (!editingWork) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        toast.error("Необхідно увійти в систему");
+        return;
+      }
+
+      const response = await fetch(`/api/teacher/works/${editingWork.id}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title: editingWork.title,
+          type: editingWork.type,
+          year: editingWork.year,
+          description: editingWork.description,
+        }),
+      });
+
+      if (response.ok) {
+        setWorks(works.map(work => 
+          work.id === editingWork.id ? editingWork : work
+        ));
+        setEditingWork(null);
+        toast.success("Працю оновлено");
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to update work');
+      }
+    } catch (error) {
+      console.error('Помилка оновлення роботи:', error);
+      toast.error("Помилка при оновленні роботи");
+    }
+  };
+
+  // Функції для напрямків
+  const handleAddDirection = async () => {
     if (newDirection.area && newDirection.description) {
-      setDirections([
-        ...directions,
-        { ...newDirection, id: Date.now().toString() },
-      ]);
-      setNewDirection({ area: "", description: "" });
-      setDirectionDialogOpen(false);
-      toast.success("Напрямок додано");
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          toast.error("Необхідно увійти в систему");
+          return;
+        }
+
+        const response = await fetch('/api/teacher/directions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(newDirection),
+        });
+
+        if (response.ok) {
+          const savedDirection = await response.json();
+          setDirections([...directions, savedDirection.direction]);
+          setNewDirection({ area: "", description: "" });
+          setDirectionDialogOpen(false);
+          toast.success("Напрямок додано");
+        } else {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to add direction');
+        }
+      } catch (error) {
+        console.error('Помилка додавання напрямку:', error);
+        toast.error("Помилка при додаванні напрямку");
+      }
+    } else {
+      toast.error("Будь ласка, заповніть обов'язкові поля: область та опис");
     }
   };
 
-  const handleAddTopic = () => {
+  const handleEditDirection = async () => {
+    if (!editingDirection) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        toast.error("Необхідно увійти в систему");
+        return;
+      }
+
+      const response = await fetch(`/api/teacher/directions/${editingDirection.id}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          area: editingDirection.area,
+          description: editingDirection.description,
+        }),
+      });
+
+      if (response.ok) {
+        setDirections(directions.map(direction => 
+          direction.id === editingDirection.id ? editingDirection : direction
+        ));
+        setEditingDirection(null);
+        toast.success("Напрямок оновлено");
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to update direction');
+      }
+    } catch (error) {
+      console.error('Помилка оновлення напрямку:', error);
+      toast.error("Помилка при оновленні напрямку");
+    }
+  };
+
+  // Функції для тем
+  const handleAddTopic = async () => {
     if (newTopic.topic && newTopic.description) {
-      setFutureTopics([
-        ...futureTopics,
-        { ...newTopic, id: Date.now().toString() },
-      ]);
-      setNewTopic({ topic: "", description: "" });
-      setTopicDialogOpen(false);
-      toast.success("Тему додано");
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          toast.error("Необхідно увійти в систему");
+          return;
+        }
+
+        const response = await fetch('/api/teacher/topics', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(newTopic),
+        });
+
+        if (response.ok) {
+          const savedTopic = await response.json();
+          setFutureTopics([...futureTopics, savedTopic.topic]);
+          setNewTopic({ topic: "", description: "" });
+          setTopicDialogOpen(false);
+          toast.success("Тему додано");
+        } else {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to add topic');
+        }
+      } catch (error) {
+        console.error('Помилка додавання теми:', error);
+        toast.error("Помилка при додаванні теми");
+      }
+    } else {
+      toast.error("Будь ласка, заповніть обов'язкові поля: тему та опис");
     }
   };
 
-  const handleDelete = () => {
+  const handleEditTopic = async () => {
+    if (!editingTopic) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        toast.error("Необхідно увійти в систему");
+        return;
+      }
+
+      const response = await fetch(`/api/teacher/topics/${editingTopic.id}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          topic: editingTopic.topic,
+          description: editingTopic.description,
+        }),
+      });
+
+      if (response.ok) {
+        setFutureTopics(futureTopics.map(topic => 
+          topic.id === editingTopic.id ? editingTopic : topic
+        ));
+        setEditingTopic(null);
+        toast.success("Тему оновлено");
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to update topic');
+      }
+    } catch (error) {
+      console.error('Помилка оновлення теми:', error);
+      toast.error("Помилка при оновленні теми");
+    }
+  };
+
+  const handleDelete = async () => {
     if (!itemToDelete) return;
 
-    switch (itemToDelete.type) {
-      case "work":
-        setWorks(works.filter((w) => w.id !== itemToDelete.id));
-        toast.success("Працю видалено");
-        break;
-      case "direction":
-        setDirections(directions.filter((d) => d.id !== itemToDelete.id));
-        toast.success("Напрямок видалено");
-        break;
-      case "topic":
-        setFutureTopics(futureTopics.filter((t) => t.id !== itemToDelete.id));
-        toast.success("Тему видалено");
-        break;
-    }
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        toast.error("Необхідно увійти в систему");
+        return;
+      }
 
-    setDeleteDialogOpen(false);
-    setItemToDelete(null);
+      let endpoint = '';
+      switch (itemToDelete.type) {
+        case "work":
+          endpoint = `/api/teacher/works/${itemToDelete.id}`;
+          break;
+        case "direction":
+          endpoint = `/api/teacher/directions/${itemToDelete.id}`;
+          break;
+        case "topic":
+          endpoint = `/api/teacher/topics/${itemToDelete.id}`;
+          break;
+      }
+
+      const response = await fetch(endpoint, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        switch (itemToDelete.type) {
+          case "work":
+            setWorks(works.filter((w) => w.id !== itemToDelete.id));
+            toast.success("Працю видалено");
+            break;
+          case "direction":
+            setDirections(directions.filter((d) => d.id !== itemToDelete.id));
+            toast.success("Напрямок видалено");
+            break;
+          case "topic":
+            setFutureTopics(futureTopics.filter((t) => t.id !== itemToDelete.id));
+            toast.success("Тему видалено");
+            break;
+        }
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to delete item');
+      }
+    } catch (error) {
+      console.error('Помилка видалення:', error);
+      toast.error("Помилка при видаленні");
+    } finally {
+      setDeleteDialogOpen(false);
+      setItemToDelete(null);
+    }
   };
 
   const openDeleteDialog = (type: string, id: string) => {
     setItemToDelete({ type, id });
     setDeleteDialogOpen(true);
   };
+
+  const startEditingWork = (work: Work) => {
+    setEditingWork(work);
+  };
+
+  const startEditingDirection = (direction: Direction) => {
+    setEditingDirection(direction);
+  };
+
+  const startEditingTopic = (topic: FutureTopic) => {
+    setEditingTopic(topic);
+  };
+
+  // Відображення завантаження
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex">
+        <div className="flex-1 flex flex-col">
+          <Header />
+          <main className="flex-1 flex items-center justify-center">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+              <p className="text-muted-foreground">Завантаження профілю...</p>
+            </div>
+          </main>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -241,7 +611,7 @@ export default function Teacher() {
                     </div>
                     <div className="space-y-1">
                       <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Посада</p>
-                      <p className="text-lg font-semibold">{teacherInfo.title}</p>
+                      <p className="text-lg font-semibold">{teacherInfo.title || "Не вказано"}</p>
                     </div>
                     <div className="space-y-1">
                       <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Кафедра</p>
@@ -253,7 +623,9 @@ export default function Teacher() {
                     </div>
                     <div className="space-y-1 md:col-span-2">
                       <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Біографія</p>
-                      <p className="text-base leading-relaxed">{teacherInfo.bio}</p>
+                      <p className="text-base leading-relaxed">
+                        {teacherInfo.bio || "Біографія ще не додана. Натисніть 'Редагувати' щоб додати інформацію."}
+                      </p>
                     </div>
                   </div>
                 </TeacherProfileCard>
@@ -274,17 +646,18 @@ export default function Teacher() {
                         </DialogHeader>
                         <div className="space-y-4">
                           <div className="space-y-2">
-                            <Label htmlFor="work-title">Назва</Label>
+                            <Label htmlFor="work-title">Назва *</Label>
                             <Input
                               id="work-title"
                               value={newWork.title}
                               onChange={(e) =>
                                 setNewWork({ ...newWork, title: e.target.value })
                               }
+                              placeholder="Введіть назву роботи"
                             />
                           </div>
                           <div className="space-y-2">
-                            <Label htmlFor="work-type">Тип роботи</Label>
+                            <Label htmlFor="work-type">Тип роботи *</Label>
                             <Input
                               id="work-type"
                               placeholder="Монографія, Стаття, Книга..."
@@ -295,9 +668,10 @@ export default function Teacher() {
                             />
                           </div>
                           <div className="space-y-2">
-                            <Label htmlFor="work-year">Рік</Label>
+                            <Label htmlFor="work-year">Рік *</Label>
                             <Input
                               id="work-year"
+                              placeholder="2024"
                               value={newWork.year}
                               onChange={(e) =>
                                 setNewWork({ ...newWork, year: e.target.value })
@@ -308,48 +682,76 @@ export default function Teacher() {
                             <Label htmlFor="work-desc">Опис</Label>
                             <Textarea
                               id="work-desc"
+                              placeholder="Короткий опис роботи..."
                               value={newWork.description}
                               onChange={(e) =>
                                 setNewWork({ ...newWork, description: e.target.value })
                               }
                             />
                           </div>
-                          <DialogClose asChild>
-                            <Button onClick={handleAddWork} className="w-full">
+                          <div className="flex gap-2">
+                            <DialogClose asChild>
+                              <Button variant="outline" className="flex-1">
+                                Скасувати
+                              </Button>
+                            </DialogClose>
+                            <Button onClick={handleAddWork} className="flex-1">
                               Зберегти
                             </Button>
-                          </DialogClose>
+                          </div>
                         </div>
                       </DialogContent>
                     </Dialog>
 
-                    {works.map((work) => (
-                      <div
-                        key={work.id}
-                        className="group p-5 bg-card rounded-xl border border-border hover:border-primary/30 hover:shadow-lg transition-all duration-300"
-                      >
-                        <div className="flex items-start gap-4">
-                          <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
-                            <Award className="w-6 h-6 text-primary" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <h4 className="font-bold text-lg mb-1 group-hover:text-primary transition-colors">{work.title}</h4>
-                            <p className="text-sm font-medium text-primary/70 mb-2">
-                              {work.type} • {work.year}
-                            </p>
-                            <p className="text-sm text-muted-foreground leading-relaxed">{work.description}</p>
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => openDeleteDialog("work", work.id)}
-                            className="h-9 w-9 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors opacity-0 group-hover:opacity-100"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
+                    {works.length === 0 ? (
+                      <div className="text-center py-8 border-2 border-dashed border-muted-foreground/20 rounded-lg">
+                        <Award className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                        <h3 className="text-lg font-semibold mb-2">Ще немає робіт</h3>
+                        <p className="text-muted-foreground text-sm mb-4">
+                          Додайте свою першу роботу або публікацію
+                        </p>
                       </div>
-                    ))}
+                    ) : (
+                      works.map((work) => (
+                        <div
+                          key={work.id}
+                          className="group p-5 bg-card rounded-xl border border-border hover:border-primary/30 hover:shadow-lg transition-all duration-300"
+                        >
+                          <div className="flex items-start gap-4">
+                            <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                              <Award className="w-6 h-6 text-primary" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-bold text-lg mb-1 group-hover:text-primary transition-colors">{work.title}</h4>
+                              <p className="text-sm font-medium text-primary/70 mb-2">
+                                {work.type} • {work.year}
+                              </p>
+                              {work.description && (
+                                <p className="text-sm text-muted-foreground leading-relaxed">{work.description}</p>
+                              )}
+                            </div>
+                            <div className="flex gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => startEditingWork(work)}
+                                className="h-9 w-9 text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors opacity-0 group-hover:opacity-100"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => openDeleteDialog("work", work.id)}
+                                className="h-9 w-9 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors opacity-0 group-hover:opacity-100"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    )}
                   </div>
                 </TeacherProfileCard>
 
@@ -369,9 +771,10 @@ export default function Teacher() {
                         </DialogHeader>
                         <div className="space-y-4">
                           <div className="space-y-2">
-                            <Label htmlFor="dir-area">Область</Label>
+                            <Label htmlFor="dir-area">Область досліджень *</Label>
                             <Input
                               id="dir-area"
+                              placeholder="Наприклад: Штучний інтелект та машинне навчання"
                               value={newDirection.area}
                               onChange={(e) =>
                                 setNewDirection({ ...newDirection, area: e.target.value })
@@ -379,9 +782,10 @@ export default function Teacher() {
                             />
                           </div>
                           <div className="space-y-2">
-                            <Label htmlFor="dir-desc">Опис</Label>
+                            <Label htmlFor="dir-desc">Опис *</Label>
                             <Textarea
                               id="dir-desc"
+                              placeholder="Детальний опис напрямку досліджень..."
                               value={newDirection.description}
                               onChange={(e) =>
                                 setNewDirection({
@@ -391,41 +795,66 @@ export default function Teacher() {
                               }
                             />
                           </div>
-                          <DialogClose asChild>
-                            <Button onClick={handleAddDirection} className="w-full">
+                          <div className="flex gap-2">
+                            <DialogClose asChild>
+                              <Button variant="outline" className="flex-1">
+                                Скасувати
+                              </Button>
+                            </DialogClose>
+                            <Button onClick={handleAddDirection} className="flex-1">
                               Зберегти
                             </Button>
-                          </DialogClose>
+                          </div>
                         </div>
                       </DialogContent>
                     </Dialog>
 
-                    {directions.map((direction) => (
-                      <div
-                        key={direction.id}
-                        className="group p-5 bg-card rounded-xl border border-border hover:border-primary/30 hover:shadow-lg transition-all duration-300"
-                      >
-                        <div className="flex items-start gap-4">
-                          <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
-                            <Target className="w-6 h-6 text-primary" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <h4 className="font-bold text-lg mb-2 group-hover:text-primary transition-colors">{direction.area}</h4>
-                            <p className="text-sm text-muted-foreground leading-relaxed">
-                              {direction.description}
-                            </p>
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => openDeleteDialog("direction", direction.id)}
-                            className="h-9 w-9 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors opacity-0 group-hover:opacity-100"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
+                    {directions.length === 0 ? (
+                      <div className="text-center py-8 border-2 border-dashed border-muted-foreground/20 rounded-lg">
+                        <Target className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                        <h3 className="text-lg font-semibold mb-2">Ще немає напрямків</h3>
+                        <p className="text-muted-foreground text-sm mb-4">
+                          Додайте свої наукові напрямки досліджень
+                        </p>
                       </div>
-                    ))}
+                    ) : (
+                      directions.map((direction) => (
+                        <div
+                          key={direction.id}
+                          className="group p-5 bg-card rounded-xl border border-border hover:border-primary/30 hover:shadow-lg transition-all duration-300"
+                        >
+                          <div className="flex items-start gap-4">
+                            <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                              <Target className="w-6 h-6 text-primary" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-bold text-lg mb-2 group-hover:text-primary transition-colors">{direction.area}</h4>
+                              <p className="text-sm text-muted-foreground leading-relaxed">
+                                {direction.description}
+                              </p>
+                            </div>
+                            <div className="flex gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => startEditingDirection(direction)}
+                                className="h-9 w-9 text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors opacity-0 group-hover:opacity-100"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => openDeleteDialog("direction", direction.id)}
+                                className="h-9 w-9 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors opacity-0 group-hover:opacity-100"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    )}
                   </div>
                 </TeacherProfileCard>
 
@@ -445,9 +874,10 @@ export default function Teacher() {
                         </DialogHeader>
                         <div className="space-y-4">
                           <div className="space-y-2">
-                            <Label htmlFor="topic-name">Тема</Label>
+                            <Label htmlFor="topic-name">Тема дослідження *</Label>
                             <Input
                               id="topic-name"
+                              placeholder="Наприклад: Квантові обчислення в AI"
                               value={newTopic.topic}
                               onChange={(e) =>
                                 setNewTopic({ ...newTopic, topic: e.target.value })
@@ -455,9 +885,10 @@ export default function Teacher() {
                             />
                           </div>
                           <div className="space-y-2">
-                            <Label htmlFor="topic-desc">Опис</Label>
+                            <Label htmlFor="topic-desc">Опис *</Label>
                             <Textarea
                               id="topic-desc"
+                              placeholder="Опишіть тему та плани щодо її дослідження..."
                               value={newTopic.description}
                               onChange={(e) =>
                                 setNewTopic({
@@ -467,41 +898,66 @@ export default function Teacher() {
                               }
                             />
                           </div>
-                          <DialogClose asChild>
-                            <Button onClick={handleAddTopic} className="w-full">
+                          <div className="flex gap-2">
+                            <DialogClose asChild>
+                              <Button variant="outline" className="flex-1">
+                                Скасувати
+                              </Button>
+                            </DialogClose>
+                            <Button onClick={handleAddTopic} className="flex-1">
                               Зберегти
                             </Button>
-                          </DialogClose>
+                          </div>
                         </div>
                       </DialogContent>
                     </Dialog>
 
-                    {futureTopics.map((topic) => (
-                      <div
-                        key={topic.id}
-                        className="group p-5 bg-card rounded-xl border border-border hover:border-primary/30 hover:shadow-lg transition-all duration-300"
-                      >
-                        <div className="flex items-start gap-4">
-                          <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
-                            <Lightbulb className="w-6 h-6 text-primary" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <h4 className="font-bold text-lg mb-2 group-hover:text-primary transition-colors">{topic.topic}</h4>
-                            <p className="text-sm text-muted-foreground leading-relaxed">
-                              {topic.description}
-                            </p>
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => openDeleteDialog("topic", topic.id)}
-                            className="h-9 w-9 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors opacity-0 group-hover:opacity-100"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
+                    {futureTopics.length === 0 ? (
+                      <div className="text-center py-8 border-2 border-dashed border-muted-foreground/20 rounded-lg">
+                        <Lightbulb className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                        <h3 className="text-lg font-semibold mb-2">Ще немає тем</h3>
+                        <p className="text-muted-foreground text-sm mb-4">
+                          Додайте теми для майбутніх досліджень
+                        </p>
                       </div>
-                    ))}
+                    ) : (
+                      futureTopics.map((topic) => (
+                        <div
+                          key={topic.id}
+                          className="group p-5 bg-card rounded-xl border border-border hover:border-primary/30 hover:shadow-lg transition-all duration-300"
+                        >
+                          <div className="flex items-start gap-4">
+                            <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                              <Lightbulb className="w-6 h-6 text-primary" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-bold text-lg mb-2 group-hover:text-primary transition-colors">{topic.topic}</h4>
+                              <p className="text-sm text-muted-foreground leading-relaxed">
+                                {topic.description}
+                              </p>
+                            </div>
+                            <div className="flex gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => startEditingTopic(topic)}
+                                className="h-9 w-9 text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors opacity-0 group-hover:opacity-100"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => openDeleteDialog("topic", topic.id)}
+                                className="h-9 w-9 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors opacity-0 group-hover:opacity-100"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    )}
                   </div>
                 </TeacherProfileCard>
 
@@ -517,15 +973,18 @@ export default function Teacher() {
                         <Input
                           id="edit-name"
                           value={editedInfo.name}
-                          onChange={(e) =>
-                            setEditedInfo({ ...editedInfo, name: e.target.value })
-                          }
+                          disabled
+                          className="bg-muted"
                         />
+                        <p className="text-xs text-muted-foreground">
+                          Ім'я не можна змінити через цю форму
+                        </p>
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="edit-title">Посада</Label>
                         <Input
                           id="edit-title"
+                          placeholder="Доктор наук, професор"
                           value={editedInfo.title}
                           onChange={(e) =>
                             setEditedInfo({ ...editedInfo, title: e.target.value })
@@ -537,10 +996,12 @@ export default function Teacher() {
                         <Input
                           id="edit-dept"
                           value={editedInfo.department}
-                          onChange={(e) =>
-                            setEditedInfo({ ...editedInfo, department: e.target.value })
-                          }
+                          disabled
+                          className="bg-muted"
                         />
+                        <p className="text-xs text-muted-foreground">
+                          Кафедра визначається вашим факультетом
+                        </p>
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="edit-email">Email</Label>
@@ -548,27 +1009,205 @@ export default function Teacher() {
                           id="edit-email"
                           type="email"
                           value={editedInfo.email}
-                          onChange={(e) =>
-                            setEditedInfo({ ...editedInfo, email: e.target.value })
-                          }
+                          disabled
+                          className="bg-muted"
                         />
+                        <p className="text-xs text-muted-foreground">
+                          Email не можна змінити через цю форму
+                        </p>
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="edit-bio">Біографія</Label>
                         <Textarea
                           id="edit-bio"
+                          placeholder="Розкажіть про себе, ваш досвід та досягнення..."
                           value={editedInfo.bio}
                           onChange={(e) =>
                             setEditedInfo({ ...editedInfo, bio: e.target.value })
                           }
+                          rows={6}
                         />
                       </div>
-                      <DialogClose asChild>
-                        <Button onClick={handleSaveInfo} className="w-full">
+                      <div className="flex gap-2">
+                        <DialogClose asChild>
+                          <Button variant="outline" className="flex-1">
+                            Скасувати
+                          </Button>
+                        </DialogClose>
+                        <Button onClick={handleSaveInfo} className="flex-1">
                           Зберегти зміни
                         </Button>
-                      </DialogClose>
+                      </div>
                     </div>
+                  </DialogContent>
+                </Dialog>
+
+                {/* Edit Work Dialog */}
+                <Dialog open={!!editingWork} onOpenChange={() => setEditingWork(null)}>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Редагувати працю</DialogTitle>
+                    </DialogHeader>
+                    {editingWork && (
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="edit-work-title">Назва *</Label>
+                          <Input
+                            id="edit-work-title"
+                            value={editingWork.title}
+                            onChange={(e) =>
+                              setEditingWork({ ...editingWork, title: e.target.value })
+                            }
+                            placeholder="Введіть назву роботи"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="edit-work-type">Тип роботи *</Label>
+                          <Input
+                            id="edit-work-type"
+                            placeholder="Монографія, Стаття, Книга..."
+                            value={editingWork.type}
+                            onChange={(e) =>
+                              setEditingWork({ ...editingWork, type: e.target.value })
+                            }
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="edit-work-year">Рік *</Label>
+                          <Input
+                            id="edit-work-year"
+                            placeholder="2024"
+                            value={editingWork.year}
+                            onChange={(e) =>
+                              setEditingWork({ ...editingWork, year: e.target.value })
+                            }
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="edit-work-desc">Опис</Label>
+                          <Textarea
+                            id="edit-work-desc"
+                            placeholder="Короткий опис роботи..."
+                            value={editingWork.description}
+                            onChange={(e) =>
+                              setEditingWork({ ...editingWork, description: e.target.value })
+                            }
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <Button 
+                            variant="outline" 
+                            className="flex-1"
+                            onClick={() => setEditingWork(null)}
+                          >
+                            Скасувати
+                          </Button>
+                          <Button onClick={handleEditWork} className="flex-1">
+                            Зберегти зміни
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </DialogContent>
+                </Dialog>
+
+                {/* Edit Direction Dialog */}
+                <Dialog open={!!editingDirection} onOpenChange={() => setEditingDirection(null)}>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Редагувати напрямок</DialogTitle>
+                    </DialogHeader>
+                    {editingDirection && (
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="edit-dir-area">Область досліджень *</Label>
+                          <Input
+                            id="edit-dir-area"
+                            placeholder="Наприклад: Штучний інтелект та машинне навчання"
+                            value={editingDirection.area}
+                            onChange={(e) =>
+                              setEditingDirection({ ...editingDirection, area: e.target.value })
+                            }
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="edit-dir-desc">Опис *</Label>
+                          <Textarea
+                            id="edit-dir-desc"
+                            placeholder="Детальний опис напрямку досліджень..."
+                            value={editingDirection.description}
+                            onChange={(e) =>
+                              setEditingDirection({
+                                ...editingDirection,
+                                description: e.target.value,
+                              })
+                            }
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <Button 
+                            variant="outline" 
+                            className="flex-1"
+                            onClick={() => setEditingDirection(null)}
+                          >
+                            Скасувати
+                          </Button>
+                          <Button onClick={handleEditDirection} className="flex-1">
+                            Зберегти зміни
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </DialogContent>
+                </Dialog>
+
+                {/* Edit Topic Dialog */}
+                <Dialog open={!!editingTopic} onOpenChange={() => setEditingTopic(null)}>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Редагувати тему</DialogTitle>
+                    </DialogHeader>
+                    {editingTopic && (
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="edit-topic-name">Тема дослідження *</Label>
+                          <Input
+                            id="edit-topic-name"
+                            placeholder="Наприклад: Квантові обчислення в AI"
+                            value={editingTopic.topic}
+                            onChange={(e) =>
+                              setEditingTopic({ ...editingTopic, topic: e.target.value })
+                            }
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="edit-topic-desc">Опис *</Label>
+                          <Textarea
+                            id="edit-topic-desc"
+                            placeholder="Опишіть тему та плани щодо її дослідження..."
+                            value={editingTopic.description}
+                            onChange={(e) =>
+                              setEditingTopic({
+                                ...editingTopic,
+                                description: e.target.value,
+                              })
+                            }
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <Button 
+                            variant="outline" 
+                            className="flex-1"
+                            onClick={() => setEditingTopic(null)}
+                          >
+                            Скасувати
+                          </Button>
+                          <Button onClick={handleEditTopic} className="flex-1">
+                            Зберегти зміни
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                   </DialogContent>
                 </Dialog>
 

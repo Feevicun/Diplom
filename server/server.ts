@@ -300,33 +300,33 @@ app.post("/api/logout", async (req: Request, res: Response) => {
 
 
 // PUT /api/update-profile
-app.put("/api/update-profile", async (req: Request, res: Response) => {
-  try {
-    const { id, name, email, avatarUrl } = req.body;
+// app.put("/api/update-profile", async (req: Request, res: Response) => {
+//   try {
+//     const { id, name, email, avatarUrl } = req.body;
 
-    if (!id) {
-      return res.status(400).json({ message: "User id is required" });
-    }
+//     if (!id) {
+//       return res.status(400).json({ message: "User id is required" });
+//     }
 
-    // Оновлення користувача
-    const result = await pool.query(
-      `UPDATE users
-       SET name = $1, email = $2, avatar_url = $3
-       WHERE id = $4
-       RETURNING id, name, email, role, avatar_url`,
-      [name, email, avatarUrl, id]
-    );
+//     // Оновлення користувача
+//     const result = await pool.query(
+//       `UPDATE users
+//        SET name = $1, email = $2, avatar_url = $3
+//        WHERE id = $4
+//        RETURNING id, name, email, role, avatar_url`,
+//       [name, email, avatarUrl, id]
+//     );
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({ message: "User not found" });
-    }
+//     if (result.rows.length === 0) {
+//       return res.status(404).json({ message: "User not found" });
+//     }
 
-    res.json({ message: "Profile updated successfully", user: result.rows[0] });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Database error" });
-  }
-});
+//     res.json({ message: "Profile updated successfully", user: result.rows[0] });
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).json({ message: "Database error" });
+//   }
+// });
 
 
 // API для перевірки користувача при забутому паролі
@@ -403,9 +403,10 @@ app.post("/api/forgot-password/reset", async (req: Request, res: Response) => {
 
 
 
+// POST /api/events - створення події
 app.post("/api/events", authenticateToken, async (req: Request, res: Response) => {
   try {
-    const { title, date, type } = req.body;
+    const { title, date, type, time, location, link, description } = req.body;
     const userEmail = req.user?.email;
 
     if (!userEmail || !title || !date || !type) {
@@ -413,8 +414,9 @@ app.post("/api/events", authenticateToken, async (req: Request, res: Response) =
     }
 
     const result = await pool.query(
-      `INSERT INTO events ("userEmail", title, date, type) VALUES ($1, $2, $3, $4) RETURNING *`,
-      [userEmail, title, date, type]
+      `INSERT INTO events ("userEmail", title, date, type, time, location, link, description) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+      [userEmail, title, date, type, time, location, link, description]
     );
 
     res.status(201).json({ message: "Event created successfully", event: result.rows[0] });
@@ -424,13 +426,17 @@ app.post("/api/events", authenticateToken, async (req: Request, res: Response) =
   }
 });
 
+// GET /api/events - отримання подій
 app.get("/api/events", authenticateToken, async (req: Request, res: Response) => {
   try {
     const userEmail = req.user?.email;
     if (!userEmail) return res.status(401).json({ message: "Unauthorized" });
 
     const result = await pool.query(
-      `SELECT id, title, date, type FROM events WHERE "userEmail" = $1 ORDER BY date`,
+      `SELECT id, title, date, type, time, location, link, description 
+       FROM events 
+       WHERE "userEmail" = $1 
+       ORDER BY date`,
       [userEmail]
     );
 
@@ -441,9 +447,71 @@ app.get("/api/events", authenticateToken, async (req: Request, res: Response) =>
   }
 });
 
+// PUT /api/events/:id - оновлення події
+app.put("/api/events/:id", authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const eventId = req.params.id;
+    const { title, date, type, time, location, link, description } = req.body;
+    const userEmail = req.user?.email;
 
+    if (!userEmail) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
 
+    const existingEvent = await pool.query(
+      'SELECT id FROM events WHERE id = $1 AND "userEmail" = $2',
+      [eventId, userEmail]
+    );
 
+    if (existingEvent.rows.length === 0) {
+      return res.status(404).json({ message: "Event not found or access denied" });
+    }
+
+    const result = await pool.query(
+      `UPDATE events 
+       SET title = $1, date = $2, type = $3, time = $4, location = $5, link = $6, description = $7
+       WHERE id = $8 AND "userEmail" = $9
+       RETURNING *`,
+      [title, date, type, time, location, link, description, eventId, userEmail]
+    );
+
+    res.json({ message: "Event updated successfully", event: result.rows[0] });
+  } catch (error) {
+    console.error("Error updating event:", error);
+    res.status(500).json({ message: "Database error updating event" });
+  }
+});
+
+// DELETE /api/events/:id - видалення події
+app.delete("/api/events/:id", authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const eventId = req.params.id;
+    const userEmail = req.user?.email;
+
+    if (!userEmail) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const existingEvent = await pool.query(
+      'SELECT id FROM events WHERE id = $1 AND "userEmail" = $2',
+      [eventId, userEmail]
+    );
+
+    if (existingEvent.rows.length === 0) {
+      return res.status(404).json({ message: "Event not found or access denied" });
+    }
+
+    await pool.query(
+      'DELETE FROM events WHERE id = $1 AND "userEmail" = $2',
+      [eventId, userEmail]
+    );
+
+    res.json({ message: "Event deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting event:", error);
+    res.status(500).json({ message: "Database error deleting event" });
+  }
+});
 
 // GET /api/user-project - отримати активний тип проекту користувача
 app.get("/api/user-project", authenticateToken, async (req: Request, res: Response) => {
@@ -1620,6 +1688,1337 @@ app.delete("/api/chat/:chatId/leave", authenticateToken, async (req: Request, re
   } catch (err) {
     console.error("Error leaving chat:", err);
     res.status(500).json({ message: "Database error" });
+  }
+});
+
+
+
+
+// ============ TEACHER PROFILE ENDPOINTS ============
+
+// GET /api/teacher/profile - отримати профіль викладача
+app.get("/api/teacher/profile", authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    // Перевіряємо чи користувач є викладачем
+    const userResult = await pool.query(
+      'SELECT role FROM users WHERE id = $1',
+      [userId]
+    );
+
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (userResult.rows[0].role !== 'teacher') {
+      return res.status(403).json({ message: "Access denied. Teacher role required" });
+    }
+
+    // Отримуємо основну інформацію про викладача
+    const teacherResult = await pool.query(
+      `SELECT 
+        u.name,
+        u.email,
+        d.name as department_name,
+        f.name as faculty_name,
+        t.title,
+        t.bio,
+        t.avatar_url,
+        t.office_hours,
+        t.phone,
+        t.website
+       FROM users u
+       LEFT JOIN departments d ON u.department_id = d.id
+       LEFT JOIN faculties f ON u.faculty_id = f.id
+       LEFT JOIN teacher_profiles t ON u.id = t.user_id
+       WHERE u.id = $1`,
+      [userId]
+    );
+
+    if (teacherResult.rows.length === 0) {
+      // Якщо профіль ще не створений, повертаємо базову інформацію
+      const userInfo = await pool.query(
+        `SELECT 
+          u.name,
+          u.email,
+          d.name as department_name,
+          f.name as faculty_name
+         FROM users u
+         LEFT JOIN departments d ON u.department_id = d.id
+         LEFT JOIN faculties f ON u.faculty_id = f.id
+         WHERE u.id = $1`,
+        [userId]
+      );
+
+      if (userInfo.rows.length === 0) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const userData = userInfo.rows[0];
+      
+      // Розділяємо ім'я на частини
+      const nameParts = userData.name.split(' ');
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.slice(1).join(' ') || '';
+
+      res.json({
+        name: userData.name,
+        firstName,
+        lastName,
+        title: "", // буде заповнено вручну
+        department: userData.department_name || "Кафедра не вказана",
+        faculty: userData.faculty_name || "Факультет не вказаний",
+        email: userData.email,
+        bio: "", // буде заповнено вручну
+        avatarUrl: null,
+        officeHours: "",
+        phone: "",
+        website: ""
+      });
+    } else {
+      const teacherData = teacherResult.rows[0];
+      
+      // Розділяємо ім'я на частини
+      const nameParts = teacherData.name.split(' ');
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.slice(1).join(' ') || '';
+
+      res.json({
+        name: teacherData.name,
+        firstName,
+        lastName,
+        title: teacherData.title || "",
+        department: teacherData.department_name || "Кафедра не вказана",
+        faculty: teacherData.faculty_name || "Факультет не вказаний",
+        email: teacherData.email,
+        bio: teacherData.bio || "",
+        avatarUrl: teacherData.avatar_url,
+        officeHours: teacherData.office_hours || "",
+        phone: teacherData.phone || "",
+        website: teacherData.website || ""
+      });
+    }
+  } catch (err) {
+    console.error("Error fetching teacher profile:", err);
+    res.status(500).json({ message: "Database error fetching teacher profile" });
+  }
+});
+
+// PUT /api/teacher/profile - оновити профіль викладача
+app.put("/api/teacher/profile", authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const {
+      title,
+      bio,
+      avatarUrl,
+      officeHours,
+      phone,
+      website
+    } = req.body;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    // Перевіряємо чи користувач є викладачем
+    const userResult = await pool.query(
+      'SELECT role FROM users WHERE id = $1',
+      [userId]
+    );
+
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (userResult.rows[0].role !== 'teacher') {
+      return res.status(403).json({ message: "Access denied. Teacher role required" });
+    }
+
+    // Перевіряємо чи профіль вже існує
+    const existingProfile = await pool.query(
+      'SELECT user_id FROM teacher_profiles WHERE user_id = $1',
+      [userId]
+    );
+
+    if (existingProfile.rows.length > 0) {
+      // Оновлюємо існуючий профіль
+      await pool.query(
+        `UPDATE teacher_profiles 
+         SET title = $1, bio = $2, avatar_url = $3, office_hours = $4, phone = $5, website = $6, updated_at = NOW()
+         WHERE user_id = $7`,
+        [title, bio, avatarUrl, officeHours, phone, website, userId]
+      );
+    } else {
+      // Створюємо новий профіль
+      await pool.query(
+        `INSERT INTO teacher_profiles 
+         (user_id, title, bio, avatar_url, office_hours, phone, website, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())`,
+        [userId, title, bio, avatarUrl, officeHours, phone, website]
+      );
+    }
+
+    res.json({ message: "Teacher profile updated successfully" });
+  } catch (err) {
+    console.error("Error updating teacher profile:", err);
+    res.status(500).json({ message: "Database error updating teacher profile" });
+  }
+});
+
+// GET /api/teacher/works - отримати роботи викладача
+app.get("/api/teacher/works", authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const result = await pool.query(
+      `SELECT 
+        id,
+        title,
+        type,
+        year,
+        description,
+        file_url,
+        publication_url,
+        created_at
+       FROM teacher_works 
+       WHERE user_id = $1 
+       ORDER BY year DESC, created_at DESC`,
+      [userId]
+    );
+
+    const works = result.rows.map((row: any) => ({
+      id: row.id.toString(),
+      title: row.title,
+      type: row.type,
+      year: row.year,
+      description: row.description,
+      fileUrl: row.file_url,
+      publicationUrl: row.publication_url,
+      createdAt: row.created_at
+    }));
+
+    res.json(works);
+  } catch (err) {
+    console.error("Error fetching teacher works:", err);
+    res.status(500).json({ message: "Database error fetching teacher works" });
+  }
+});
+
+// POST /api/teacher/works - додати роботу викладача
+app.post("/api/teacher/works", authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const {
+      title,
+      type,
+      year,
+      description,
+      fileUrl,
+      publicationUrl
+    } = req.body;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    if (!title || !type || !year) {
+      return res.status(400).json({ message: "Title, type and year are required" });
+    }
+
+    const result = await pool.query(
+      `INSERT INTO teacher_works 
+       (user_id, title, type, year, description, file_url, publication_url, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+       RETURNING id`,
+      [userId, title, type, year, description || '', fileUrl, publicationUrl]
+    );
+
+    const newWork = {
+      id: result.rows[0].id.toString(),
+      title,
+      type,
+      year,
+      description: description || '',
+      fileUrl,
+      publicationUrl,
+      createdAt: new Date().toISOString()
+    };
+
+    res.status(201).json({
+      message: "Work added successfully",
+      work: newWork
+    });
+  } catch (err) {
+    console.error("Error adding teacher work:", err);
+    res.status(500).json({ message: "Database error adding teacher work" });
+  }
+});
+
+// DELETE /api/teacher/works/:workId - видалити роботу викладача
+app.delete("/api/teacher/works/:workId", authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const { workId } = req.params;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    // Перевіряємо чи робота належить користувачу
+    const workCheck = await pool.query(
+      'SELECT id FROM teacher_works WHERE id = $1 AND user_id = $2',
+      [workId, userId]
+    );
+
+    if (workCheck.rows.length === 0) {
+      return res.status(404).json({ message: "Work not found or access denied" });
+    }
+
+    await pool.query('DELETE FROM teacher_works WHERE id = $1', [workId]);
+
+    res.json({ message: "Work deleted successfully" });
+  } catch (err) {
+    console.error("Error deleting teacher work:", err);
+    res.status(500).json({ message: "Database error deleting teacher work" });
+  }
+});
+
+// GET /api/teacher/directions - отримати напрямки досліджень
+app.get("/api/teacher/directions", authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const result = await pool.query(
+      `SELECT 
+        id,
+        area,
+        description,
+        created_at
+       FROM teacher_research_directions 
+       WHERE user_id = $1 
+       ORDER BY created_at DESC`,
+      [userId]
+    );
+
+    const directions = result.rows.map((row: any) => ({
+      id: row.id.toString(),
+      area: row.area,
+      description: row.description,
+      createdAt: row.created_at
+    }));
+
+    res.json(directions);
+  } catch (err) {
+    console.error("Error fetching teacher directions:", err);
+    res.status(500).json({ message: "Database error fetching teacher directions" });
+  }
+});
+
+// POST /api/teacher/directions - додати напрямок досліджень
+app.post("/api/teacher/directions", authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const {
+      area,
+      description
+    } = req.body;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    if (!area || !description) {
+      return res.status(400).json({ message: "Area and description are required" });
+    }
+
+    const result = await pool.query(
+      `INSERT INTO teacher_research_directions 
+       (user_id, area, description, created_at)
+       VALUES ($1, $2, $3, NOW())
+       RETURNING id`,
+      [userId, area, description]
+    );
+
+    const newDirection = {
+      id: result.rows[0].id.toString(),
+      area,
+      description,
+      createdAt: new Date().toISOString()
+    };
+
+    res.status(201).json({
+      message: "Research direction added successfully",
+      direction: newDirection
+    });
+  } catch (err) {
+    console.error("Error adding teacher direction:", err);
+    res.status(500).json({ message: "Database error adding teacher direction" });
+  }
+});
+
+// DELETE /api/teacher/directions/:directionId - видалити напрямок досліджень
+app.delete("/api/teacher/directions/:directionId", authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const { directionId } = req.params;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    // Перевіряємо чи напрямок належить користувачу
+    const directionCheck = await pool.query(
+      'SELECT id FROM teacher_research_directions WHERE id = $1 AND user_id = $2',
+      [directionId, userId]
+    );
+
+    if (directionCheck.rows.length === 0) {
+      return res.status(404).json({ message: "Direction not found or access denied" });
+    }
+
+    await pool.query('DELETE FROM teacher_research_directions WHERE id = $1', [directionId]);
+
+    res.json({ message: "Research direction deleted successfully" });
+  } catch (err) {
+    console.error("Error deleting teacher direction:", err);
+    res.status(500).json({ message: "Database error deleting teacher direction" });
+  }
+});
+
+// GET /api/teacher/topics - отримати майбутні теми досліджень
+app.get("/api/teacher/topics", authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const result = await pool.query(
+      `SELECT 
+        id,
+        topic,
+        description,
+        created_at
+       FROM teacher_future_topics 
+       WHERE user_id = $1 
+       ORDER BY created_at DESC`,
+      [userId]
+    );
+
+    const topics = result.rows.map((row: any) => ({
+      id: row.id.toString(),
+      topic: row.topic,
+      description: row.description,
+      createdAt: row.created_at
+    }));
+
+    res.json(topics);
+  } catch (err) {
+    console.error("Error fetching teacher topics:", err);
+    res.status(500).json({ message: "Database error fetching teacher topics" });
+  }
+});
+
+// POST /api/teacher/topics - додати майбутню тему досліджень
+app.post("/api/teacher/topics", authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const {
+      topic,
+      description
+    } = req.body;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    if (!topic || !description) {
+      return res.status(400).json({ message: "Topic and description are required" });
+    }
+
+    const result = await pool.query(
+      `INSERT INTO teacher_future_topics 
+       (user_id, topic, description, created_at)
+       VALUES ($1, $2, $3, NOW())
+       RETURNING id`,
+      [userId, topic, description]
+    );
+
+    const newTopic = {
+      id: result.rows[0].id.toString(),
+      topic,
+      description,
+      createdAt: new Date().toISOString()
+    };
+
+    res.status(201).json({
+      message: "Future topic added successfully",
+      topic: newTopic
+    });
+  } catch (err) {
+    console.error("Error adding teacher topic:", err);
+    res.status(500).json({ message: "Database error adding teacher topic" });
+  }
+});
+
+// DELETE /api/teacher/topics/:topicId - видалити майбутню тему досліджень
+app.delete("/api/teacher/topics/:topicId", authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const { topicId } = req.params;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    // Перевіряємо чи тема належить користувачу
+    const topicCheck = await pool.query(
+      'SELECT id FROM teacher_future_topics WHERE id = $1 AND user_id = $2',
+      [topicId, userId]
+    );
+
+    if (topicCheck.rows.length === 0) {
+      return res.status(404).json({ message: "Topic not found or access denied" });
+    }
+
+    await pool.query('DELETE FROM teacher_future_topics WHERE id = $1', [topicId]);
+
+    res.json({ message: "Future topic deleted successfully" });
+  } catch (err) {
+    console.error("Error deleting teacher topic:", err);
+    res.status(500).json({ message: "Database error deleting teacher topic" });
+  }
+});
+
+// PUT /api/teacher/works/:workId - оновити роботу викладача
+app.put("/api/teacher/works/:workId", authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const { workId } = req.params;
+    const {
+      title,
+      type,
+      year,
+      description,
+      fileUrl,
+      publicationUrl
+    } = req.body;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    if (!title || !type || !year) {
+      return res.status(400).json({ message: "Title, type and year are required" });
+    }
+
+    // Перевіряємо чи робота належить користувачу
+    const workCheck = await pool.query(
+      'SELECT id FROM teacher_works WHERE id = $1 AND user_id = $2',
+      [workId, userId]
+    );
+
+    if (workCheck.rows.length === 0) {
+      return res.status(404).json({ message: "Work not found or access denied" });
+    }
+
+    await pool.query(
+      `UPDATE teacher_works 
+       SET title = $1, type = $2, year = $3, description = $4, file_url = $5, publication_url = $6
+       WHERE id = $7`,
+      [title, type, year, description || '', fileUrl, publicationUrl, workId]
+    );
+
+    res.json({ message: "Work updated successfully" });
+  } catch (err) {
+    console.error("Error updating teacher work:", err);
+    res.status(500).json({ message: "Database error updating teacher work" });
+  }
+});
+
+// PUT /api/teacher/directions/:directionId - оновити напрямок досліджень
+app.put("/api/teacher/directions/:directionId", authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const { directionId } = req.params;
+    const {
+      area,
+      description
+    } = req.body;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    if (!area || !description) {
+      return res.status(400).json({ message: "Area and description are required" });
+    }
+
+    // Перевіряємо чи напрямок належить користувачу
+    const directionCheck = await pool.query(
+      'SELECT id FROM teacher_research_directions WHERE id = $1 AND user_id = $2',
+      [directionId, userId]
+    );
+
+    if (directionCheck.rows.length === 0) {
+      return res.status(404).json({ message: "Direction not found or access denied" });
+    }
+
+    await pool.query(
+      `UPDATE teacher_research_directions 
+       SET area = $1, description = $2
+       WHERE id = $3`,
+      [area, description, directionId]
+    );
+
+    res.json({ message: "Research direction updated successfully" });
+  } catch (err) {
+    console.error("Error updating teacher direction:", err);
+    res.status(500).json({ message: "Database error updating teacher direction" });
+  }
+});
+
+// PUT /api/teacher/topics/:topicId - оновити майбутню тему досліджень
+app.put("/api/teacher/topics/:topicId", authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const { topicId } = req.params;
+    const {
+      topic,
+      description
+    } = req.body;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    if (!topic || !description) {
+      return res.status(400).json({ message: "Topic and description are required" });
+    }
+
+    // Перевіряємо чи тема належить користувачу
+    const topicCheck = await pool.query(
+      'SELECT id FROM teacher_future_topics WHERE id = $1 AND user_id = $2',
+      [topicId, userId]
+    );
+
+    if (topicCheck.rows.length === 0) {
+      return res.status(404).json({ message: "Topic not found or access denied" });
+    }
+
+    await pool.query(
+      `UPDATE teacher_future_topics 
+       SET topic = $1, description = $2
+       WHERE id = $3`,
+      [topic, description, topicId]
+    );
+
+    res.json({ message: "Future topic updated successfully" });
+  } catch (err) {
+    console.error("Error updating teacher topic:", err);
+    res.status(500).json({ message: "Database error updating teacher topic" });
+  }
+});
+
+
+
+// ============ STUDENT PROFILE ENDPOINTS ============
+
+// GET /api/student/profile
+app.get("/api/student/profile", authenticateToken, async (req: Request, res: Response) => {
+  try {
+    console.log("GET /api/student/profile - userId:", req.user?.userId);
+    
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      console.log("No user ID found");
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const result = await pool.query(
+      `SELECT 
+        u.name,
+        u.email,
+        u.faculty_id,
+        u.department_id,
+        f.name as faculty_name,
+        d.name as department_name, 
+        sp.bio,
+        sp.student_group as "group",
+        sp.course,
+        sp.avatar_url,
+        sp.phone,
+        sp.linkedin_url,
+        sp.github_url
+       FROM users u
+       LEFT JOIN student_profiles sp ON u.id = sp.user_id
+       LEFT JOIN faculties f ON u.faculty_id = f.id 
+       LEFT JOIN departments d ON u.department_id = d.id
+       WHERE u.id = $1`,
+      [userId]
+    );
+
+    console.log("Query result:", result.rows);
+
+    if (result.rows.length === 0) {
+      console.log("User not found in database");
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const profileData = result.rows[0];
+    
+    // Формуємо відповідь з правильними назвами полів
+    const response = {
+      name: profileData.name,
+      email: profileData.email,
+      faculty: profileData.faculty_name, // використовуємо назву факультету
+      faculty_id: profileData.faculty_id, // або ID, якщо потрібно
+      department: profileData.department_name, // використовуємо назву кафедри
+      department_id: profileData.department_id, // або ID, якщо потрібно
+      bio: profileData.bio,
+      group: profileData.group,
+      course: profileData.course,
+      avatar_url: profileData.avatar_url,
+      phone: profileData.phone,
+      linkedin_url: profileData.linkedin_url,
+      github_url: profileData.github_url
+    };
+
+    console.log("Sending profile data:", response);
+    res.json(response);
+  } catch (err) {
+    console.error("Error fetching student profile:", err);
+    res.status(500).json({ message: "Database error fetching student profile" });
+  }
+});
+
+
+// PUT /api/student/profile - оновити профіль студента
+app.put("/api/student/profile", authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const {
+      name,
+      bio,
+      group,
+      course,
+      faculty_id, // зміни faculty на faculty_id
+      email,
+      phone,
+      linkedin_url,
+      github_url
+    } = req.body;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    console.log("Updating profile for user:", userId, "Data:", req.body);
+
+    // Оновлюємо основну інформацію в users
+    await pool.query(
+      `UPDATE users 
+       SET name = $1, email = $2, faculty_id = $3, updated_at = NOW()
+       WHERE id = $4`,
+      [name, email, faculty_id, userId]
+    );
+
+    // Перевіряємо чи профіль вже існує
+    const existingProfile = await pool.query(
+      'SELECT user_id FROM student_profiles WHERE user_id = $1',
+      [userId]
+    );
+
+    if (existingProfile.rows.length > 0) {
+      // Оновлюємо існуючий профіль
+      await pool.query(
+        `UPDATE student_profiles 
+         SET bio = $1, student_group = $2, course = $3, 
+             phone = $4, linkedin_url = $5, github_url = $6, updated_at = NOW()
+         WHERE user_id = $7`,
+        [bio, group, course, phone, linkedin_url, github_url, userId]
+      );
+    } else {
+      // Створюємо новий профіль
+      await pool.query(
+        `INSERT INTO student_profiles 
+         (user_id, bio, student_group, course, phone, linkedin_url, github_url, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())`,
+        [userId, bio, group, course, phone, linkedin_url, github_url]
+      );
+    }
+
+    // Повертаємо оновлені дані
+    const updatedResult = await pool.query(
+      `SELECT 
+        u.name,
+        u.email,
+        u.faculty_id,
+        u.department_id,
+        sp.bio,
+        sp.student_group as "group",
+        sp.course,
+        sp.phone,
+        sp.linkedin_url,
+        sp.github_url
+       FROM users u
+       LEFT JOIN student_profiles sp ON u.id = sp.user_id
+       WHERE u.id = $1`,
+      [userId]
+    );
+
+    res.json({
+      message: "Student profile updated successfully",
+      profile: updatedResult.rows[0]
+    });
+  } catch (err) {
+    console.error("Error updating student profile:", err);
+    res.status(500).json({ message: "Database error updating student profile" });
+  }
+});
+
+// GET /api/student/projects - отримати проєкти студента
+app.get("/api/student/projects", authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const result = await pool.query(
+      `SELECT 
+        id,
+        title,
+        type,
+        status,
+        description,
+        technologies,
+        project_url,
+        github_url,
+        start_date,
+        end_date,
+        created_at
+       FROM student_projects 
+       WHERE user_id = $1 
+       ORDER BY created_at DESC`,
+      [userId]
+    );
+
+    const projects = result.rows.map((row: any) => ({
+      id: row.id.toString(),
+      title: row.title,
+      type: row.type,
+      status: row.status,
+      description: row.description,
+      technologies: row.technologies ? row.technologies.split(',') : [],
+      projectUrl: row.project_url,
+      githubUrl: row.github_url,
+      startDate: row.start_date,
+      endDate: row.end_date,
+      createdAt: row.created_at
+    }));
+
+    res.json(projects);
+  } catch (err) {
+    console.error("Error fetching student projects:", err);
+    res.status(500).json({ message: "Database error fetching student projects" });
+  }
+});
+
+// POST /api/student/projects - додати проєкт студента
+app.post("/api/student/projects", authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const {
+      title,
+      type,
+      status,
+      description,
+      technologies,
+      projectUrl,
+      githubUrl,
+      startDate,
+      endDate
+    } = req.body;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    if (!title || !type || !status) {
+      return res.status(400).json({ message: "Title, type and status are required" });
+    }
+
+    const result = await pool.query(
+      `INSERT INTO student_projects 
+       (user_id, title, type, status, description, technologies, project_url, github_url, start_date, end_date, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
+       RETURNING id`,
+      [userId, title, type, status, description || '', 
+       technologies ? technologies.join(',') : null, projectUrl, githubUrl, startDate, endDate]
+    );
+
+    const newProject = {
+      id: result.rows[0].id.toString(),
+      title,
+      type,
+      status,
+      description: description || '',
+      technologies: technologies || [],
+      projectUrl,
+      githubUrl,
+      startDate,
+      endDate,
+      createdAt: new Date().toISOString()
+    };
+
+    res.status(201).json({
+      message: "Project added successfully",
+      project: newProject
+    });
+  } catch (err) {
+    console.error("Error adding student project:", err);
+    res.status(500).json({ message: "Database error adding student project" });
+  }
+});
+
+// PUT /api/student/projects/:projectId - оновити проєкт студента
+app.put("/api/student/projects/:projectId", authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const { projectId } = req.params;
+    const {
+      title,
+      type,
+      status,
+      description,
+      technologies,
+      projectUrl,
+      githubUrl,
+      startDate,
+      endDate
+    } = req.body;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    if (!title || !type || !status) {
+      return res.status(400).json({ message: "Title, type and status are required" });
+    }
+
+    // Перевіряємо чи проєкт належить користувачу
+    const projectCheck = await pool.query(
+      'SELECT id FROM student_projects WHERE id = $1 AND user_id = $2',
+      [projectId, userId]
+    );
+
+    if (projectCheck.rows.length === 0) {
+      return res.status(404).json({ message: "Project not found or access denied" });
+    }
+
+    await pool.query(
+      `UPDATE student_projects 
+       SET title = $1, type = $2, status = $3, description = $4, technologies = $5, 
+           project_url = $6, github_url = $7, start_date = $8, end_date = $9, updated_at = NOW()
+       WHERE id = $10`,
+      [title, type, status, description || '', 
+       technologies ? technologies.join(',') : null, projectUrl, githubUrl, startDate, endDate, projectId]
+    );
+
+    res.json({ message: "Project updated successfully" });
+  } catch (err) {
+    console.error("Error updating student project:", err);
+    res.status(500).json({ message: "Database error updating student project" });
+  }
+});
+
+// DELETE /api/student/projects/:projectId - видалити проєкт студента
+app.delete("/api/student/projects/:projectId", authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const { projectId } = req.params;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    // Перевіряємо чи проєкт належить користувачу
+    const projectCheck = await pool.query(
+      'SELECT id FROM student_projects WHERE id = $1 AND user_id = $2',
+      [projectId, userId]
+    );
+
+    if (projectCheck.rows.length === 0) {
+      return res.status(404).json({ message: "Project not found or access denied" });
+    }
+
+    await pool.query('DELETE FROM student_projects WHERE id = $1', [projectId]);
+
+    res.json({ message: "Project deleted successfully" });
+  } catch (err) {
+    console.error("Error deleting student project:", err);
+    res.status(500).json({ message: "Database error deleting student project" });
+  }
+});
+
+// GET /api/student/achievements - отримати досягнення студента
+app.get("/api/student/achievements", authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const result = await pool.query(
+      `SELECT 
+        id,
+        title,
+        description,
+        date,
+        type,
+        organization,
+        certificate_url,
+        created_at
+       FROM student_achievements 
+       WHERE user_id = $1 
+       ORDER BY date DESC, created_at DESC`,
+      [userId]
+    );
+
+    const achievements = result.rows.map((row: any) => ({
+      id: row.id.toString(),
+      title: row.title,
+      description: row.description,
+      date: row.date,
+      type: row.type,
+      organization: row.organization,
+      certificateUrl: row.certificate_url,
+      createdAt: row.created_at
+    }));
+
+    res.json(achievements);
+  } catch (err) {
+    console.error("Error fetching student achievements:", err);
+    res.status(500).json({ message: "Database error fetching student achievements" });
+  }
+});
+
+// POST /api/student/achievements - додати досягнення студента
+app.post("/api/student/achievements", authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const {
+      title,
+      description,
+      date,
+      type,
+      organization,
+      certificateUrl
+    } = req.body;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    if (!title || !date) {
+      return res.status(400).json({ message: "Title and date are required" });
+    }
+
+    const result = await pool.query(
+      `INSERT INTO student_achievements 
+       (user_id, title, description, date, type, organization, certificate_url, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+       RETURNING id`,
+      [userId, title, description || '', date, type, organization, certificateUrl]
+    );
+
+    const newAchievement = {
+      id: result.rows[0].id.toString(),
+      title,
+      description: description || '',
+      date,
+      type,
+      organization,
+      certificateUrl,
+      createdAt: new Date().toISOString()
+    };
+
+    res.status(201).json({
+      message: "Achievement added successfully",
+      achievement: newAchievement
+    });
+  } catch (err) {
+    console.error("Error adding student achievement:", err);
+    res.status(500).json({ message: "Database error adding student achievement" });
+  }
+});
+
+// PUT /api/student/achievements/:achievementId - оновити досягнення студента
+app.put("/api/student/achievements/:achievementId", authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const { achievementId } = req.params;
+    const {
+      title,
+      description,
+      date,
+      type,
+      organization,
+      certificateUrl
+    } = req.body;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    if (!title || !date) {
+      return res.status(400).json({ message: "Title and date are required" });
+    }
+
+    // Перевіряємо чи досягнення належить користувачу
+    const achievementCheck = await pool.query(
+      'SELECT id FROM student_achievements WHERE id = $1 AND user_id = $2',
+      [achievementId, userId]
+    );
+
+    if (achievementCheck.rows.length === 0) {
+      return res.status(404).json({ message: "Achievement not found or access denied" });
+    }
+
+    await pool.query(
+      `UPDATE student_achievements 
+       SET title = $1, description = $2, date = $3, type = $4, organization = $5, certificate_url = $6, updated_at = NOW()
+       WHERE id = $7`,
+      [title, description || '', date, type, organization, certificateUrl, achievementId]
+    );
+
+    res.json({ message: "Achievement updated successfully" });
+  } catch (err) {
+    console.error("Error updating student achievement:", err);
+    res.status(500).json({ message: "Database error updating student achievement" });
+  }
+});
+
+// DELETE /api/student/achievements/:achievementId - видалити досягнення студента
+app.delete("/api/student/achievements/:achievementId", authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const { achievementId } = req.params;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    // Перевіряємо чи досягнення належить користувачу
+    const achievementCheck = await pool.query(
+      'SELECT id FROM student_achievements WHERE id = $1 AND user_id = $2',
+      [achievementId, userId]
+    );
+
+    if (achievementCheck.rows.length === 0) {
+      return res.status(404).json({ message: "Achievement not found or access denied" });
+    }
+
+    await pool.query('DELETE FROM student_achievements WHERE id = $1', [achievementId]);
+
+    res.json({ message: "Achievement deleted successfully" });
+  } catch (err) {
+    console.error("Error deleting student achievement:", err);
+    res.status(500).json({ message: "Database error deleting student achievement" });
+  }
+});
+
+// GET /api/student/goals - отримати цілі студента
+app.get("/api/student/goals", authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const result = await pool.query(
+      `SELECT 
+        id,
+        goal,
+        description,
+        deadline,
+        status,
+        priority,
+        progress,
+        created_at
+       FROM student_goals 
+       WHERE user_id = $1 
+       ORDER BY 
+         CASE priority
+           WHEN 'high' THEN 1
+           WHEN 'medium' THEN 2
+           WHEN 'low' THEN 3
+           ELSE 4
+         END,
+         deadline ASC`,
+      [userId]
+    );
+
+    const goals = result.rows.map((row: any) => ({
+      id: row.id.toString(),
+      goal: row.goal,
+      description: row.description,
+      deadline: row.deadline,
+      status: row.status,
+      priority: row.priority,
+      progress: row.progress,
+      createdAt: row.created_at
+    }));
+
+    res.json(goals);
+  } catch (err) {
+    console.error("Error fetching student goals:", err);
+    res.status(500).json({ message: "Database error fetching student goals" });
+  }
+});
+
+// POST /api/student/goals - додати ціль студента
+app.post("/api/student/goals", authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const {
+      goal,
+      description,
+      deadline,
+      status = 'active',
+      priority = 'medium',
+      progress = 0
+    } = req.body;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    if (!goal || !deadline) {
+      return res.status(400).json({ message: "Goal and deadline are required" });
+    }
+
+    const result = await pool.query(
+      `INSERT INTO student_goals 
+       (user_id, goal, description, deadline, status, priority, progress, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+       RETURNING id`,
+      [userId, goal, description || '', deadline, status, priority, progress]
+    );
+
+    const newGoal = {
+      id: result.rows[0].id.toString(),
+      goal,
+      description: description || '',
+      deadline,
+      status,
+      priority,
+      progress,
+      createdAt: new Date().toISOString()
+    };
+
+    res.status(201).json({
+      message: "Goal added successfully",
+      goal: newGoal
+    });
+  } catch (err) {
+    console.error("Error adding student goal:", err);
+    res.status(500).json({ message: "Database error adding student goal" });
+  }
+});
+
+// PUT /api/student/goals/:goalId - оновити ціль студента
+app.put("/api/student/goals/:goalId", authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const { goalId } = req.params;
+    const {
+      goal,
+      description,
+      deadline,
+      status,
+      priority,
+      progress
+    } = req.body;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    if (!goal || !deadline) {
+      return res.status(400).json({ message: "Goal and deadline are required" });
+    }
+
+    // Перевіряємо чи ціль належить користувачу
+    const goalCheck = await pool.query(
+      'SELECT id FROM student_goals WHERE id = $1 AND user_id = $2',
+      [goalId, userId]
+    );
+
+    if (goalCheck.rows.length === 0) {
+      return res.status(404).json({ message: "Goal not found or access denied" });
+    }
+
+    await pool.query(
+      `UPDATE student_goals 
+       SET goal = $1, description = $2, deadline = $3, status = $4, priority = $5, progress = $6, updated_at = NOW()
+       WHERE id = $7`,
+      [goal, description || '', deadline, status, priority, progress, goalId]
+    );
+
+    res.json({ message: "Goal updated successfully" });
+  } catch (err) {
+    console.error("Error updating student goal:", err);
+    res.status(500).json({ message: "Database error updating student goal" });
+  }
+});
+
+// DELETE /api/student/goals/:goalId - видалити ціль студента
+app.delete("/api/student/goals/:goalId", authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const { goalId } = req.params;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    // Перевіряємо чи ціль належить користувачу
+    const goalCheck = await pool.query(
+      'SELECT id FROM student_goals WHERE id = $1 AND user_id = $2',
+      [goalId, userId]
+    );
+
+    if (goalCheck.rows.length === 0) {
+      return res.status(404).json({ message: "Goal not found or access denied" });
+    }
+
+    await pool.query('DELETE FROM student_goals WHERE id = $1', [goalId]);
+
+    res.json({ message: "Goal deleted successfully" });
+  } catch (err) {
+    console.error("Error deleting student goal:", err);
+    res.status(500).json({ message: "Database error deleting student goal" });
   }
 });
 

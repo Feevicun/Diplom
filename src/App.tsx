@@ -16,6 +16,7 @@ import Resources from './pages/Resources';
 import TeacherDashboard from './pages/TeacherDashboard';
 import TeacherGrades from './pages/TeacherGraders';
 import TeacherInfo from './pages/TeacherInfo'; 
+import TeacherApplications from './pages/StudentApplications'; 
 
 import { ThemeProvider } from './context/ThemeContext';
 import { VoiceAssistant } from './components/VoiceAssistant/VoiceAssistant';
@@ -42,8 +43,8 @@ function App() {
             {/* Викладацькі маршрути */}
             <Route path="/teacherdashboard" element={<TeacherDashboard />} />
             <Route path="/teacher/grades" element={<TeacherGrades />} />
-            <Route path="/teacher/info" element={<TeacherInfo />} /> {/* Додаємо маршрут */}
-            <Route path="/teacher/students" element={<TeacherDashboard />} /> {/* Тимочасова заглушка */}
+            <Route path="/teacher/info" element={<TeacherInfo />} /> 
+            <Route path="/teacher/students" element={<TeacherApplications />} /> 
             
             {/* Спільні маршрути */}
             <Route path="/chat" element={<Chat />} />

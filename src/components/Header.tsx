@@ -21,7 +21,8 @@ import {
   TrendingUp,
   Zap,
   LogOut,
-  Book
+  Book,
+  Sparkles
 } from 'lucide-react';
 import { useTheme } from '@/context/ThemeContext';
 import {
@@ -47,9 +48,11 @@ const Header = () => {
   const [isCreateMenuOpen, setIsCreateMenuOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
+  const [isProfileAnimating, setIsProfileAnimating] = useState(false);
 
   const menuRef = useRef<HTMLDivElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
+  const profileButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     const storedUser = localStorage.getItem('currentUser');
@@ -112,12 +115,86 @@ const Header = () => {
   };
 
   const handleProfileClick = () => {
-    // Перенаправляємо на відповідний профіль в залежності від ролі
-    if (userRole === 'teacher') {
-      navigate('/teacher/info');
-    } else {
-      navigate('/profile');
+    // Запускаємо анімацію
+    setIsProfileAnimating(true);
+    
+    // Створюємо ефект частинок
+    createParticleEffect();
+    
+    // Затримка перед навігацією
+    setTimeout(() => {
+      // Перенаправляємо на відповідний профіль в залежності від ролі
+      if (userRole === 'teacher') {
+        navigate('/teacher/info');
+      } else {
+        navigate('/profile');
+      }
+      
+      // Закінчуємо анімацію
+      setTimeout(() => setIsProfileAnimating(false), 500);
+    }, 600);
+  };
+
+  const createParticleEffect = () => {
+    const button = profileButtonRef.current;
+    if (!button) return;
+
+    const buttonRect = button.getBoundingClientRect();
+    const centerX = buttonRect.left + buttonRect.width / 2;
+    const centerY = buttonRect.top + buttonRect.height / 2;
+
+    // Створюємо частинки
+    for (let i = 0; i < 12; i++) {
+      createParticle(centerX, centerY);
     }
+  };
+
+  const createParticle = (x: number, y: number) => {
+    const particle = document.createElement('div');
+    particle.className = 'absolute w-1 h-1 rounded-full bg-primary pointer-events-none';
+    
+    // Випадкові кольори для частинок
+    const colors = [
+      'bg-blue-500', 'bg-purple-500', 'bg-pink-500', 
+      'bg-indigo-500', 'bg-cyan-500', 'bg-primary'
+    ];
+    const randomColor = colors[Math.floor(Math.random() * colors.length)];
+    particle.className = `absolute w-1 h-1 rounded-full ${randomColor} pointer-events-none`;
+    
+    // Випадковий розмір
+    const size = Math.random() * 3 + 1;
+    particle.style.width = `${size}px`;
+    particle.style.height = `${size}px`;
+    
+    document.body.appendChild(particle);
+
+    // Випадковий рух
+    const angle = Math.random() * Math.PI * 2;
+    const speed = Math.random() * 60 + 40;
+    const vx = Math.cos(angle) * speed;
+    const vy = Math.sin(angle) * speed;
+
+    // Анімація
+    const animation = particle.animate(
+      [
+        {
+          transform: `translate(${x}px, ${y}px) scale(1)`,
+          opacity: 1
+        },
+        {
+          transform: `translate(${x + vx}px, ${y + vy}px) scale(0)`,
+          opacity: 0
+        }
+      ],
+      {
+        duration: Math.random() * 600 + 400,
+        easing: 'cubic-bezier(0.4, 0, 0.2, 1)'
+      }
+    );
+
+    animation.onfinish = () => {
+      particle.remove();
+    };
   };
 
   const openMobileMenu = () => {
@@ -253,13 +330,44 @@ const Header = () => {
               {i18n.language === 'ua' ? 'UA' : 'EN'}
             </Button>
 
+            {/* Оновлена кнопка профілю з анімацією */}
             <Button
+              ref={profileButtonRef}
               variant="ghost"
               size="icon"
               onClick={handleProfileClick}
-              className="rounded-full"
+              disabled={isProfileAnimating}
+              className={cn(
+                "rounded-full relative overflow-hidden transition-all duration-500",
+                isProfileAnimating && [
+                  "bg-primary text-primary-foreground",
+                  "animate-pulse scale-110",
+                  "shadow-lg shadow-primary/50"
+                ]
+              )}
             >
-              <Settings className="h-4 w-4" />
+              {/* Основний іконка */}
+              <Settings className={cn(
+                "h-4 w-4 transition-all duration-300",
+                isProfileAnimating && [
+                  "scale-110 rotate-180",
+                  "text-primary-foreground"
+                ]
+              )} />
+              
+              {/* Додаткові ефекти під час анімації */}
+              {isProfileAnimating && (
+                <>
+                  {/* Ефект спаркл-іконки */}
+                  <Sparkles className="absolute h-3 w-3 animate-spin text-primary-foreground/80" />
+                  
+                  {/* Пульсуюче кільце */}
+                  <div className="absolute inset-0 rounded-full border-2 border-primary-foreground/30 animate-ping" />
+                  
+                  {/* Градієнтний оверлей */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-primary/50 to-transparent opacity-50" />
+                </>
+              )}
             </Button>
 
             <div className="w-px h-6 bg-border mx-2" />
@@ -267,9 +375,6 @@ const Header = () => {
             <div className="hidden sm:flex items-center gap-3">
               <div className="text-right leading-tight">
                 <p className="text-sm font-medium">{firstName}</p>
-                <p className="text-xs text-muted-foreground capitalize">
-                  {userRole === 'teacher' ? 'Викладач' : 'Студент'}
-                </p>
                 <p
                   onClick={toggleOnlineStatus}
                   className="text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
@@ -329,9 +434,6 @@ const Header = () => {
                       {isOnline ? t('header.online') : t('header.offline')}
                     </span>
                   </div>
-                  <span className="text-xs text-muted-foreground capitalize">
-                    {userRole === 'teacher' ? 'Викладач' : 'Студент'}
-                  </span>
                 </div>
               </div>
               <Button
