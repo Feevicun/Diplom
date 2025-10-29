@@ -402,11 +402,10 @@ app.post("/api/forgot-password/reset", async (req: Request, res: Response) => {
 });
 
 
-
 // POST /api/events - створення події
 app.post("/api/events", authenticateToken, async (req: Request, res: Response) => {
   try {
-    const { title, date, type, time, location, link, description } = req.body;
+    const { title, date, type, time, location, link, description, completed } = req.body;
     const userEmail = req.user?.email;
 
     if (!userEmail || !title || !date || !type) {
@@ -414,9 +413,9 @@ app.post("/api/events", authenticateToken, async (req: Request, res: Response) =
     }
 
     const result = await pool.query(
-      `INSERT INTO events ("userEmail", title, date, type, time, location, link, description) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
-      [userEmail, title, date, type, time, location, link, description]
+      `INSERT INTO events ("userEmail", title, date, type, time, location, link, description, completed) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
+      [userEmail, title, date, type, time, location, link, description, completed || false]
     );
 
     res.status(201).json({ message: "Event created successfully", event: result.rows[0] });
@@ -433,7 +432,7 @@ app.get("/api/events", authenticateToken, async (req: Request, res: Response) =>
     if (!userEmail) return res.status(401).json({ message: "Unauthorized" });
 
     const result = await pool.query(
-      `SELECT id, title, date, type, time, location, link, description 
+      `SELECT id, title, date, type, time, location, link, description, completed
        FROM events 
        WHERE "userEmail" = $1 
        ORDER BY date`,
@@ -451,7 +450,7 @@ app.get("/api/events", authenticateToken, async (req: Request, res: Response) =>
 app.put("/api/events/:id", authenticateToken, async (req: Request, res: Response) => {
   try {
     const eventId = req.params.id;
-    const { title, date, type, time, location, link, description } = req.body;
+    const { title, date, type, time, location, link, description, completed } = req.body;
     const userEmail = req.user?.email;
 
     if (!userEmail) {
@@ -469,10 +468,10 @@ app.put("/api/events/:id", authenticateToken, async (req: Request, res: Response
 
     const result = await pool.query(
       `UPDATE events 
-       SET title = $1, date = $2, type = $3, time = $4, location = $5, link = $6, description = $7
-       WHERE id = $8 AND "userEmail" = $9
+       SET title = $1, date = $2, type = $3, time = $4, location = $5, link = $6, description = $7, completed = $8
+       WHERE id = $9 AND "userEmail" = $10
        RETURNING *`,
-      [title, date, type, time, location, link, description, eventId, userEmail]
+      [title, date, type, time, location, link, description, completed, eventId, userEmail]
     );
 
     res.json({ message: "Event updated successfully", event: result.rows[0] });
@@ -889,6 +888,26 @@ app.get("/api/resources", async (req: Request, res: Response) => {
   }
 });
 
+// GET ресурсу за ID
+app.get("/api/resources/:id", async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const result = await pool.query(
+      "SELECT r.*, u.name as created_by_name FROM resources r LEFT JOIN users u ON r.created_by = u.id WHERE r.id = $1",
+      [id]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "Ресурс не знайдено" });
+    }
+    
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error("Error fetching resource:", err);
+    res.status(500).json({ message: "Database error fetching resource" });
+  }
+});
+
 // POST новий ресурс
 app.post("/api/resources", authenticateToken, async (req: Request, res: Response) => {
   try {
@@ -921,9 +940,15 @@ app.post("/api/resources", authenticateToken, async (req: Request, res: Response
       [title, description, link, category || 'other', req.user.userId]
     );
 
+    // Отримуємо повну інформацію про ресурс з іменем користувача
+    const fullResource = await pool.query(
+      "SELECT r.*, u.name as created_by_name FROM resources r LEFT JOIN users u ON r.created_by = u.id WHERE r.id = $1",
+      [result.rows[0].id]
+    );
+
     res.status(201).json({
       message: "Ресурс додано успішно",
-      resource: result.rows[0]
+      resource: fullResource.rows[0] // Повертаємо ресурс з created_by_name
     });
   } catch (err) {
     console.error("Error adding resource:", err);
@@ -931,18 +956,21 @@ app.post("/api/resources", authenticateToken, async (req: Request, res: Response
   }
 });
 
+
 // PUT оновлення ресурсу
 app.put("/api/resources/:id", authenticateToken, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { title, description, link, category } = req.body;
     
+    console.log(`Updating resource ${id} with:`, { title, description, link, category });
+    
     // Type guard for req.user
     if (!req.user) {
       return res.status(401).json({ message: "User not authenticated" });
     }
     
-    // Перевірка прав власності
+    // Перевірка прав власності - вибираємо тільки created_by
     const resourceCheck = await pool.query(
       "SELECT created_by FROM resources WHERE id = $1",
       [id]
@@ -956,21 +984,44 @@ app.put("/api/resources/:id", authenticateToken, async (req: Request, res: Respo
       return res.status(403).json({ message: "Доступ заборонено" });
     }
 
+    // Валідація даних
+    if (!title || !title.trim()) {
+      return res.status(400).json({ message: "Назва обов'язкова" });
+    }
+    
+    if (!link || !link.trim()) {
+      return res.status(400).json({ message: "Посилання обов'язкове" });
+    }
+
+    // Форматування посилання
+    let formattedLink = link.trim();
+    if (!formattedLink.startsWith('http://') && !formattedLink.startsWith('https://')) {
+      formattedLink = 'https://' + formattedLink;
+    }
+
     const result = await pool.query(
       `UPDATE resources
        SET title = $1, description = $2, link = $3, category = $4, updated_at = CURRENT_TIMESTAMP
        WHERE id = $5
        RETURNING *`,
-      [title, description, link, category, id]
+      [title.trim(), description?.trim() || '', formattedLink, category || 'other', id]
     );
 
+    console.log('Resource updated successfully:', result.rows[0]);
+    
+    // Отримуємо повну інформацію про ресурс з іменем користувача
+    const fullResource = await pool.query(
+      "SELECT r.*, u.name as created_by_name FROM resources r LEFT JOIN users u ON r.created_by = u.id WHERE r.id = $1",
+      [id]
+    );
+    
     res.json({
       message: "Ресурс оновлено успішно",
-      resource: result.rows[0]
+      resource: fullResource.rows[0] // Повертаємо ресурс з created_by_name
     });
   } catch (err) {
     console.error("Error updating resource:", err);
-    res.status(500).json({ message: "Помилка бази даних" });
+    res.status(500).json({ message: "Помилка бази даних при оновленні ресурсу" });
   }
 });
 

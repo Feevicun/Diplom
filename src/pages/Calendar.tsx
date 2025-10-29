@@ -14,6 +14,8 @@ import {
   Link as LinkIcon,
   MapPin,
   FileText,
+  CheckCircle2,
+  Circle,
 } from 'lucide-react';
 
 import Header from '@/components/Header';
@@ -35,6 +37,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import {
   AlertDialog,
@@ -44,7 +47,6 @@ import {
   AlertDialogDescription,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { toast } from 'sonner';
 import { format, isSameDay } from 'date-fns';
 import { uk, enUS } from 'date-fns/locale';
 
@@ -59,6 +61,7 @@ interface Event {
   location?: string;
   link?: string;
   description?: string;
+  completed: boolean;
 }
 
 interface CurrentUser {
@@ -86,6 +89,7 @@ const CalendarPage = () => {
     location: '',
     link: '',
     description: '',
+    completed: false,
   });
 
   const [user, setUser] = useState<CurrentUser | null>(null);
@@ -154,6 +158,7 @@ const CalendarPage = () => {
         location: '',
         link: '',
         description: '',
+        completed: false,
       });
     }
   }, [showModal, editingEvent, selectedDate]);
@@ -174,6 +179,7 @@ const CalendarPage = () => {
         location: newEvent.location,
         link: newEvent.link,
         description: newEvent.description,
+        completed: newEvent.completed,
       };
 
       const res = await fetch('/api/events', {
@@ -189,14 +195,11 @@ const CalendarPage = () => {
         const { event } = await res.json();
         setEvents((prev) => [...prev, event]);
         setShowModal(false);
-        toast.success('Подію успішно додано');
       } else {
         console.error('Failed to create event');
-        toast.error('Помилка при додаванні події');
       }
     } catch (err) {
       console.error('Error creating event:', err);
-      toast.error('Помилка при додаванні події');
     }
   };
 
@@ -216,6 +219,7 @@ const CalendarPage = () => {
         location: newEvent.location,
         link: newEvent.link,
         description: newEvent.description,
+        completed: newEvent.completed,
       };
 
       const res = await fetch(`/api/events/${editingEvent.id}`, {
@@ -232,14 +236,11 @@ const CalendarPage = () => {
         setEvents((prev) => prev.map(e => e.id === editingEvent.id ? event : e));
         setEditingEvent(null);
         setShowModal(false);
-        toast.success('Подію успішно оновлено');
       } else {
         console.error('Failed to update event');
-        toast.error('Помилка при оновленні події');
       }
     } catch (err) {
       console.error('Error updating event:', err);
-      toast.error('Помилка при оновленні події');
     }
   };
 
@@ -257,23 +258,53 @@ const CalendarPage = () => {
       });
 
       if (res.ok) {
-        // Додаємо затримку для анімації
         setTimeout(() => {
           setEvents((prev) => prev.filter(event => event.id !== eventToDelete));
           setDeletingEventId(null);
           setDeleteDialogOpen(false);
           setEventToDelete(null);
-          toast.success('Подію успішно видалено');
         }, 300);
       } else {
         console.error('Failed to delete event');
         setDeletingEventId(null);
-        toast.error('Помилка при видаленні події');
       }
     } catch (err) {
       console.error('Error deleting event:', err);
       setDeletingEventId(null);
-      toast.error('Помилка при видаленні події');
+    }
+  };
+
+  // Функція для перемикання статусу виконання
+  const toggleEventCompletion = async (eventId: string) => {
+    if (!token) return;
+
+    const event = events.find(e => e.id === eventId);
+    if (!event) return;
+
+    const updatedEvent = { ...event, completed: !event.completed };
+
+    try {
+      const res = await fetch(`/api/events/${eventId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(updatedEvent),
+      });
+
+      if (res.ok) {
+        const { event: savedEvent } = await res.json();
+        setEvents((prev) => prev.map(e => e.id === eventId ? savedEvent : e));
+      } else {
+        console.error('Failed to update event completion status');
+        // Якщо API не працює, оновлюємо локально
+        setEvents((prev) => prev.map(e => e.id === eventId ? updatedEvent : e));
+      }
+    } catch (err) {
+      console.error('Error updating event completion:', err);
+      // Якщо виникла помилка, оновлюємо локально
+      setEvents((prev) => prev.map(e => e.id === eventId ? updatedEvent : e));
     }
   };
 
@@ -287,6 +318,7 @@ const CalendarPage = () => {
       location: event.location || '',
       link: event.link || '',
       description: event.description || '',
+      completed: event.completed,
     });
     setShowModal(true);
   };
@@ -340,16 +372,20 @@ const CalendarPage = () => {
     return format(new Date(event.date), 'HH:mm');
   };
 
-  const getEventTypeColor = (type: EventType) => {
+  const getEventTypeColor = (type: EventType, completed: boolean) => {
+    if (completed) {
+      return 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400';
+    }
+    
     switch (type) {
       case 'task':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300';
       case 'meeting':
-        return 'bg-green-100 text-green-800';
+        return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300';
       case 'deadline':
-        return 'bg-red-100 text-red-800';
+        return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
     }
   };
 
@@ -381,7 +417,7 @@ const CalendarPage = () => {
           <div className="max-w-6xl mx-auto px-6 py-8 space-y-10">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div className="flex items-center gap-2">
-                <CalendarIcon className="text-blue-500 w-7 h-7" />
+                <CalendarIcon className="text-primary w-7 h-7" />
                 <div>
                   <h1 className="text-3xl font-bold text-foreground">{t('calendar.pageTitle')}</h1>
                   <p className="text-muted-foreground text-sm">{t('calendar.pageDescription')}</p>
@@ -400,6 +436,9 @@ const CalendarPage = () => {
                   <DialogTitle className="text-xl">
                     {editingEvent ? 'Редагувати подію' : 'Додати нову подію'}
                   </DialogTitle>
+                  <DialogDescription>
+                    {editingEvent ? 'Внесіть зміни до події' : 'Заповніть інформацію про нову подію'}
+                  </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4">
                   <div className="space-y-2">
@@ -438,6 +477,22 @@ const CalendarPage = () => {
                     </div>
                   </div>
 
+                  {/* Чекбокс для статусу виконання */}
+                  {editingEvent && (
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="event-completed"
+                        checked={newEvent.completed}
+                        onChange={(e) => setNewEvent({ ...newEvent, completed: e.target.checked })}
+                        className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                      />
+                      <Label htmlFor="event-completed">
+                        Позначити як виконане
+                      </Label>
+                    </div>
+                  )}
+
                   <div className="space-y-2">
                     <Label htmlFor="event-location">Місце проведення</Label>
                     <Input
@@ -469,7 +524,7 @@ const CalendarPage = () => {
                     />
                   </div>
 
-                  <div className="flex justify-end gap-2 pt-2">
+                  <div className="flex justify-end gap-2 pt-4 mt-6">
                     <Button 
                       variant="secondary" 
                       onClick={() => {
@@ -502,7 +557,7 @@ const CalendarPage = () => {
                     Видалити подію?
                   </AlertDialogTitle>
                   
-                  <AlertDialogDescription className="text-muted-foreground text-sm mb-4">
+                  <AlertDialogDescription className="text-sm mb-4">
                     Ця дія незворотня. Підтвердіть видалення.
                   </AlertDialogDescription>
 
@@ -524,7 +579,7 @@ const CalendarPage = () => {
 
             <div className="grid md:grid-cols-2 gap-10">
               {/* Календар - завжди світлий */}
-              <Card className="bg-[var(--card)] text-[var(--card-foreground)]">
+              <Card>
                 <CardHeader>
                   <CardTitle>{t('calendar.card.calendarTitle')}</CardTitle>
                   <CardDescription>{t('calendar.card.calendarDescription')}</CardDescription>
@@ -538,7 +593,6 @@ const CalendarPage = () => {
                     tileClassName={({ date }) => {
                       const isToday = isSameDay(date, new Date());
                       const isSelected = isSameDay(date, selectedDate);
-                      const hasEvents = events.some(event => isSameDay(new Date(event.date), date));
                       
                       return [
                         'py-2 rounded-lg transition-colors duration-200 text-center',
@@ -546,9 +600,6 @@ const CalendarPage = () => {
                         isSelected
                           ? 'bg-blue-600 text-white font-semibold hover:bg-blue-700'
                           : 'hover:bg-gray-100 hover:text-gray-900',
-                        hasEvents && !isSelected 
-                          ? 'after:content-[""] after:absolute after:bottom-1 after:left-1/2 after:transform after:-translate-x-1/2 after:w-1 after:h-1 after:bg-blue-500 after:rounded-full' 
-                          : '',
                       ].join(' ');
                     }}
                     navigationLabel={({ date }) => (
@@ -564,8 +615,8 @@ const CalendarPage = () => {
                 </CardContent>
               </Card>
 
-              {/* Події - адаптуються до теми */}
-              <Card className="bg-[var(--card)] text-[var(--card-foreground)] h-[400px] flex flex-col">
+              {/* Події */}
+              <Card className="h-[400px] flex flex-col">
                 <CardHeader>
                   <CardTitle>
                     {t('calendar.card.eventsTitle', {
@@ -584,7 +635,7 @@ const CalendarPage = () => {
                       <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
                         <CalendarIcon className="w-8 h-8 text-muted-foreground" />
                       </div>
-                      <h3 className="text-lg font-semibold text-foreground mb-2">
+                      <h3 className="text-lg font-semibold mb-2">
                         Немає подій на цей день
                       </h3>
                       <p className="text-muted-foreground text-sm mb-6 max-w-sm">
@@ -602,51 +653,42 @@ const CalendarPage = () => {
                       return (
                         <div
                           key={event.id}
-                          className={`border rounded-xl p-4 space-y-2 group relative bg-card dark:bg-card dark:border-border transition-all duration-300 ${
+                          className={`border rounded-xl p-4 space-y-2 group relative transition-all duration-300 ${
                             deletingEventId === event.id 
                               ? 'opacity-0 scale-95 -translate-y-2' 
                               : 'opacity-100 scale-100 translate-y-0'
+                          } ${
+                            event.completed ? 'opacity-75' : ''
                           }`}
                           ref={index === filteredEvents.length - 1 ? lastEventRef : null}
                         >
-                          {/* Кнопки редагування та видалення */}
-                          <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6 bg-background/80 backdrop-blur-sm"
-                              onClick={() => startEditing(event)}
-                            >
-                              <Edit3 className="h-3 w-3" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6 bg-background/80 backdrop-blur-sm text-destructive hover:text-destructive hover:bg-destructive/10"
-                              onClick={() => startDeleting(event.id)}
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
-                          </div>
-
                           <div className="flex items-start justify-between gap-3">
                             <div className="flex items-start gap-3 flex-1 min-w-0">
-                              <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${getEventTypeColor(event.type)}`}>
+                              <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${getEventTypeColor(event.type, event.completed)}`}>
                                 <EventIcon className="w-4 h-4" />
                               </div>
                               <div className="flex-1 min-w-0">
-                                <h3 className="font-semibold text-base pr-8 dark:text-foreground truncate">
+                                <h3 className={`font-semibold text-base truncate ${
+                                  event.completed ? 'line-through text-muted-foreground' : ''
+                                }`}>
                                   {event.title}
                                 </h3>
-                                <div className="flex items-center text-sm text-muted-foreground mt-1 dark:text-muted-foreground">
+                                <div className="flex items-center text-sm text-muted-foreground mt-1">
                                   <Clock className="w-3 h-3 mr-1 flex-shrink-0" />
                                   <span>{formatEventTime(event)}</span>
+                                  {event.completed && (
+                                    <Badge variant="outline" className="ml-2 text-xs bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-300">
+                                      Виконано
+                                    </Badge>
+                                  )}
                                 </div>
                               </div>
                             </div>
                             <Badge
                               variant={
-                                event.type === 'task'
+                                event.completed
+                                  ? 'secondary'
+                                  : event.type === 'task'
                                   ? 'secondary'
                                   : event.type === 'meeting'
                                   ? 'default'
@@ -659,7 +701,9 @@ const CalendarPage = () => {
                           </div>
 
                           {event.location && (
-                            <div className="flex items-center text-sm text-muted-foreground dark:text-muted-foreground">
+                            <div className={`flex items-center text-sm ${
+                              event.completed ? 'text-muted-foreground' : 'text-muted-foreground'
+                            }`}>
                               <MapPin className="w-3 h-3 mr-2 flex-shrink-0" />
                               <span className="truncate">{event.location}</span>
                             </div>
@@ -667,12 +711,12 @@ const CalendarPage = () => {
 
                           {event.link && (
                             <div className="flex items-center text-sm">
-                              <LinkIcon className="w-3 h-3 mr-2 text-blue-500 flex-shrink-0" />
+                              <LinkIcon className="w-3 h-3 mr-2 text-blue-500 dark:text-blue-400 flex-shrink-0" />
                               <a 
                                 href={event.link} 
                                 target="_blank" 
                                 rel="noopener noreferrer"
-                                className="text-blue-500 hover:underline truncate"
+                                className="text-blue-500 hover:underline truncate dark:text-blue-400"
                               >
                                 Приєднатися до зустрічі
                               </a>
@@ -680,10 +724,52 @@ const CalendarPage = () => {
                           )}
 
                           {event.description && (
-                            <p className="text-sm text-muted-foreground pt-2 border-t dark:text-muted-foreground dark:border-border line-clamp-2">
+                            <p className={`text-sm pt-2 border-t line-clamp-2 ${
+                              event.completed ? 'text-muted-foreground' : 'text-muted-foreground'
+                            }`}>
                               {event.description}
                             </p>
                           )}
+
+                          {/* Кнопки редагування та видалення - тепер внизу */}
+                          <div className="flex justify-end gap-1 pt-2 border-t mt-2">
+                            {/* Кнопка перемикання статусу виконання */}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 px-2 hover:bg-green-50 hover:text-green-600 dark:hover:bg-green-900/20"
+                              onClick={() => toggleEventCompletion(event.id)}
+                              title={event.completed ? 'Позначити як невиконане' : 'Позначити як виконане'}
+                            >
+                              {event.completed ? (
+                                <CheckCircle2 className="h-3 w-3 text-green-600 dark:text-green-400 mr-1" />
+                              ) : (
+                                <Circle className="h-3 w-3 text-muted-foreground mr-1" />
+                              )}
+                              <span className="text-xs">
+                                {event.completed ? 'Виконано' : 'Не виконано'}
+                              </span>
+                            </Button>
+                            
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 w-7 hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-900/20"
+                              onClick={() => startEditing(event)}
+                              title="Редагувати"
+                            >
+                              <Edit3 className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10 dark:hover:bg-red-900/20"
+                              onClick={() => startDeleting(event.id)}
+                              title="Видалити"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
                         </div>
                       );
                     })
@@ -710,7 +796,7 @@ const CalendarPage = () => {
                 return (
                   <Card key={i} className="shadow-sm">
                     <CardHeader className="flex items-start justify-between">
-                      <Icon className="text-blue-500 w-5 h-5" />
+                      <Icon className="text-primary w-5 h-5" />
                     </CardHeader>
                     <CardContent>
                       <CardTitle className="text-base">{titles[i]}</CardTitle>

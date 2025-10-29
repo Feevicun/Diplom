@@ -44,6 +44,24 @@ interface Application {
   expanded: boolean;
 }
 
+interface AcceptedStudent {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  avatar?: string;
+  course: number;
+  faculty: string;
+  specialty: string;
+  workType: 'coursework' | 'diploma';
+  workTitle: string;
+  startDate: string;
+  progress: number;
+  status: 'active' | 'completed' | 'behind';
+  lastMeeting?: string;
+  nextMeeting?: string;
+}
+
 const TeacherApplications = () => {
   const { t } = useTranslation();
   const [expandedApplication, setExpandedApplication] = useState<number | null>(null);
@@ -102,6 +120,44 @@ const TeacherApplications = () => {
 
   const toggleApplication = (id: number) => {
     setExpandedApplication(expandedApplication === id ? null : id);
+  };
+
+  // Функція для прийняття студента
+  const acceptStudent = async (application: Application) => {
+    try {
+      // Створюємо нового студента на основі заявки
+      const newStudent: AcceptedStudent = {
+        id: `student-${application.id}`,
+        name: application.studentName,
+        email: application.email,
+        phone: application.phone,
+        avatar: application.studentAvatar,
+        course: parseInt(application.year) || 3, // Конвертуємо курс з рядка
+        faculty: "Факультет інформаційних технологій",
+        specialty: application.program,
+        workType: application.type === "course" ? "coursework" : "diploma",
+        workTitle: application.topic,
+        startDate: new Date().toISOString().split('T')[0],
+        progress: 10, // Початковий прогрес
+        status: 'active',
+        nextMeeting: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] // Через тиждень
+      };
+
+      // Зберігаємо в localStorage (тимчасове рішення)
+      const existingStudents = JSON.parse(localStorage.getItem('teacherStudents') || '[]');
+      const updatedStudents = [...existingStudents, newStudent];
+      localStorage.setItem('teacherStudents', JSON.stringify(updatedStudents));
+
+      // Оновлюємо статус заявки
+      updateApplicationStatus(application.id, "accepted");
+
+      // Показуємо повідомлення про успіх
+      alert(`Студент ${application.studentName} успішно прийнятий!`);
+
+    } catch (error) {
+      console.error('Помилка при прийнятті студента:', error);
+      alert('Сталася помилка при прийнятті студента');
+    }
   };
 
   const updateApplicationStatus = (id: number, status: ApplicationStatus) => {
@@ -322,7 +378,7 @@ const TeacherApplications = () => {
                                 <Button 
                                   size="sm" 
                                   className="bg-green-600 text-white hover:bg-green-700"
-                                  onClick={() => updateApplicationStatus(application.id, "accepted")}
+                                  onClick={() => acceptStudent(application)}
                                 >
                                   <CheckCircle className="w-4 h-4 mr-2" />
                                   {t('teacherApplications.acceptApplication', { defaultValue: "Прийняти заявку" })}
@@ -353,7 +409,7 @@ const TeacherApplications = () => {
                               <Button 
                                 size="sm" 
                                 className="bg-green-600 text-white hover:bg-green-700"
-                                onClick={() => updateApplicationStatus(application.id, "accepted")}
+                                onClick={() => acceptStudent(application)}
                               >
                                 <CheckCircle className="w-4 h-4 mr-2" />
                                 {t('teacherApplications.acceptApplication', { defaultValue: "Прийняти заявку" })}
