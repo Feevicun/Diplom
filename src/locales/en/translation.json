@@ -680,7 +680,8 @@
     "pieChartDescription":"Percentage distribution of tasks"
   },
   "resources": {
-    "title": "Materials for coursework/thesis",
+    "title": "Materials for your work",
+    "subtitle": "Useful materials for learning and research",
     "searchPlaceholder": "Search resources...",
     "loading": "Loading resources...",
     "sections": {

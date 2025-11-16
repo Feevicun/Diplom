@@ -714,14 +714,20 @@ const Resources = () => {
 
         <main className="flex-1 overflow-y-auto p-6">
           <div className="max-w-7xl mx-auto">
-            {/* Заголовок та пошук */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-              <div>
-                <h1 className="text-2xl font-semibold mb-2">{t('resources.title')}</h1>
-                <p className="text-muted-foreground">
-                  {t('resources.stats.available', { count: allResources.length })}
-                  {folders.length > 0 && ` • ${t('resources.stats.folders', { count: folders.length })}`}
-                </p>
+            {/* ОНОВЛЕНО: Заголовок з іконкою та описом як у інших сторінках */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+              <div className="flex items-center gap-2">
+                <Library className="text-primary w-7 h-7" />
+                <div>
+                  <h1 className="text-3xl font-bold text-foreground">{t('resources.title')}</h1>
+                  <p className="text-muted-foreground text-sm">
+                    {t('resources.subtitle')}
+                  </p>
+                  <p className="text-muted-foreground text-sm">
+                    {t('resources.stats.available', { count: allResources.length })}
+                    {folders.length > 0 && ` • ${t('resources.stats.folders', { count: folders.length })}`}
+                  </p>
+                </div>
               </div>
               
               <div className="flex flex-col sm:flex-row gap-3">
