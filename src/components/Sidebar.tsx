@@ -1,3 +1,4 @@
+// Sidebar.tsx
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -17,6 +18,7 @@ import {
   Book,
   Users,
   GraduationCap,
+  FolderOpen,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -92,9 +94,9 @@ const Sidebar = () => {
         if (user.name) {
           return user.name;
         }
-        return 'Користувач';
+        return t('sidebar.user');
       })()
-    : 'Користувач';
+    : t('sidebar.user');
 
   const userRole = user?.role ?? '';
 
@@ -108,15 +110,16 @@ const Sidebar = () => {
 
   // Викладацьке меню
   const teacherMenuItems: MenuItemType[] = [
-    { title: 'Панель викладача', href: '/teacherdashboard', icon: Home },
-    { title: 'Оцінювання робіт', href: '/teacher/grades', icon: FileText },
-    { title: 'Заявки студентів', href: '/teacher/students', icon: Users },
-    { title: 'Повідомлення', href: '/chat', icon: MessageSquare },
-    { title: 'Календар', href: '/calendar', icon: Calendar }
+    { title: t('sidebar.teacherDashboard'), href: '/teacherdashboard', icon: Home },
+    { title: t('sidebar.gradingWorks'), href: '/teacher/grades', icon: FileText },
+    { title: t('sidebar.studentApplications'), href: '/teacher/students', icon: Users },
+    { title: t('sidebar.messages'), href: '/chat', icon: MessageSquare },
+    { title: t('sidebar.calendar'), href: '/calendar', icon: Calendar }
   ];
 
   // Спільні інструменти
   const toolsItems: MenuItemType[] = [
+    { title: t('sidebar.workspace'), href: '/notespage', icon: FolderOpen, badge: null },
     { title: t('sidebar.aiAssistant'), href: '/ai-assistant', icon: Zap, badge: 'BETA' },
     { title: t('sidebar.analytics'), href: '/analytics', icon: TrendingUp, badge: null },
     { title: t('sidebar.resources'), href: '/resources', icon: Book, badge: null }
@@ -166,7 +169,7 @@ const Sidebar = () => {
           <div>
             <h1 className="text-lg font-bold">ThesisHub</h1>
             <p className="text-xs text-muted-foreground">
-              {userRole === 'teacher' ? 'Teaching Platform' : 'Research Platform'}
+              {userRole === 'teacher' ? t('sidebar.teacherPlatform') : t('sidebar.researchPlatform')}
             </p>
           </div>
         </div>
@@ -178,7 +181,7 @@ const Sidebar = () => {
           {/* Основне меню */}
           <div className="space-y-2">
             <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-3 mb-3">
-              {userRole === 'teacher' ? 'Викладацька панель' : t('sidebar.sectionMain')}
+              {userRole === 'teacher' ? t('sidebar.teacherPanel') : t('sidebar.sectionMain')}
             </h2>
             <nav className="space-y-1">
               {mainMenuItems.map((item) => (
@@ -225,17 +228,17 @@ const Sidebar = () => {
                     .filter(Boolean)
                     .map((n) => n[0].toUpperCase())
                     .join('')
-                : 'К'}
+                : t('sidebar.userInitial')}
             </AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-foreground truncate">{userName}</p>
             <p className="text-xs text-muted-foreground truncate">
               {userRole === 'student'
-                ? 'Студент'
+                ? t('sidebar.student')
                 : userRole === 'teacher'
-                ? 'Викладач'
-                : userRole || 'Користувач'}
+                ? t('sidebar.teacher')
+                : userRole || t('sidebar.user')}
             </p>
           </div>
           <Button

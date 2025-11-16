@@ -9,4 +9,5 @@ const pool = new Pool({
   database: 'Diplom',
 });
 
+
 export default pool;

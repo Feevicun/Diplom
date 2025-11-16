@@ -434,18 +434,26 @@ const CalendarPage = () => {
               <DialogContent className="max-w-md">
                 <DialogHeader>
                   <DialogTitle className="text-xl">
-                    {editingEvent ? 'Редагувати подію' : 'Додати нову подію'}
+                    {editingEvent 
+                      ? t('calendar.dialog.editTitle') 
+                      : t('calendar.dialog.title')
+                    }
                   </DialogTitle>
                   <DialogDescription>
-                    {editingEvent ? 'Внесіть зміни до події' : 'Заповніть інформацію про нову подію'}
+                    {editingEvent 
+                      ? t('calendar.dialog.editDescription') 
+                      : t('calendar.dialog.description')
+                    }
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="event-title">Назва події *</Label>
+                    <Label htmlFor="event-title">
+                      {t('calendar.dialog.eventTitle')} *
+                    </Label>
                     <Input
                       id="event-title"
-                      placeholder="Введіть назву події"
+                      placeholder={t('calendar.dialog.placeholder')}
                       value={newEvent.title}
                       onChange={(e) => setNewEvent({ ...newEvent, title: e.target.value })}
                     />
@@ -453,21 +461,25 @@ const CalendarPage = () => {
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="event-type">Тип події</Label>
+                      <Label htmlFor="event-type">
+                        {t('calendar.dialog.eventType')}
+                      </Label>
                       <select
                         id="event-type"
                         value={newEvent.type}
                         onChange={(e) => setNewEvent({ ...newEvent, type: e.target.value as EventType })}
                         className="w-full border rounded-md px-3 py-2 text-sm"
                       >
-                        <option value="task">Завдання</option>
-                        <option value="meeting">Зустріч</option>
-                        <option value="deadline">Дедлайн</option>
+                        <option value="task">{t('calendar.eventTypes.task')}</option>
+                        <option value="meeting">{t('calendar.eventTypes.meeting')}</option>
+                        <option value="deadline">{t('calendar.eventTypes.deadline')}</option>
                       </select>
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="event-time">Час</Label>
+                      <Label htmlFor="event-time">
+                        {t('calendar.dialog.time')}
+                      </Label>
                       <Input
                         id="event-time"
                         type="time"
@@ -488,36 +500,42 @@ const CalendarPage = () => {
                         className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
                       />
                       <Label htmlFor="event-completed">
-                        Позначити як виконане
+                        {t('calendar.dialog.markCompleted')}
                       </Label>
                     </div>
                   )}
 
                   <div className="space-y-2">
-                    <Label htmlFor="event-location">Місце проведення</Label>
+                    <Label htmlFor="event-location">
+                      {t('calendar.dialog.location')}
+                    </Label>
                     <Input
                       id="event-location"
-                      placeholder="Аудиторія, адреса..."
+                      placeholder={t('calendar.dialog.locationPlaceholder')}
                       value={newEvent.location}
                       onChange={(e) => setNewEvent({ ...newEvent, location: e.target.value })}
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="event-link">Посилання (для онлайн зустрічей)</Label>
+                    <Label htmlFor="event-link">
+                      {t('calendar.dialog.link')}
+                    </Label>
                     <Input
                       id="event-link"
-                      placeholder="https://meet.google.com/..."
+                      placeholder={t('calendar.dialog.linkPlaceholder')}
                       value={newEvent.link}
                       onChange={(e) => setNewEvent({ ...newEvent, link: e.target.value })}
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="event-description">Опис</Label>
+                    <Label htmlFor="event-description">
+                      {t('calendar.dialog.description')}
+                    </Label>
                     <Textarea
                       id="event-description"
-                      placeholder="Додаткові деталі..."
+                      placeholder={t('calendar.dialog.descriptionPlaceholder')}
                       value={newEvent.description}
                       onChange={(e) => setNewEvent({ ...newEvent, description: e.target.value })}
                       rows={3}
@@ -532,13 +550,16 @@ const CalendarPage = () => {
                         setEditingEvent(null);
                       }}
                     >
-                      Скасувати
+                      {t('calendar.dialog.cancel')}
                     </Button>
                     <Button 
                       onClick={editingEvent ? handleUpdateEvent : handleAddEvent}
                       disabled={!newEvent.title.trim()}
                     >
-                      {editingEvent ? 'Оновити' : 'Додати'}
+                      {editingEvent 
+                        ? t('calendar.dialog.update') 
+                        : t('calendar.dialog.save')
+                      }
                     </Button>
                   </div>
                 </div>
@@ -554,23 +575,23 @@ const CalendarPage = () => {
                   </div>
                   
                   <AlertDialogTitle className="text-lg font-semibold mb-2">
-                    Видалити подію?
+                    {t('calendar.deleteDialog.title')}
                   </AlertDialogTitle>
                   
                   <AlertDialogDescription className="text-sm mb-4">
-                    Ця дія незворотня. Підтвердіть видалення.
+                    {t('calendar.deleteDialog.description')}
                   </AlertDialogDescription>
 
                   <div className="flex gap-2 w-full">
                     <AlertDialogCancel className="flex-1 h-9 text-sm">
-                      Скасувати
+                      {t('calendar.deleteDialog.cancel')}
                     </AlertDialogCancel>
                     <AlertDialogAction
                       onClick={handleDeleteEvent}
                       className="flex-1 h-9 bg-destructive text-destructive-foreground hover:bg-destructive/90 text-sm"
                     >
                       <Trash2 className="w-3 h-3 mr-1" />
-                      Видалити
+                      {t('calendar.deleteDialog.delete')}
                     </AlertDialogAction>
                   </div>
                 </div>
@@ -636,15 +657,16 @@ const CalendarPage = () => {
                         <CalendarIcon className="w-8 h-8 text-muted-foreground" />
                       </div>
                       <h3 className="text-lg font-semibold mb-2">
-                        Немає подій на цей день
+                        {t('calendar.noEvents.title')}
                       </h3>
                       <p className="text-muted-foreground text-sm mb-6 max-w-sm">
-                        На {format(selectedDate, 'dd MMMM yyyy', { locale: currentLocale })} не заплановано жодних подій.
-                        Додайте першу подію, щоб почати планування.
+                        {t('calendar.noEvents.description', {
+                          date: format(selectedDate, 'dd MMMM yyyy', { locale: currentLocale })
+                        })}
                       </p>
                       <Button onClick={() => setShowModal(true)}>
                         <Plus className="w-4 h-4 mr-2" />
-                        Додати подію
+                        {t('calendar.button.addEvent')}
                       </Button>
                     </div>
                   ) : (
@@ -678,7 +700,7 @@ const CalendarPage = () => {
                                   <span>{formatEventTime(event)}</span>
                                   {event.completed && (
                                     <Badge variant="outline" className="ml-2 text-xs bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-300">
-                                      Виконано
+                                      {t('calendar.status.completed')}
                                     </Badge>
                                   )}
                                 </div>
@@ -718,7 +740,7 @@ const CalendarPage = () => {
                                 rel="noopener noreferrer"
                                 className="text-blue-500 hover:underline truncate dark:text-blue-400"
                               >
-                                Приєднатися до зустрічі
+                                {t('calendar.joinMeeting')}
                               </a>
                             </div>
                           )}
@@ -739,7 +761,10 @@ const CalendarPage = () => {
                               size="sm"
                               className="h-7 px-2 hover:bg-green-50 hover:text-green-600 dark:hover:bg-green-900/20"
                               onClick={() => toggleEventCompletion(event.id)}
-                              title={event.completed ? 'Позначити як невиконане' : 'Позначити як виконане'}
+                              title={event.completed 
+                                ? t('calendar.actions.markIncomplete') 
+                                : t('calendar.actions.markComplete')
+                              }
                             >
                               {event.completed ? (
                                 <CheckCircle2 className="h-3 w-3 text-green-600 dark:text-green-400 mr-1" />
@@ -747,7 +772,10 @@ const CalendarPage = () => {
                                 <Circle className="h-3 w-3 text-muted-foreground mr-1" />
                               )}
                               <span className="text-xs">
-                                {event.completed ? 'Виконано' : 'Не виконано'}
+                                {event.completed 
+                                  ? t('calendar.status.completed') 
+                                  : t('calendar.status.notCompleted')
+                                }
                               </span>
                             </Button>
                             
@@ -756,7 +784,7 @@ const CalendarPage = () => {
                               size="sm"
                               className="h-7 w-7 hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-900/20"
                               onClick={() => startEditing(event)}
-                              title="Редагувати"
+                              title={t('calendar.actions.edit')}
                             >
                               <Edit3 className="h-3 w-3" />
                             </Button>
@@ -765,7 +793,7 @@ const CalendarPage = () => {
                               size="sm"
                               className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10 dark:hover:bg-red-900/20"
                               onClick={() => startDeleting(event.id)}
-                              title="Видалити"
+                              title={t('calendar.actions.delete')}
                             >
                               <Trash2 className="h-3 w-3" />
                             </Button>

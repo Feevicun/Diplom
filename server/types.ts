@@ -18,6 +18,7 @@ export interface GenerateIdeaBody {
 }
 
 export interface JwtUserPayload {
+  id: number;
   userId: number;
   email: string;
   role: string;
@@ -30,3 +31,5 @@ export interface Message {
   content: string;
   createdAt?: string;
 }
+
+

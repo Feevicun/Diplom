@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import type { IconType } from 'react-icons';
 import {
   Card,
   CardContent,
@@ -32,6 +33,19 @@ import {
   Plus,
   Settings,
   Loader2,
+  Bookmark,
+  GraduationCap,
+  FileCheck,
+  Library,
+  Mic,
+  Video,
+  Download,
+  Shield,
+  Eye,
+  PenTool,
+  Search,
+  Award,
+  Brain,
 } from 'lucide-react';
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
@@ -79,15 +93,35 @@ interface CalendarEvent {
 // Тип для активності з підтримкою календарних подій
 interface RecentActivity {
   id: string;
-  type: 'comment' | 'deadline' | 'approval' | 'task' | 'meeting';
+  type: 'deadline' | 'meeting' | 'task';
   text: string;
   time: string;
-  icon: any;
+  icon: IconType;
   eventDate?: Date;
 }
 
-// API функції (ті ж що і в ThesisTracker)
-const apiRequest = async (url: string, options: any = {}) => {
+// Тип для AI рекомендацій
+interface AIRecommendation {
+  id: string;
+  title: string;
+  description: string;
+  icon: IconType;
+  priority: 'high' | 'medium' | 'low';
+  category: 'writing' | 'research' | 'planning' | 'review' | 'defense' | 'resources';
+  emoji: string;
+  action?: string;
+  relatedTo?: string;
+}
+
+// API функції
+interface ApiOptions {
+  method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
+  headers?: Record<string, string>;
+  body?: string;
+}
+
+// API функції
+const apiRequest = async (url: string, options: ApiOptions = {}) => {
   const token = localStorage.getItem('token');
   const defaultHeaders = {
     'Content-Type': 'application/json',
@@ -110,22 +144,278 @@ const apiRequest = async (url: string, options: any = {}) => {
   return response.json();
 };
 
+// Компонент для іконки оновлення
+const RefreshCw = ({ className }: { className?: string }) => (
+  <svg
+    className={className}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M21 12a9 9 0 0 1-9 9 9 9 0 0 1-9-9 9 9 0 0 1 9-9c2.5 0 4.8 1 6.5 2.5L13 12" />
+    <path d="M21 12v6h-6" />
+  </svg>
+);
+
 const Dashboard = () => {
   const { t, i18n } = useTranslation();
   const [user, setUser] = useState<UserType | null>(null);
   const [isFirstVisit, setIsFirstVisit] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [currentRecommendationIndex, setCurrentRecommendationIndex] = useState(0);
+  const [animationKey, setAnimationKey] = useState(0);
+  const [lastUpdateTime, setLastUpdateTime] = useState<Date>(new Date());
 
-  // Стани для відстеження проєкту (синхронізовані з ThesisTracker)
+  // Стани для відстеження проєкту
   const [projectType, setProjectType] = useState<string | null>(null); 
   const [chapters, setChapters] = useState<ChapterData[]>([]);
-  
-  // Новий стан для подій календаря
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
 
   // Локаль для форматування дат
   const currentLocale = i18n.language === 'ua' ? uk : enUS;
+
+  // Динамічні кольори для теми системи
+  const getThemeColors = () => {
+    return {
+      primary: {
+        light: 'bg-primary/10 text-primary border-primary/20',
+        medium: 'bg-primary/20 text-primary-foreground border-primary/30',
+        dark: 'bg-primary text-primary-foreground border-primary'
+      },
+      secondary: {
+        light: 'bg-secondary/10 text-secondary-foreground border-secondary/20',
+        medium: 'bg-secondary/20 text-secondary-foreground border-secondary/30',
+        dark: 'bg-secondary text-secondary-foreground border-secondary'
+      },
+      accent: {
+        light: 'bg-accent/10 text-accent-foreground border-accent/20',
+        medium: 'bg-accent/20 text-accent-foreground border-accent/30',
+        dark: 'bg-accent text-accent-foreground border-accent'
+      }
+    };
+  };
+
+  // Спеціалізовані AI рекомендації для навчального проєкту
+  const aiRecommendations: AIRecommendation[] = [
+    // Написання
+    {
+      id: 'writing-1',
+      title: i18n.language === 'ua' ? 'Покращте структуру вступу' : 'Improve Introduction Structure',
+      description: i18n.language === 'ua' 
+        ? 'Перевірте, чи чітко визначені мета, завдання та актуальність дослідження у вступі.'
+        : 'Check if the purpose, objectives and relevance of the research are clearly defined in the introduction.',
+      icon: FileText,
+      priority: 'high',
+      category: 'writing',
+      emoji: '📝',
+      relatedTo: 'introduction'
+    },
+    {
+      id: 'writing-2',
+      title: i18n.language === 'ua' ? 'Уніфікуйте термінологію' : 'Unify Terminology',
+      description: i18n.language === 'ua'
+        ? 'Переконайтесь, що ключові терміни використовуються послідовно по всій роботі.'
+        : 'Make sure key terms are used consistently throughout the work.',
+      icon: BookOpen,
+      priority: 'medium',
+      category: 'writing',
+      emoji: '🔤'
+    },
+    {
+      id: 'writing-3',
+      title: i18n.language === 'ua' ? 'Перевірте форматування' : 'Check Formatting',
+      description: i18n.language === 'ua'
+        ? 'Перевірте відступи, міжрядкові інтервали та розмір шрифту згідно з вимогами.'
+        : 'Check indents, line spacing and font size according to requirements.',
+      icon: Settings,
+      priority: 'medium',
+      category: 'writing',
+      emoji: '📐'
+    },
+
+    // Дослідження
+    {
+      id: 'research-1',
+      title: i18n.language === 'ua' ? 'Оновіть літературу' : 'Update Literature',
+      description: i18n.language === 'ua'
+        ? 'Додайте 2-3 актуальні джерела за останні 3 роки для посилення теоретичної бази.'
+        : 'Add 2-3 recent sources from the last 3 years to strengthen the theoretical basis.',
+      icon: Library,
+      priority: 'high',
+      category: 'research',
+      emoji: '📚',
+      action: i18n.language === 'ua' ? 'Знайти джерела' : 'Find sources'
+    },
+    {
+      id: 'research-2',
+      title: i18n.language === 'ua' ? 'Аналіз цитувань' : 'Citation Analysis',
+      description: i18n.language === 'ua'
+        ? 'Перевірте, чи всі цитування відповідають вимогам стандарту та мають повні бібліографічні описи.'
+        : 'Check if all citations meet standard requirements and have complete bibliographic descriptions.',
+      icon: Search,
+      priority: 'high',
+      category: 'research',
+      emoji: '🔍'
+    },
+    {
+      id: 'research-3',
+      title: i18n.language === 'ua' ? 'Методологічна узгодженість' : 'Methodological Consistency',
+      description: i18n.language === 'ua'
+        ? 'Переконайтесь, що методи дослідження узгоджені з метою роботи та правильно описані.'
+        : 'Make sure research methods are consistent with the purpose of the work and properly described.',
+      icon: Target,
+      priority: 'medium',
+      category: 'research',
+      emoji: '🎯'
+    },
+
+    // Планування
+    {
+      id: 'planning-1',
+      title: i18n.language === 'ua' ? 'Розклад на тиждень' : 'Weekly Schedule',
+      description: i18n.language === 'ua'
+        ? 'Створіть детальний план роботи на наступний тиждень з конкретними завданнями для кожного розділу.'
+        : 'Create a detailed work plan for the next week with specific tasks for each chapter.',
+      icon: Calendar,
+      priority: 'medium',
+      category: 'planning',
+      emoji: '📅',
+      action: i18n.language === 'ua' ? 'Створити план' : 'Create plan'
+    },
+    {
+      id: 'planning-2',
+      title: i18n.language === 'ua' ? 'Пріоритет завдань' : 'Task Prioritization',
+      description: i18n.language === 'ua'
+        ? 'Визначте 3 найважливіші завдання на сьогодні, що найбільше вплинуть на прогрес роботи.'
+        : 'Identify 3 most important tasks for today that will most impact work progress.',
+      icon: Award,
+      priority: 'high',
+      category: 'planning',
+      emoji: '⭐'
+    },
+    {
+      id: 'planning-3',
+      title: i18n.language === 'ua' ? 'Консультація з керівником' : 'Supervisor Consultation',
+      description: i18n.language === 'ua'
+        ? 'Заплануйте зустріч з керівником для обговорення поточного прогресу та наступних кроків.'
+        : 'Schedule a meeting with your supervisor to discuss current progress and next steps.',
+      icon: Users,
+      priority: 'medium',
+      category: 'planning',
+      emoji: '👥'
+    },
+
+    // Рецензування
+    {
+      id: 'review-1',
+      title: i18n.language === 'ua' ? 'Перевірка на плагіат' : 'Plagiarism Check',
+      description: i18n.language === 'ua'
+        ? 'Проведіть самоперевірку роботи на унікальність перед поданням керівнику.'
+        : 'Perform self-check of work for uniqueness before submitting to supervisor.',
+      icon: Shield,
+      priority: 'high',
+      category: 'review',
+      emoji: '🛡️',
+      action: i18n.language === 'ua' ? 'Перевірити' : 'Check'
+    },
+    {
+      id: 'review-2',
+      title: i18n.language === 'ua' ? 'Вичитка тексту' : 'Proofreading',
+      description: i18n.language === 'ua'
+        ? 'Уважно перечитайте роботу на предмет граматичних та пунктуаційних помилок.'
+        : 'Carefully reread the work for grammatical and punctuation errors.',
+      icon: Eye,
+      priority: 'medium',
+      category: 'review',
+      emoji: '✏️'
+    },
+    {
+      id: 'review-3',
+      title: i18n.language === 'ua' ? 'Перевірка послідовності' : 'Sequence Check',
+      description: i18n.language === 'ua'
+        ? 'Переконайтесь, що всі розділи логічно пов\'язані та ілюстрації відповідають тексту.'
+        : 'Make sure all chapters are logically connected and illustrations match the text.',
+      icon: CheckCircle,
+      priority: 'medium',
+      category: 'review',
+      emoji: '🔗'
+    },
+
+    // Підготовка до захисту
+    {
+      id: 'defense-1',
+      title: i18n.language === 'ua' ? 'Створення презентації' : 'Presentation Creation',
+      description: i18n.language === 'ua'
+        ? 'Розпочніть підготовку слайдів для захисту, виділивши ключові моменти роботи.'
+        : 'Start preparing defense slides by highlighting key points of the work.',
+      icon: Video,
+      priority: 'low',
+      category: 'defense',
+      emoji: '📊'
+    },
+    {
+      id: 'defense-2',
+      title: i18n.language === 'ua' ? 'Текст виступу' : 'Speech Text',
+      description: i18n.language === 'ua'
+        ? 'Підготуйте тезисний план виступу на 7-10 хвилин, акцентуючи на найважливіших результатах.'
+        : 'Prepare a thesis plan for a 7-10 minute speech, focusing on the most important results.',
+      icon: Mic,
+      priority: 'low',
+      category: 'defense',
+      emoji: '🎤'
+    },
+    {
+      id: 'defense-3',
+      title: i18n.language === 'ua' ? 'Передзахист' : 'Pre-defense',
+      description: i18n.language === 'ua'
+        ? 'Заплануйте пробний виступ перед друзями або родиною для відпрацювання навичок.'
+        : 'Schedule a trial performance before friends or family to practice skills.',
+      icon: GraduationCap,
+      priority: 'low',
+      category: 'defense',
+      emoji: '🎓'
+    },
+
+    // Ресурси
+    {
+      id: 'resources-1',
+      title: i18n.language === 'ua' ? 'Архівування роботи' : 'Work Archiving',
+      description: i18n.language === 'ua'
+        ? 'Зробіть резервні копії роботи в хмарних сховищах та на зовнішніх носіях.'
+        : 'Make backup copies of work in cloud storage and on external media.',
+      icon: Download,
+      priority: 'high',
+      category: 'resources',
+      emoji: '💾',
+      action: i18n.language === 'ua' ? 'Зберегти' : 'Save'
+    },
+    {
+      id: 'resources-2',
+      title: i18n.language === 'ua' ? 'Додаткові матеріали' : 'Additional Materials',
+      description: i18n.language === 'ua'
+        ? 'Підготуйте додатки, таблиці та графіки, що підтверджують результати дослідження.'
+        : 'Prepare appendices, tables and graphs that confirm research results.',
+      icon: FileCheck,
+      priority: 'medium',
+      category: 'resources',
+      emoji: '📎'
+    },
+    {
+      id: 'resources-3',
+      title: i18n.language === 'ua' ? 'Список літератури' : 'Bibliography',
+      description: i18n.language === 'ua'
+        ? 'Перевірте повноту та правильність оформлення списку використаних джерел.'
+        : 'Check the completeness and correctness of the bibliography.',
+      icon: Bookmark,
+      priority: 'medium',
+      category: 'resources',
+      emoji: '📖'
+    }
+  ];
 
   // Функція для завантаження подій календаря
   const fetchCalendarEvents = async () => {
@@ -150,42 +440,22 @@ const Dashboard = () => {
     }
   };
 
-  // Функція для генерації активності з календарних подій та системних подій
+  // Функція для генерації активності ВИКЛЮЧНО з календарних подій
   const generateRecentActivities = (): RecentActivity[] => {
-    const activities: RecentActivity[] = [];
-    
-    // Системні активності (можуть бути з API в майбутньому)
-    const systemActivities: RecentActivity[] = [
-      { 
-        id: 'system-1', 
-        type: 'comment', 
-        text: 'Новий коментар до розділу 2', 
-        time: '2 год тому', 
-        icon: MessageSquare 
-      },
-      { 
-        id: 'system-2', 
-        type: 'approval', 
-        text: 'Розділ 1 затверджено', 
-        time: '3 дні тому', 
-        icon: CheckCircle 
-      },
-    ];
-    
-    // Додаємо календарні події
     const calendarActivities: RecentActivity[] = calendarEvents
       .map(event => {
         const eventDate = new Date(event.date);
         let timeText = '';
         let activityText = '';
         
-        // Генеруємо текст часу
         if (isToday(eventDate)) {
-          timeText = `сьогодні о ${format(eventDate, 'HH:mm')}`;
+          timeText = i18n.language === 'ua' 
+            ? `сьогодні о ${format(eventDate, 'HH:mm')}`
+            : `today at ${format(eventDate, 'HH:mm')}`;
         } else if (isTomorrow(eventDate)) {
-          timeText = 'завтра';
+          timeText = i18n.language === 'ua' ? 'завтра' : 'tomorrow';
         } else if (isYesterday(eventDate)) {
-          timeText = 'вчора';
+          timeText = i18n.language === 'ua' ? 'вчора' : 'yesterday';
         } else {
           timeText = formatDistanceToNow(eventDate, { 
             locale: currentLocale, 
@@ -193,16 +463,21 @@ const Dashboard = () => {
           });
         }
         
-        // Генеруємо текст активності
         switch (event.type) {
           case 'deadline':
-            activityText = `Дедлайн: ${event.title}`;
+            activityText = i18n.language === 'ua' 
+              ? `Дедлайн: ${event.title}`
+              : `Deadline: ${event.title}`;
             break;
           case 'meeting':
-            activityText = `Зустріч: ${event.title}`;
+            activityText = i18n.language === 'ua'
+              ? `Зустріч: ${event.title}`
+              : `Meeting: ${event.title}`;
             break;
           case 'task':
-            activityText = `Завдання: ${event.title}`;
+            activityText = i18n.language === 'ua'
+              ? `Завдання: ${event.title}`
+              : `Task: ${event.title}`;
             break;
           default:
             activityText = event.title;
@@ -219,17 +494,131 @@ const Dashboard = () => {
           eventDate
         } as RecentActivity;
       })
-      // Сортуємо за датою (найближчі першими)
       .sort((a, b) => {
         if (!a.eventDate || !b.eventDate) return 0;
         return a.eventDate.getTime() - b.eventDate.getTime();
       });
     
-    // Об'єднуємо та сортуємо всі активності
-    activities.push(...calendarActivities, ...systemActivities);
+    return calendarActivities.slice(0, 3);
+  };
+
+  // Автоматична зміна рекомендацій кожні 10-15 хвилин
+  useEffect(() => {
+    const getRandomInterval = () => Math.floor(Math.random() * (900000 - 600000 + 1)) + 600000; // 10-15 хвилин
     
-    // Повертаємо тільки останні 3 активностей
-    return activities.slice(0, 3);
+    const interval = setInterval(() => {
+      setCurrentRecommendationIndex((prev) => 
+        prev === aiRecommendations.length - 1 ? 0 : prev + 1
+      );
+      setAnimationKey(prev => prev + 1);
+      setLastUpdateTime(new Date());
+    }, getRandomInterval());
+
+    return () => clearInterval(interval);
+  }, [aiRecommendations.length]);
+
+  // Функція для ручної зміни рекомендації
+  const nextRecommendation = () => {
+    setCurrentRecommendationIndex((prev) => 
+      prev === aiRecommendations.length - 1 ? 0 : prev + 1
+    );
+    setAnimationKey(prev => prev + 1);
+    setLastUpdateTime(new Date());
+  };
+
+  // Функція для отримання поточних рекомендацій (3 штуки)
+  const getCurrentRecommendations = () => {
+    const recommendations = [];
+    for (let i = 0; i < 3; i++) {
+      const index = (currentRecommendationIndex + i) % aiRecommendations.length;
+      recommendations.push(aiRecommendations[index]);
+    }
+    return recommendations;
+  };
+
+  // Функція для отримання кольорів теми для пріоритету
+  const getPriorityTheme = (priority: 'high' | 'medium' | 'low') => {
+    const theme = getThemeColors();
+    switch (priority) {
+      case 'high':
+        return {
+          bg: theme.primary.light,
+          border: 'border-l-4 border-l-primary',
+          icon: theme.primary.medium,
+          badge: theme.primary.medium
+        };
+      case 'medium':
+        return {
+          bg: theme.secondary.light,
+          border: 'border-l-4 border-l-secondary',
+          icon: theme.secondary.medium,
+          badge: theme.secondary.medium
+        };
+      case 'low':
+        return {
+          bg: theme.accent.light,
+          border: 'border-l-4 border-l-accent',
+          icon: theme.accent.medium,
+          badge: theme.accent.medium
+        };
+      default:
+        return {
+          bg: 'bg-muted/50',
+          border: 'border-l-4 border-l-muted',
+          icon: 'bg-muted text-muted-foreground',
+          badge: 'bg-muted text-muted-foreground'
+        };
+    }
+  };
+
+  // Функція для отримання іконки категорії
+  const getCategoryIcon = (category: string) => {
+    switch (category) {
+      case 'writing':
+        return PenTool;
+      case 'research':
+        return Search;
+      case 'planning':
+        return Calendar;
+      case 'review':
+        return Eye;
+      case 'defense':
+        return GraduationCap;
+      case 'resources':
+        return FileCheck;
+      default:
+        return Lightbulb;
+    }
+  };
+
+  // Функція для отримання назви категорії
+  const getCategoryName = (category: string) => {
+    const categories = {
+      writing: i18n.language === 'ua' ? 'Написання' : 'Writing',
+      research: i18n.language === 'ua' ? 'Дослідження' : 'Research',
+      planning: i18n.language === 'ua' ? 'Планування' : 'Planning',
+      review: i18n.language === 'ua' ? 'Рецензування' : 'Review',
+      defense: i18n.language === 'ua' ? 'Захист' : 'Defense',
+      resources: i18n.language === 'ua' ? 'Ресурси' : 'Resources'
+    };
+    return categories[category as keyof typeof categories] || category;
+  };
+
+  // Функція для форматування часу оновлення
+  const getUpdateTimeText = () => {
+    const now = new Date();
+    const diffInMinutes = Math.floor((now.getTime() - lastUpdateTime.getTime()) / 60000);
+    
+    if (i18n.language === 'ua') {
+      if (diffInMinutes < 1) return 'щойно оновлено';
+      if (diffInMinutes === 1) return 'оновлено 1 хвилину тому';
+      if (diffInMinutes < 5) return `оновлено ${diffInMinutes} хвилини тому`;
+      return `оновлено ${diffInMinutes} хвилин тому`;
+    } else {
+      if (diffInMinutes < 1) return 'just updated';
+      if (diffInMinutes === 1) return 'updated 1 minute ago';
+      return `updated ${diffInMinutes} minutes ago`;
+    }
   };
 
   useEffect(() => {
@@ -243,7 +632,6 @@ const Dashboard = () => {
             const parsedUser = JSON.parse(storedUser);
             console.log('Знайшли користувача в localStorage:', parsedUser);
             
-            // Переконуємось що є firstName
             const userWithFirstName = {
               ...parsedUser,
               firstName: parsedUser.firstName || parsedUser.name?.split(' ')[0] || '',
@@ -252,13 +640,12 @@ const Dashboard = () => {
             
             setUser(userWithFirstName);
             console.log('Встановили користувача з localStorage:', userWithFirstName);
-            return; // Якщо є дані в localStorage, не робимо API запит
+            return;
           } catch (error) {
             console.log('Помилка парсингу localStorage:', error);
           }
         }
         
-        // Якщо немає в localStorage, робимо API запит
         const res = await fetch('/api/current-user', {
           method: 'GET',
           credentials: 'include',
@@ -317,16 +704,13 @@ const Dashboard = () => {
     try {
       setLoading(true);
       
-      // Завантажуємо активний тип проекту користувача через API
       const response = await apiRequest('/user-project');
       
       if (response.projectType) {
         setProjectType(response.projectType);
         
-        // Завантажуємо глави для цього типу проекту
         const chaptersResponse = await apiRequest(`/user-chapters?projectType=${response.projectType}`);
         
-        // Завантажуємо коментарі для кожної глави
         const chaptersWithComments = await Promise.all(
           chaptersResponse.map(async (chapter: ChapterData) => {
             try {
@@ -383,7 +767,7 @@ const Dashboard = () => {
         supervisor: t('index.supervisor'),
         progress: 0,
         deadline: t('index.deadline'),
-        status: 'Не обрано',
+        status: i18n.language === 'ua' ? 'Не обрано' : 'Not selected',
         completedChapters: 0,
         totalChapters: 0,
         uploadedChapters: 0
@@ -398,18 +782,17 @@ const Dashboard = () => {
     const completedChapters = chapters.filter(ch => ch.status === 'completed').length;
     const uploadedChapters = chapters.filter(ch => ch.progress > 0 || ch.uploadedFile).length;
     
-    // Визначаємо назву проєкту на основі типу
     const projectTitles: Record<string, string> = {
-      diploma: 'Дипломний проєкт',
-      coursework: 'Курсова робота', 
-      practice: 'Звіт з практики'
+      diploma: i18n.language === 'ua' ? 'Дипломний проєкт' : 'Diploma project',
+      coursework: i18n.language === 'ua' ? 'Курсова робота' : 'Coursework', 
+      practice: i18n.language === 'ua' ? 'Звіт з практики' : 'Practice report'
     };
 
-    let status = 'Не розпочато';
+    let status = i18n.language === 'ua' ? 'Не розпочато' : 'Not started';
     if (completedChapters === totalChapters && totalChapters > 0) {
-      status = 'Завершено';
+      status = i18n.language === 'ua' ? 'Завершено' : 'Completed';
     } else if (uploadedChapters > 0) {
-      status = 'В процесі';
+      status = i18n.language === 'ua' ? 'В процесі' : 'In progress';
     }
 
     return {
@@ -426,7 +809,7 @@ const Dashboard = () => {
 
   const currentWork = getCurrentWorkData();
 
-  // Генеруємо активність з календарних подій та системних подій
+  // Генеруємо активність ВИКЛЮЧНО з календарних подій
   const recentActivities = generateRecentActivities();
 
   // Оновлюємо quickStats з динамічними даними з API
@@ -436,14 +819,22 @@ const Dashboard = () => {
       label: t('index.stats.overallProgress'),
       value: `${currentWork.progress}%`,
       icon: Target,
-      change: currentWork.uploadedChapters > 0 ? `+${currentWork.uploadedChapters} розділів` : projectType ? t('index.stats.progressChange1') : t('index.stats.progressChange'),
+      change: currentWork.uploadedChapters > 0 
+        ? (i18n.language === 'ua' ? `+${currentWork.uploadedChapters} розділів` : `+${currentWork.uploadedChapters} chapters`) 
+        : projectType 
+          ? t('index.stats.progressChange1') 
+          : t('index.stats.progressChange'),
       trend: currentWork.uploadedChapters > 0 ? 'up' : 'neutral',
     },
     {
       label: t('index.stats.chaptersReady'),
       value: chaptersStats.displayText,
       icon: BookOpen,
-      change: currentWork.uploadedChapters > 0 ? t('index.stats.chaptersChange') : projectType ? t('index.stats.noChaptersYet') : t('index.stats.chaptersChange'),
+      change: currentWork.uploadedChapters > 0 
+        ? t('index.stats.chaptersChange') 
+        : projectType 
+          ? t('index.stats.noChaptersYet') 
+          : t('index.stats.chaptersChange'),
       trend: currentWork.uploadedChapters > 0 ? 'up' : 'neutral',
     },
     {
@@ -455,7 +846,7 @@ const Dashboard = () => {
     },
     {
       label: t('index.stats.aiSuggestions'),
-      value: '3',
+      value: aiRecommendations.length.toString(),
       icon: Lightbulb,
       change: t('index.stats.newTips'),
       trend: 'up',
@@ -475,27 +866,6 @@ const Dashboard = () => {
 
   const projectMilestones = getProjectMilestones();
 
-  const recommendations = [
-    {
-      title: t('index.aiRecommendations.literatureReview.title'),
-      description: t('index.aiRecommendations.literatureReview.description'),
-      icon: BookOpen,
-      priority: t('index.aiRecommendations.literatureReview.priority'),
-    },
-    {
-      title: t('index.aiRecommendations.methodology.title'),
-      description: t('index.aiRecommendations.methodology.description'),
-      icon: Users,
-      priority: t('index.aiRecommendations.methodology.priority'),
-    },
-    {
-      title: t('index.aiRecommendations.conclusion.title'),
-      description: t('index.aiRecommendations.conclusion.description'),
-      icon: TrendingUp,
-      priority: t('index.aiRecommendations.conclusion.priority'),
-    },
-  ];
-
   // Показуємо індикатор завантаження для блоків прогресу
   if (loading) {
     return (
@@ -509,7 +879,9 @@ const Dashboard = () => {
           <main className="flex-1 flex items-center justify-center">
             <div className="text-center">
               <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4" />
-              <p className="text-muted-foreground">Завантаження даних проекту...</p>
+              <p className="text-muted-foreground">
+                {i18n.language === 'ua' ? 'Завантаження даних проекту...' : 'Loading project data...'}
+              </p>
             </div>
           </main>
         </div>
@@ -558,10 +930,13 @@ const Dashboard = () => {
                     <div className="flex items-center gap-2 mb-4">
                       <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
                       <span className="text-sm font-medium text-primary">
-                        {projectType === 'diploma' ? 'Дипломний проєкт' : 
-                         projectType === 'coursework' ? 'Курсова робота' : 
-                         projectType === 'practice' ? 'Звіт з практики' :
-                         t('welcome.heading')}
+                        {projectType === 'diploma' 
+                          ? (i18n.language === 'ua' ? 'Дипломний проєкт' : 'Diploma project')
+                          : projectType === 'coursework' 
+                            ? (i18n.language === 'ua' ? 'Курсова робота' : 'Coursework')
+                            : projectType === 'practice' 
+                              ? (i18n.language === 'ua' ? 'Звіт з практики' : 'Practice report')
+                              : t('welcome.heading')}
                       </span>
                     </div>
                       <h1 className="text-2xl md:text-4xl font-bold mb-4 text-foreground">
@@ -573,14 +948,18 @@ const Dashboard = () => {
                     <div className="flex flex-wrap items-center gap-3">
                       <Badge variant="outline" className="px-4 py-2 bg-background/50">
                         <Target className="w-4 h-4 mr-2" />
-                        {currentWork.progress}% завершено
+                        {currentWork.progress}% {i18n.language === 'ua' ? 'завершено' : 'completed'}
                       </Badge>
                       <Badge variant="outline" className="px-4 py-2 bg-background/50">
                         <Clock className="w-4 h-4 mr-2" />
                         {currentWork.deadline}
                       </Badge>
                       <Badge 
-                        variant={currentWork.status === 'Завершено' ? 'default' : currentWork.status === 'В процесі' ? 'secondary' : 'outline'} 
+                        variant={currentWork.status === (i18n.language === 'ua' ? 'Завершено' : 'Completed') 
+                          ? 'default' 
+                          : currentWork.status === (i18n.language === 'ua' ? 'В процесі' : 'In progress') 
+                            ? 'secondary' 
+                            : 'outline'} 
                         className="px-4 py-2"
                       >
                         {currentWork.status}
@@ -629,10 +1008,13 @@ const Dashboard = () => {
                           <div className="flex items-center gap-2 mb-2">
                             <div className="w-2 h-2 bg-primary rounded-full"></div>
                             <span className="text-sm font-medium text-primary">
-                              {projectType === 'diploma' ? 'Дипломний проєкт' :
-                               projectType === 'coursework' ? 'Курсова робота' :
-                               projectType === 'practice' ? 'Звіт з практики' :
-                               t('index.proj')}
+                              {projectType === 'diploma' 
+                                ? (i18n.language === 'ua' ? 'Дипломний проєкт' : 'Diploma project')
+                                : projectType === 'coursework' 
+                                  ? (i18n.language === 'ua' ? 'Курсова робота' : 'Coursework')
+                                  : projectType === 'practice' 
+                                    ? (i18n.language === 'ua' ? 'Звіт з практики' : 'Practice report')
+                                    : t('index.proj')}
                             </span>
                           </div>
                           <CardTitle className="text-xl md:text-2xl font-bold mb-2">{t('index.projectProgress')}</CardTitle>
@@ -736,12 +1118,16 @@ const Dashboard = () => {
                     <CardHeader>
                       <div className="flex items-center gap-2">
                         <div className="w-2 h-2 bg-primary rounded-full"></div>
-                        <CardTitle className="text-lg">{t('index.recentActivity.title')}</CardTitle>
+                        <CardTitle className="text-lg">
+                          {i18n.language === 'ua' ? 'Остання активність' : 'Recent Activity'}
+                        </CardTitle>
                       </div>
                       <CardDescription>
                         {recentActivities.length === 0 
-                          ? 'Немає недавньої активності'
-                          : `${recentActivities.length} останніх подій`
+                          ? (i18n.language === 'ua' ? 'Немає недавньої активності' : 'No recent activity')
+                          : i18n.language === 'ua' 
+                            ? `${recentActivities.length} останніх подій`
+                            : `${recentActivities.length} recent events`
                         }
                       </CardDescription>
                     </CardHeader>
@@ -750,11 +1136,13 @@ const Dashboard = () => {
                         {recentActivities.length === 0 ? (
                           <div className="text-center py-8 text-muted-foreground">
                             <Calendar className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                            <p className="text-sm">Немає подій для відображення</p>
+                            <p className="text-sm">
+                              {i18n.language === 'ua' ? 'Немає подій для відображення' : 'No events to display'}
+                            </p>
                             <Button variant="outline" size="sm" className="mt-3" asChild>
                               <Link to="/calendar">
                                 <Plus className="w-3 h-3 mr-1" />
-                                Додати подію
+                                {i18n.language === 'ua' ? 'Додати подію' : 'Add event'}
                               </Link>
                             </Button>
                           </div>
@@ -770,8 +1158,6 @@ const Dashboard = () => {
                                     ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400'
                                     : activity.type === 'task'
                                     ? 'bg-yellow-100 text-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-400'
-                                    : activity.type === 'approval'
-                                    ? 'bg-green-100 text-green-600 dark:bg-green-900/20 dark:text-green-400'
                                     : 'bg-muted'
                                 }`}>
                                   <Icon className="h-4 w-4" />
@@ -802,7 +1188,7 @@ const Dashboard = () => {
                           <Button variant="outline" size="sm" className="w-full" asChild>
                             <Link to="/calendar">
                               <Calendar className="w-4 h-4 mr-2" />
-                              Переглянути календар
+                              {i18n.language === 'ua' ? 'Переглянути календар' : 'View calendar'}
                             </Link>
                           </Button>
                         </div>
@@ -844,43 +1230,147 @@ const Dashboard = () => {
                 </div>
               </div>
 
-              <Card className="hover:shadow-lg transition-shadow">
-                <CardHeader>
-                  <div className="flex items-center space-x-3">
-                    <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center">
-                      <Lightbulb className="h-6 w-6 text-primary" />
+              {/* Оновлений блок AI рекомендацій з динамічними кольорами теми */}
+              <Card className="hover:shadow-lg transition-shadow overflow-hidden">
+                <CardHeader className="pb-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center border border-primary/20">
+                        <Brain className="h-6 w-6 text-primary" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-xl">
+                          {i18n.language === 'ua' ? 'Рекомендації для проєкту' : 'Project Recommendations'}
+                        </CardTitle>
+                        <CardDescription className="flex items-center gap-2">
+                          <Clock className="h-3 w-3" />
+                          {getUpdateTimeText()}
+                          <span className="text-xs px-2 py-1 bg-primary/10 text-primary rounded-full">
+                            {i18n.language === 'ua' ? 'Автооновлення' : 'Auto-update'}
+                          </span>
+                        </CardDescription>
+                      </div>
                     </div>
-                    <div>
-                      <CardTitle className="text-xl">{t('index.aiRecommendations.title')}</CardTitle>
-                      <CardDescription>{t('index.aiRecommendations.description')}</CardDescription>
-                    </div>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={nextRecommendation}
+                      className="border-primary/20 text-primary hover:bg-primary/10"
+                    >
+                      <RefreshCw className="h-4 w-4 mr-1" />
+                      {i18n.language === 'ua' ? 'Оновити' : 'Refresh'}
+                    </Button>
                   </div>
                 </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {recommendations.map((item, index) => {
-                      const Icon = item.icon;
+                <CardContent className="pt-6">
+                  <div 
+                    key={animationKey}
+                    className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+                  >
+                    {getCurrentRecommendations().map((recommendation, index) => {
+                      const Icon = recommendation.icon;
+                      const CategoryIcon = getCategoryIcon(recommendation.category);
+                      const priorityText = i18n.language === 'ua' 
+                        ? recommendation.priority === 'high' ? 'Високий' 
+                          : recommendation.priority === 'medium' ? 'Середній' 
+                          : 'Низький'
+                        : recommendation.priority.charAt(0).toUpperCase() + recommendation.priority.slice(1);
+
+                      const theme = getPriorityTheme(recommendation.priority);
+
                       return (
-                        <div key={index} className="p-6 border rounded-xl hover:bg-muted/50 transition-colors">
-                          <div className={`inline-flex px-2 py-1 rounded text-xs font-medium mb-4 ${item.priority === 'Високий'
-                            ? 'bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400'
-                            : item.priority === 'Середній'
-                              ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-400'
-                              : 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400'
-                            }`}>
-                            {item.priority}
+                        <div
+                          key={recommendation.id}
+                          className={`p-5 border rounded-lg hover:shadow-md transition-all duration-300 transform hover:-translate-y-0.5 ${theme.bg} ${theme.border} ${
+                            index === 0 
+                              ? 'animate-fade-in-up delay-75' 
+                              : index === 1 
+                                ? 'animate-fade-in-up delay-150' 
+                                : 'animate-fade-in-up delay-225'
+                          }`}
+                        >
+                          {/* Заголовок з іконкою та категорією */}
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="flex items-center space-x-3">
+                              <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${theme.icon}`}>
+                                <Icon className="h-4 w-4" />
+                              </div>
+                              <div className="flex-1">
+                                <h3 className="font-semibold text-foreground text-sm leading-tight mb-1">
+                                  {recommendation.title}
+                                </h3>
+                                <div className="flex items-center gap-2">
+                                  <Badge 
+                                    variant="secondary" 
+                                    className={`text-xs ${theme.badge}`}
+                                  >
+                                    {priorityText}
+                                  </Badge>
+                                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                    <CategoryIcon className="h-3 w-3" />
+                                    {getCategoryName(recommendation.category)}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="text-lg">
+                              {recommendation.emoji}
+                            </div>
                           </div>
-                          <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center mb-4">
-                            <Icon className="h-5 w-5 text-primary" />
+
+                          {/* Опис */}
+                          <p className="text-sm text-muted-foreground mb-3 leading-relaxed">
+                            {recommendation.description}
+                          </p>
+
+                          {/* Футер з додатковою інформацією */}
+                          <div className="flex items-center justify-between pt-2 border-t border-border/30">
+                            <div className="flex-1">
+                              {recommendation.action && (
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  className="h-7 text-xs text-primary hover:text-primary hover:bg-primary/10"
+                                >
+                                  {recommendation.action}
+                                  <ArrowRight className="h-3 w-3 ml-1" />
+                                </Button>
+                              )}
+                            </div>
+                            {recommendation.relatedTo && (
+                              <Badge variant="outline" className="text-xs">
+                                {recommendation.relatedTo}
+                              </Badge>
+                            )}
                           </div>
-                          <h3 className="font-bold text-foreground mb-2">{item.title}</h3>
-                          <p className="text-sm text-muted-foreground mb-4">{item.description}</p>
-                          <Button variant="ghost" size="sm" className="text-primary p-0 h-auto">
-                            {t('index.aiRecommendations.view')} <ArrowRight className="ml-1 h-3 w-3" />
-                          </Button>
                         </div>
                       );
                     })}
+                  </div>
+
+                  {/* Інформація про систему */}
+                  <div className="mt-6 pt-4 border-t border-border/50">
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <div className="flex items-center gap-4">
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="flex gap-1">
+                          {[1, 2, 3].map((dot) => (
+                            <div
+                              key={dot}
+                              className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${
+                                dot === (currentRecommendationIndex % 3) + 1
+                                  ? 'bg-primary'
+                                  : 'bg-muted'
+                              }`}
+                            />
+                          ))}
+                        </div>
+                        <span>
+                          {currentRecommendationIndex + 1}/{aiRecommendations.length}
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 </CardContent>
               </Card>

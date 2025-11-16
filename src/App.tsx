@@ -17,6 +17,7 @@ import TeacherDashboard from './pages/TeacherDashboard';
 import TeacherGrades from './pages/TeacherGraders';
 import TeacherInfo from './pages/TeacherInfo'; 
 import TeacherApplications from './pages/StudentApplications'; 
+import NotesPage from './pages/NotesPage';
 
 import { ThemeProvider } from './context/ThemeContext';
 import { VoiceAssistant } from './components/VoiceAssistant/VoiceAssistant';
@@ -39,6 +40,7 @@ function App() {
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/tracker" element={<ThesisTracker />} />
             <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/notespage" element={<NotesPage />} /> 
             
             {/* Викладацькі маршрути */}
             <Route path="/teacherdashboard" element={<TeacherDashboard />} />

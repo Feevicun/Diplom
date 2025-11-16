@@ -22,7 +22,12 @@ import {
   Zap,
   LogOut,
   Book,
-  Sparkles
+  Sparkles,
+  StickyNote,
+  ListTodo,
+  Link,
+  FileCode,
+  Database
 } from 'lucide-react';
 import { useTheme } from '@/context/ThemeContext';
 import {
@@ -54,32 +59,88 @@ const Header = () => {
   const overlayRef = useRef<HTMLDivElement>(null);
   const profileButtonRef = useRef<HTMLButtonElement>(null);
 
-  useEffect(() => {
+  // Функція для оновлення даних користувача
+  const updateUserData = () => {
     const storedUser = localStorage.getItem('currentUser');
     if (storedUser) {
-      const user = JSON.parse(storedUser);
-      if (user.firstName) {
-        setFirstName(user.firstName);
-      } else if (user.name) {
-        const [firstName] = user.name.split(' ');
-        setFirstName(firstName || '');
-        localStorage.setItem(
-          'currentUser',
-          JSON.stringify({ ...user, firstName })
-        );
-      } else {
+      try {
+        const user = JSON.parse(storedUser);
+        console.log('🔄 Header: Updating user data from localStorage:', user);
+        
+        if (user.firstName) {
+          setFirstName(user.firstName);
+        } else if (user.name) {
+          const [firstName] = user.name.split(' ');
+          setFirstName(firstName || '');
+          // Оновлюємо localStorage з правильним firstName
+          localStorage.setItem(
+            'currentUser',
+            JSON.stringify({ ...user, firstName })
+          );
+        } else {
+          setFirstName('');
+        }
+
+        // Встановлюємо роль користувача
+        if (user.role) {
+          setUserRole(user.role);
+        }
+      } catch (error) {
+        console.error('❌ Header: Error parsing user data:', error);
         setFirstName('');
       }
-
-      // Встановлюємо роль користувача
-      if (user.role) {
-        setUserRole(user.role);
-      }
+    } else {
+      console.log('⚠️ Header: No user data found in localStorage');
+      setFirstName('');
     }
     
     const storedStatus = localStorage.getItem('userStatus');
     setIsOnline(storedStatus === null ? true : storedStatus === 'online');
-  }, []);
+  };
+
+  // Слухаємо зміни в localStorage та кастомні події
+  useEffect(() => {
+    const handleStorageChange = () => {
+      console.log('🔄 Header: Storage change detected');
+      updateUserData();
+    };
+
+    const handleUserDataUpdated = (event: CustomEvent) => {
+      console.log('🔄 Header: User data updated event received:', event.detail);
+      updateUserData();
+    };
+
+    // Спочатку завантажуємо дані
+    updateUserData();
+
+    // Слухаємо події зміни localStorage
+    window.addEventListener('storage', handleStorageChange);
+    
+    // Слухаємо кастомні події оновлення даних
+    window.addEventListener('userDataUpdated', handleUserDataUpdated as EventListener);
+
+    // Також слухаємо зміни в localStorage кожні 2 секунди (для дебагу)
+    const interval = setInterval(() => {
+      const currentUser = localStorage.getItem('currentUser');
+      if (currentUser) {
+        try {
+          const user = JSON.parse(currentUser);
+          if (user.name && !firstName) {
+            console.log('🔄 Header: Interval update - setting firstName');
+            updateUserData();
+          }
+        } catch (error) {
+          console.error('Error in interval check:', error);
+        }
+      }
+    }, 2000);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('userDataUpdated', handleUserDataUpdated as EventListener);
+      clearInterval(interval);
+    };
+  }, [firstName]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -111,7 +172,39 @@ const Header = () => {
 
   const handleCreateSelect = (type: string) => {
     setIsCreateMenuOpen(false);
-    navigate(`/tracker?type=${type}`);
+    
+    // Навігація для різних типів контенту
+    switch (type) {
+      case 'note':
+        navigate('/notes/new');
+        break;
+      case 'task':
+        navigate('/tasks/new');
+        break;
+      case 'project':
+        navigate('/projects/new');
+        break;
+      case 'bookmark':
+        navigate('/bookmarks/new');
+        break;
+      case 'document':
+        navigate('/documents/new');
+        break;
+      case 'code':
+        navigate('/code/new');
+        break;
+      case 'coursework':
+        navigate('/tracker?type=coursework');
+        break;
+      case 'diploma':
+        navigate('/tracker?type=diploma');
+        break;
+      case 'practice':
+        navigate('/tracker?type=practice');
+        break;
+      default:
+        navigate('/create');
+    }
   };
 
   const handleProfileClick = () => {
@@ -242,6 +335,52 @@ const Header = () => {
 
   const menuItems = getMenuItems();
 
+  // Опції для меню "Створити"
+  const createOptions = [
+    {
+      type: 'note',
+      icon: StickyNote,
+      label: t('header.createNote'),
+      description: t('header.createNoteDesc'),
+      color: 'text-blue-500'
+    },
+    {
+      type: 'task',
+      icon: ListTodo,
+      label: t('header.createTask'),
+      description: t('header.createTaskDesc'),
+      color: 'text-green-500'
+    },
+    {
+      type: 'project',
+      icon: FileText,
+      label: t('header.createProject'),
+      description: t('header.createProjectDesc'),
+      color: 'text-purple-500'
+    },
+    {
+      type: 'bookmark',
+      icon: Link,
+      label: t('header.createBookmark'),
+      description: t('header.createBookmarkDesc'),
+      color: 'text-orange-500'
+    },
+    {
+      type: 'document',
+      icon: FileCode,
+      label: t('header.createDocument'),
+      description: t('header.createDocumentDesc'),
+      color: 'text-red-500'
+    },
+    {
+      type: 'code',
+      icon: Database,
+      label: t('header.createCode'),
+      description: t('header.createCodeDesc'),
+      color: 'text-cyan-500'
+    }
+  ];
+
   return (
     <>
       <header className="h-16 bg-[--sidebar]/95 backdrop-blur border-b sticky top-0 z-50 text-[--sidebar-foreground]">
@@ -279,28 +418,60 @@ const Header = () => {
                 </Button>
 
                 {isCreateMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-48 rounded-xl border bg-popover text-popover-foreground shadow-xl z-50 animate-in slide-in-from-top-2 duration-200">
-                    <button
-                      onClick={() => handleCreateSelect('coursework')}
-                      className="w-full text-left px-4 py-3 text-sm rounded-t-xl hover:bg-accent flex items-center gap-3"
-                    >
-                      <BookOpen className="h-4 w-4" />
-                      {t('header.createCoursework')}
-                    </button>
-                    <button
-                      onClick={() => handleCreateSelect('diploma')}
-                      className="w-full text-left px-4 py-3 text-sm hover:bg-accent flex items-center gap-3"
-                    >
-                      <GraduationCap className="h-4 w-4" />
-                      {t('header.createDiploma')}
-                    </button>
-                    <button
-                      onClick={() => handleCreateSelect('practice')}
-                      className="w-full text-left px-4 py-3 text-sm rounded-b-xl hover:bg-accent flex items-center gap-3"
-                    >
-                      <Briefcase className="h-4 w-4" />
-                      {t('header.createPractice')}
-                    </button>
+                  <div className="absolute right-0 mt-2 w-64 rounded-xl border bg-popover text-popover-foreground shadow-xl z-50 animate-in slide-in-from-top-2 duration-200">
+                    <div className="p-3 border-b">
+                      <h3 className="font-semibold text-sm">{t('header.createNew')}</h3>
+                    </div>
+                    <div className="p-2">
+                      {createOptions.map((option) => {
+                        const Icon = option.icon;
+                        return (
+                          <button
+                            key={option.type}
+                            onClick={() => handleCreateSelect(option.type)}
+                            className="w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-accent flex items-center gap-3 transition-colors group"
+                          >
+                            <div className={cn("p-2 rounded-lg bg-accent/50 group-hover:bg-accent/80 transition-colors", option.color)}>
+                              <Icon className="h-4 w-4" />
+                            </div>
+                            <div className="flex-1">
+                              <div className="font-medium">{option.label}</div>
+                              <div className="text-xs text-muted-foreground">
+                                {option.description}
+                              </div>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    
+                    {/* Роздільник для академічних робіт */}
+                    <div className="p-3 border-t">
+                      <h3 className="font-semibold text-sm text-muted-foreground">{t('header.academicWorks')}</h3>
+                    </div>
+                    <div className="p-2">
+                      <button
+                        onClick={() => handleCreateSelect('coursework')}
+                        className="w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-accent flex items-center gap-3 transition-colors group"
+                      >
+                        <BookOpen className="h-4 w-4 text-blue-500" />
+                        <span>{t('header.createCoursework')}</span>
+                      </button>
+                      <button
+                        onClick={() => handleCreateSelect('diploma')}
+                        className="w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-accent flex items-center gap-3 transition-colors group"
+                      >
+                        <GraduationCap className="h-4 w-4 text-purple-500" />
+                        <span>{t('header.createDiploma')}</span>
+                      </button>
+                      <button
+                        onClick={() => handleCreateSelect('practice')}
+                        className="w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-accent flex items-center gap-3 transition-colors group"
+                      >
+                        <Briefcase className="h-4 w-4 text-green-500" />
+                        <span>{t('header.createPractice')}</span>
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -374,7 +545,9 @@ const Header = () => {
 
             <div className="hidden sm:flex items-center gap-3">
               <div className="text-right leading-tight">
-                <p className="text-sm font-medium">{firstName}</p>
+                <p className="text-sm font-medium">
+                  {firstName || t('header.user')}
+                </p>
                 <p
                   onClick={toggleOnlineStatus}
                   className="text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
@@ -427,7 +600,7 @@ const Header = () => {
                   <User className="h-4 w-4 text-primary-foreground" />
                 </div>
                 <div>
-                  <h2 className="font-semibold">{firstName || 'User'}</h2>
+                  <h2 className="font-semibold">{firstName || t('header.user')}</h2>
                   <div className="flex items-center gap-2 mt-1">
                     <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-green-500' : 'bg-gray-400'}`} />
                     <span className="text-sm text-muted-foreground">

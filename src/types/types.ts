@@ -33,7 +33,7 @@ export interface TopicAPIResponse {
 }
 
 export interface StructureAPIResponse {
-  structure?: string;
+  structure: StructureItem[];
   error?: string;
 }
 
@@ -366,3 +366,78 @@ export type UserLite = {
   lastName: string;
   role?: "student" | "supervisor";
 };
+
+
+export interface PremiumSuggestion {
+  type: 'work' | 'direction' | 'future_topic';
+  id: string;
+  title: string;
+  description?: string;
+  work_type?: string;
+  year?: number;
+  url?: string;
+  area?: string;
+  topic_description?: string;
+  relevance: number;
+  created_at: string;
+}
+
+export interface PremiumSuggestionsResponse {
+  suggestions: PremiumSuggestion[];
+  searchQuery: string;
+  totalCount: number;
+}
+
+// Додайте ці типи
+export interface StructureItem {
+  id: number;
+  key: string;
+  progress: number;
+  status: string;
+  content: string;
+}
+
+
+
+// Додайте до types/types.ts
+export interface HuggingFaceAnalysisRequest {
+  inputs: string;
+  parameters?: {
+    candidate_labels: string[];
+  };
+}
+
+export interface HuggingFaceAnalysisResponse {
+  labels: string[];
+  scores: number[];
+  sequence: string;
+}
+
+// В types/types.ts
+export interface TextAnalysisMetrics {
+  wordCount: number;
+  sentenceCount: number;
+  paragraphCount: number;
+  characterCount: number;
+  averageSentenceLength: number;
+  averageWordLength: number;
+  readabilityScore: number;
+  coherenceScore: number; // Додано нову метрику
+}
+
+export interface TextAnalysisResult {
+  metrics: {
+    wordCount: number;
+    sentenceCount: number;
+    paragraphCount: number;
+    characterCount: number;
+    averageSentenceLength: number;
+    averageWordLength: number;
+    readabilityScore: number;
+    coherenceScore: number;
+  };
+  strengths: string[];
+  issues: string[];
+  suggestions: string[];
+  overallScore: number;
+}

@@ -32,10 +32,11 @@ import {
   Upload,
   Clock,
   ListChecks,
-  Plus
+  RefreshCw
 } from 'lucide-react';
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
+import { toast } from "sonner";
 
 interface Student {
   id: string;
@@ -53,6 +54,7 @@ interface Student {
   status: 'active' | 'completed' | 'behind';
   lastMeeting?: string;
   nextMeeting?: string;
+  teacherId?: string;
 }
 
 interface User {
@@ -60,6 +62,7 @@ interface User {
   lastName: string;
   email: string;
   role: string;
+  id?: string;
 }
 
 interface CalendarEvent {
@@ -72,6 +75,42 @@ interface CalendarEvent {
   link?: string;
   description?: string;
 }
+
+// Функція для отримання токену
+const getAuthToken = (): string | null => {
+  if (typeof window !== 'undefined') {
+    return localStorage.getItem('authToken') || 
+           sessionStorage.getItem('authToken') ||
+           localStorage.getItem('token') ||
+           sessionStorage.getItem('token');
+  }
+  return null;
+};
+
+// Функція для отримання ID поточного користувача
+const getCurrentUserId = (): string | null => {
+  if (typeof window !== 'undefined') {
+    const currentUser = localStorage.getItem('currentUser') || 
+                       sessionStorage.getItem('currentUser');
+    
+    if (currentUser) {
+      try {
+        const userData = JSON.parse(currentUser);
+        if (userData.id) {
+          return userData.id.toString();
+        }
+      } catch {
+        // Ігноруємо помилку парсингу
+      }
+    }
+    
+    return localStorage.getItem('userId') || 
+           sessionStorage.getItem('userId') ||
+           localStorage.getItem('user_id') ||
+           sessionStorage.getItem('user_id');
+  }
+  return null;
+};
 
 const TeacherDashboard = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -91,6 +130,27 @@ const TeacherDashboard = () => {
     meetings: 0,
     upcomingEvents: 0
   });
+
+  // Функція для перевірки та синхронізації даних
+  const checkAndSyncData = () => {
+    const teacherId = getCurrentUserId();
+    if (!teacherId) return;
+
+    // Перевіряємо localStorage як fallback
+    const savedStudents = localStorage.getItem('teacherStudents');
+    if (savedStudents) {
+      const localStudents = JSON.parse(savedStudents);
+      const teacherStudents = localStudents.filter((student: Student) => 
+        student.teacherId === teacherId
+      );
+      
+      // Якщо є студенти в localStorage, але не в стані - синхронізуємо
+      if (teacherStudents.length > 0 && students.length === 0) {
+        setStudents(teacherStudents);
+        console.log('Synced students from localStorage:', teacherStudents.length);
+      }
+    }
+  };
 
   // Отримання даних користувача з API
   useEffect(() => {
@@ -119,18 +179,11 @@ const TeacherDashboard = () => {
           }
         }
 
-        // Якщо немає токена, використовуємо mock дані
+        // Якщо немає токена, використовуємо дані з localStorage
         if (!user) {
           const savedUser = localStorage.getItem('currentUser');
           if (savedUser) {
             setUser(JSON.parse(savedUser));
-          } else {
-            setUser({
-              firstName: 'Олександр',
-              lastName: 'Петренко',
-              email: 'o.petrenko@lnu.edu.ua',
-              role: 'teacher'
-            });
           }
         }
         
@@ -139,13 +192,6 @@ const TeacherDashboard = () => {
         const savedUser = localStorage.getItem('currentUser');
         if (savedUser) {
           setUser(JSON.parse(savedUser));
-        } else {
-          setUser({
-            firstName: 'Олександр',
-            lastName: 'Петренко',
-            email: 'o.petrenko@lnu.edu.ua',
-            role: 'teacher'
-          });
         }
       } finally {
         setLoading(false);
@@ -186,35 +232,137 @@ const TeacherDashboard = () => {
     }
   }, [user]);
 
-  // Завантаження студентів з localStorage
-  useEffect(() => {
-    const loadStudents = () => {
-      try {
-        const savedStudents = JSON.parse(localStorage.getItem('teacherStudents') || '[]');
-        const uniqueStudents = savedStudents.filter((student: Student, index: number, self: Student[]) => 
-          index === self.findIndex((s: Student) => s.id === student.id)
+  // Основна функція завантаження студентів
+  const fetchStudentsFromAPI = async () => {
+    try {
+      const teacherId = getCurrentUserId();
+      const token = getAuthToken();
+      
+      console.log('Fetching students for teacher:', teacherId);
+      
+      if (!teacherId) {
+        console.log('No teacher ID found');
+        // Fallback до localStorage
+        const savedStudents = localStorage.getItem('teacherStudents');
+        if (savedStudents) {
+          const localStudents = JSON.parse(savedStudents);
+          const teacherStudents = localStudents.filter((student: Student) => 
+            student.teacherId === teacherId
+          );
+          setStudents(teacherStudents);
+        } else {
+          setStudents([]);
+        }
+        return;
+      }
+
+      const response = await fetch(`/api/teacher/students?teacher_id=${teacherId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        
+        // Конвертація даних з API у формат компонента
+        const apiStudents: Student[] = Array.isArray(data) ? data.map((student: any) => ({
+          id: student.id?.toString() || `api-${Date.now()}`,
+          name: student.student_name || student.name || 'Студент',
+          email: student.student_email || student.email || '',
+          phone: student.student_phone || student.phone || '',
+          avatar: student.student_avatar || student.avatar || '',
+          course: student.course || 3,
+          faculty: student.faculty || "Факультет інформаційних технологій",
+          specialty: student.specialty || "Комп'ютерні науки",
+          workType: student.work_type || student.workType || 'coursework',
+          workTitle: student.work_title || student.workTitle || 'Робота без назви',
+          startDate: student.start_date || student.startDate || new Date().toISOString().split('T')[0],
+          progress: student.progress || 0,
+          status: student.status || 'active',
+          lastMeeting: student.last_meeting || student.lastMeeting,
+          nextMeeting: student.next_meeting || student.nextMeeting,
+          teacherId: student.teacher_id || teacherId
+        })) : [];
+
+        console.log('Students loaded from API:', apiStudents.length);
+        setStudents(apiStudents);
+        
+        // Додатково зберігаємо в localStorage для синхронізації
+        if (apiStudents.length > 0) {
+          const existingStudents = JSON.parse(localStorage.getItem('teacherStudents') || '[]');
+          const updatedStudents = [...existingStudents.filter((s: Student) => s.teacherId !== teacherId), ...apiStudents];
+          localStorage.setItem('teacherStudents', JSON.stringify(updatedStudents));
+        }
+      } else {
+        console.log('API request failed, trying localStorage');
+        // Fallback до localStorage
+        const savedStudents = localStorage.getItem('teacherStudents');
+        if (savedStudents) {
+          const localStudents = JSON.parse(savedStudents);
+          const teacherStudents = localStudents.filter((student: Student) => 
+            student.teacherId === teacherId
+          );
+          setStudents(teacherStudents);
+          console.log('Students loaded from localStorage:', teacherStudents.length);
+        } else {
+          setStudents([]);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching students from API:', error);
+      // Fallback до localStorage
+      const savedStudents = localStorage.getItem('teacherStudents');
+      if (savedStudents) {
+        const localStudents = JSON.parse(savedStudents);
+        const teacherStudents = localStudents.filter((student: Student) => 
+          student.teacherId === getCurrentUserId()
         );
-        setStudents(uniqueStudents);
-      } catch (error) {
-        console.error('Помилка завантаження студентів:', error);
+        setStudents(teacherStudents);
+      } else {
         setStudents([]);
+      }
+    }
+  };
+
+  // Завантаження студентів при монтуванні
+  useEffect(() => {
+    fetchStudentsFromAPI();
+  }, []);
+
+  // Слухачі для оновлення студентів
+  useEffect(() => {
+    const handleStudentUpdate = () => {
+      console.log('Student update event received, refreshing students...');
+      fetchStudentsFromAPI();
+    };
+
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'teacherStudents') {
+        console.log('LocalStorage changed, refreshing students...');
+        fetchStudentsFromAPI();
       }
     };
 
-    loadStudents();
-
-    const handleStorageChange = () => {
-      loadStudents();
-    };
-
+    // Слухач для кастомних подій (коли студент додається через заявки)
+    window.addEventListener('studentUpdated', handleStudentUpdate);
+    
+    // Слухач для змін в localStorage
     window.addEventListener('storage', handleStorageChange);
-    const interval = setInterval(loadStudents, 1000);
 
     return () => {
+      window.removeEventListener('studentUpdated', handleStudentUpdate);
       window.removeEventListener('storage', handleStorageChange);
-      clearInterval(interval);
     };
   }, []);
+
+  // Перевірка синхронізації після завантаження
+  useEffect(() => {
+    if (!loading) {
+      checkAndSyncData();
+    }
+  }, [loading]);
 
   // Розрахунок статистики на основі реальних даних
   useEffect(() => {
@@ -352,20 +500,56 @@ const TeacherDashboard = () => {
     }
   };
 
-  // Статистика для карток - тепер на основі реальних даних
+  // Слухачі для оновлення студентів
+useEffect(() => {
+  const handleStudentsUpdated = () => {
+    console.log('Students updated event received, refreshing students...');
+    fetchStudentsFromAPI();
+  };
+
+  const handleStorageChange = (e: StorageEvent) => {
+    if (e.key === 'teacherStudents') {
+      console.log('LocalStorage changed, refreshing students...');
+      fetchStudentsFromAPI();
+    }
+  };
+
+  // Слухач для кастомних подій
+  window.addEventListener('studentsUpdated', handleStudentsUpdated);
+  window.addEventListener('studentUpdated', handleStudentsUpdated); // для зворотної сумісності
+  
+  // Слухач для змін в localStorage
+  window.addEventListener('storage', handleStorageChange);
+
+  return () => {
+    window.removeEventListener('studentsUpdated', handleStudentsUpdated);
+    window.removeEventListener('studentUpdated', handleStudentsUpdated);
+    window.removeEventListener('storage', handleStorageChange);
+  };
+}, []);
+
+// Функція для оновлення списку студентів
+const refreshStudents = async () => {
+  console.log('Manual refresh triggered');
+  await fetchStudentsFromAPI();
+  checkAndSyncData();
+  toast.success('Список студентів оновлено');
+};
+
+  // Статистика для карток - на основі реальних даних
   const quickStats = [
     {
       label: 'Всього студентів',
       value: stats.total.toString(),
       icon: Users,
-      change: stats.total > 0 ? '+2 цього місяця' : 'Ще немає студентів',
+      change: stats.total > 0 ? 'Активні студенти' : 'Ще немає студентів',
       trend: stats.total > 0 ? 'up' : 'neutral' as const,
     },
     {
       label: 'Середній прогрес',
       value: `${stats.averageProgress}%`,
       icon: Target,
-      change: stats.averageProgress > 0 ? 'На 5% вище ніж минулого місяця' : 'Очікуємо роботи',
+      change: stats.averageProgress > 0 ? 'Прогрес робіт' : 'Очікуємо роботи',
       trend: stats.averageProgress > 0 ? 'up' : 'neutral' as const,
     },
     {
@@ -383,28 +567,6 @@ const TeacherDashboard = () => {
       trend: 'neutral' as const,
     },
   ];
-
-  const addDemoStudent = () => {
-    const demoStudent: Student = {
-      id: `demo-${Date.now()}`,
-      name: 'Демо Студент',
-      email: 'demo@student.edu.ua',
-      phone: '+380001234567',
-      course: 3,
-      faculty: "Факультет інформаційних технологій",
-      specialty: "Комп'ютерні науки",
-      workType: 'coursework',
-      workTitle: 'Демонстраційна курсова робота',
-      startDate: new Date().toISOString().split('T')[0],
-      progress: 25,
-      status: 'active',
-      nextMeeting: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-    };
-
-    const updatedStudents = [...students, demoStudent];
-    setStudents(updatedStudents);
-    localStorage.setItem('teacherStudents', JSON.stringify(updatedStudents));
-  };
 
   if (loading) {
     return (
@@ -578,18 +740,18 @@ const TeacherDashboard = () => {
                                   Дипломні
                                 </Button>
                               </div>
+
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="text-xs h-8"
+                                onClick={refreshStudents}
+                                title="Синхронізувати дані"
+                              >
+                                <RefreshCw className="w-3 h-3 mr-1" />
+                                Синхронізувати
+                              </Button>
                             </>
-                          )}
-                          
-                          {students.length === 0 && (
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              onClick={addDemoStudent}
-                            >
-                              <Plus className="w-4 h-4 mr-2" />
-                              Демо студент
-                            </Button>
                           )}
                         </div>
                       </div>
@@ -614,10 +776,6 @@ const TeacherDashboard = () => {
                                 <Users className="w-5 h-5 mr-2" />
                                 Перейти до заявок
                               </Link>
-                            </Button>
-                            <Button variant="outline" size="lg" onClick={addDemoStudent}>
-                              <Plus className="w-5 h-5 mr-2" />
-                              Демо студент
                             </Button>
                           </div>
                           

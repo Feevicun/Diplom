@@ -2,7 +2,8 @@ import { useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { MessageSquare, Calendar, Download, CheckCircle, Clock, FileText, AlertCircle, Users, Star, Edit, X, Send, ChevronDown, Loader2, GraduationCap, User, ArrowRight } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { MessageSquare, Calendar, Download, CheckCircle, Clock, FileText, AlertCircle, Users, Star, Edit, X, Send, ChevronDown, Loader2, GraduationCap, User, ArrowRight, Eye, History, Bell } from 'lucide-react';
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
 import { useState, useEffect } from 'react';
@@ -20,11 +21,14 @@ interface Student {
   workTitle: string;
   startDate: string;
   progress: number;
-  status: 'active' | 'completed' | 'behind';
+  status: 'active' | 'completed' | 'behind' | 'review';
   lastActivity: string;
   grade: number;
   unreadComments: number;
   projectType: 'diploma' | 'coursework' | 'practice';
+  teacherId?: string;
+  hasPendingReview?: boolean;
+  lastSubmissionDate?: string;
 }
 
 interface Comment {
@@ -34,6 +38,18 @@ interface Comment {
   date: string;
   type: 'feedback' | 'response';
   status: 'info' | 'warning' | 'error' | 'success';
+}
+
+interface FileVersion {
+  id: string;
+  fileName: string;
+  fileSize: string;
+  uploadDate: string;
+  uploadedBy: string;
+  userId: string;
+  version: number;
+  downloadUrl?: string;
+  changes?: string;
 }
 
 interface Chapter {
@@ -52,17 +68,10 @@ interface Chapter {
     currentVersion: number;
   };
   teacherComments: Comment[];
-  fileHistory?: Array<{
-    id: string;
-    fileName: string;
-    fileSize: string;
-    uploadDate: string;
-    uploadedBy: string;
-    userId: string;
-    version: number;
-    downloadUrl?: string;
-    changes?: string;
-  }>;
+  fileHistory?: FileVersion[];
+  gradedBy?: string;
+  gradedAt?: string;
+  submittedForReviewAt?: string;
 }
 
 interface CommentSectionProps {
@@ -82,6 +91,101 @@ interface StudentSelectProps {
   onSelect: (student: Student) => void;
   loading: boolean;
 }
+
+interface FileHistoryModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  fileHistory: FileVersion[];
+  currentUser: { id: string; name: string };
+}
+
+interface GradeModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  chapter: Chapter | null;
+  onGradeSubmit: (chapterId: number, grade: number, feedback?: string) => void;
+}
+
+// Функція для отримання токену
+const getAuthToken = (): string | null => {
+  if (typeof window !== 'undefined') {
+    return localStorage.getItem('authToken') || 
+           sessionStorage.getItem('authToken') ||
+           localStorage.getItem('token') ||
+           sessionStorage.getItem('token');
+  }
+  return null;
+};
+
+// Функція для отримання ID поточного користувача
+const getCurrentUserId = (): string | null => {
+  if (typeof window !== 'undefined') {
+    const currentUser = localStorage.getItem('currentUser') || 
+                       sessionStorage.getItem('currentUser');
+    
+    if (currentUser) {
+      try {
+        const userData = JSON.parse(currentUser);
+        if (userData.id) {
+          return userData.id.toString();
+        }
+      } catch {
+        // Ігноруємо помилку парсингу
+      }
+    }
+    
+    return localStorage.getItem('userId') || 
+           sessionStorage.getItem('userId') ||
+           localStorage.getItem('user_id') ||
+           sessionStorage.getItem('user_id');
+  }
+  return null;
+};
+
+// Функція для безпечного парсингу JSON
+const safeJsonParse = (text: string) => {
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    console.error('JSON parse error:', error);
+    return null;
+  }
+};
+
+// Функція для безпечного запиту до API
+const safeFetch = async (url: string, options: any = {}) => {
+  try {
+    const token = getAuthToken();
+    const headers = {
+      'Content-Type': 'application/json',
+      ...(token && { 'Authorization': `Bearer ${token}` }),
+      ...options.headers,
+    };
+
+    const response = await fetch(url, {
+      ...options,
+      headers,
+    });
+
+    if (!response.ok) {
+      console.error(`HTTP error! status: ${response.status}`);
+      return null;
+    }
+
+    const text = await response.text();
+    
+    // Якщо відповідь порожня, повертаємо null
+    if (!text.trim()) {
+      return null;
+    }
+
+    const data = safeJsonParse(text);
+    return data;
+  } catch (error) {
+    console.error('Fetch error:', error);
+    return null;
+  }
+};
 
 const getStatusIcon = (status: string) => {
   switch (status) {
@@ -135,6 +239,222 @@ const getCommentBadgeStyle = (status: Comment['status']) => {
   }
 };
 
+// Модальне вікно історії файлів
+const FileHistoryModal = ({ 
+  isOpen, 
+  onClose, 
+  fileHistory, 
+  currentUser 
+}: FileHistoryModalProps) => {
+  if (!isOpen) return null;
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleString('uk-UA', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg max-w-2xl w-full max-h-[80vh] overflow-hidden">
+        <div className="flex items-center justify-between p-4 border-b">
+          <h3 className="text-lg font-semibold flex items-center gap-2">
+            <History className="w-5 h-5" />
+            Історія версій файлу
+          </h3>
+          <Button variant="ghost" size="sm" onClick={onClose}>
+            ×
+          </Button>
+        </div>
+        
+        <div className="overflow-y-auto max-h-[60vh]">
+          <div className="p-4 space-y-3">
+            {fileHistory.map((version, index) => (
+              <div
+                key={version.id}
+                className={`p-3 border rounded-lg ${
+                  index === 0 
+                    ? 'bg-blue-50 border-blue-200' 
+                    : 'bg-gray-50 border-gray-200'
+                }`}
+              >
+                <div className="flex items-start justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <span className={`px-2 py-1 rounded text-xs ${
+                      index === 0 
+                        ? 'bg-blue-100 text-blue-800 border border-blue-200' 
+                        : 'bg-gray-100 text-gray-800 border border-gray-200'
+                    }`}>
+                      Версія {version.version}
+                      {index === 0 && ' (поточна)'}
+                    </span>
+                    {version.uploadedBy === currentUser.name && (
+                      <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded border border-green-200">
+                        Ваша версія
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-right text-sm text-gray-600">
+                    {formatDate(version.uploadDate)}
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <FileText className="w-4 h-4 text-gray-600" />
+                      <span className="font-medium text-sm">{version.fileName}</span>
+                    </div>
+                    <div className="flex items-center gap-4 text-xs text-gray-500">
+                      <span>{version.fileSize}</span>
+                      <span className="flex items-center gap-1">
+                        <User className="w-3 h-3" />
+                        {version.uploadedBy}
+                      </span>
+                    </div>
+                    {version.changes && (
+                      <div className="mt-2 text-xs text-gray-600 bg-white p-2 rounded border">
+                        <strong>Зміни:</strong> {version.changes}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2 ml-4">
+                    {version.downloadUrl && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => window.open(version.downloadUrl, '_blank')}
+                        className="h-8"
+                      >
+                        <Download className="w-3 h-3" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="p-4 border-t bg-gray-50">
+          <div className="text-sm text-gray-600">
+            <p>• Всього версій: {fileHistory.length}</p>
+            <p>• Остання зміна: {fileHistory[0] ? formatDate(fileHistory[0].uploadDate) : 'немає'}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Модальне вікно оцінювання
+const GradeModal = ({ 
+  isOpen, 
+  onClose, 
+  chapter, 
+  onGradeSubmit 
+}: GradeModalProps) => {
+  const [grade, setGrade] = useState<string>('');
+  const [feedback, setFeedback] = useState<string>('');
+
+  useEffect(() => {
+    if (chapter?.studentGrade) {
+      setGrade(chapter.studentGrade.toString());
+    } else {
+      setGrade('');
+    }
+    setFeedback('');
+  }, [chapter]);
+
+  if (!isOpen || !chapter) return null;
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const numericGrade = parseInt(grade);
+    if (!isNaN(numericGrade) && numericGrade >= 0 && numericGrade <= 100) {
+      onGradeSubmit(chapter.id, numericGrade, feedback || undefined);
+      onClose();
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg max-w-md w-full">
+        <div className="flex items-center justify-between p-4 border-b">
+          <h3 className="text-lg font-semibold flex items-center gap-2">
+            <Star className="w-5 h-5" />
+            Оцінювання розділу
+          </h3>
+          <Button variant="ghost" size="sm" onClick={onClose}>
+            ×
+          </Button>
+        </div>
+        
+        <form onSubmit={handleSubmit} className="p-4 space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              Розділ: <span className="font-semibold">{chapter.title}</span>
+            </label>
+          </div>
+          
+          <div>
+            <label htmlFor="grade" className="block text-sm font-medium mb-2">
+              Оцінка (0-100)
+            </label>
+            <input
+              id="grade"
+              type="number"
+              min="0"
+              max="100"
+              value={grade}
+              onChange={(e) => setGrade(e.target.value)}
+              className="w-full p-2 border border-gray-300 rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              placeholder="Введіть оцінку"
+              required
+            />
+          </div>
+          
+          <div>
+            <label htmlFor="feedback" className="block text-sm font-medium mb-2">
+              Коментар (необов'язково)
+            </label>
+            <textarea
+              id="feedback"
+              value={feedback}
+              onChange={(e) => setFeedback(e.target.value)}
+              className="w-full p-2 border border-gray-300 rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              placeholder="Додайте коментар або відгук..."
+              rows={3}
+            />
+          </div>
+          
+          <div className="flex justify-end gap-2 pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClose}
+            >
+              Скасувати
+            </Button>
+            <Button
+              type="submit"
+              className="bg-blue-600 text-white hover:bg-blue-700"
+            >
+              <CheckCircle className="w-4 h-4 mr-2" />
+              Зберегти оцінку
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
 // Початковий екран
 const WelcomeScreen = ({ 
   students, 
@@ -145,6 +465,8 @@ const WelcomeScreen = ({
   onSelectStudent: (student: Student) => void;
   loading: boolean;
 }) => {
+  const pendingReviewsCount = students.filter(s => s.hasPendingReview).length;
+
   return (
     <div className="max-w-6xl mx-auto py-8 px-4">
       <div className="text-center mb-12">
@@ -155,6 +477,15 @@ const WelcomeScreen = ({
         <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
           Оберіть студента для перегляду та оцінювання його роботи. Тут ви можете залишати коментарі, виставляти оцінки та відстежувати прогрес.
         </p>
+        
+        {pendingReviewsCount > 0 && (
+          <div className="mt-4 inline-flex items-center gap-2 bg-yellow-50 border border-yellow-200 rounded-full px-4 py-2">
+            <Bell className="w-4 h-4 text-yellow-600" />
+            <span className="text-yellow-800 font-medium">
+              {pendingReviewsCount} робіт очікують на перевірку
+            </span>
+          </div>
+        )}
       </div>
 
       {loading ? (
@@ -179,10 +510,14 @@ const WelcomeScreen = ({
       ) : (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-            {students.slice(0, 6).map((student) => (
+            {students.map((student) => (
               <Card 
                 key={student.id} 
-                className="bg-card border border-border hover:shadow-lg transition-all duration-200 cursor-pointer hover:border-primary/50"
+                className={`bg-card border hover:shadow-lg transition-all duration-200 cursor-pointer ${
+                  student.hasPendingReview 
+                    ? 'border-yellow-400 bg-yellow-50/50 hover:border-yellow-500' 
+                    : 'border-border hover:border-primary/50'
+                }`}
                 onClick={() => onSelectStudent(student)}
               >
                 <CardHeader className="pb-3">
@@ -191,7 +526,14 @@ const WelcomeScreen = ({
                       <User className="w-6 h-6 text-primary" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <CardTitle className="text-base truncate">{student.name}</CardTitle>
+                      <div className="flex items-center gap-2">
+                        <CardTitle className="text-base truncate">{student.name}</CardTitle>
+                        {student.hasPendingReview && (
+                          <Badge variant="destructive" className="text-xs">
+                            На перевірці
+                          </Badge>
+                        )}
+                      </div>
                       <CardDescription className="text-sm truncate">
                         {student.course} курс • {student.specialty}
                       </CardDescription>
@@ -218,6 +560,11 @@ const WelcomeScreen = ({
                       {student.workType === 'coursework' ? 'Курсова' : 'Дипломна'}
                     </span>
                   </div>
+                  {student.lastSubmissionDate && (
+                    <div className="text-xs text-muted-foreground">
+                      Надіслано: {new Date(student.lastSubmissionDate).toLocaleDateString('uk-UA')}
+                    </div>
+                  )}
                   <Button 
                     variant="outline" 
                     size="sm" 
@@ -230,18 +577,6 @@ const WelcomeScreen = ({
               </Card>
             ))}
           </div>
-
-          {students.length > 6 && (
-            <div className="text-center">
-              <p className="text-muted-foreground mb-4">
-                Показано 6 з {students.length} студентів
-              </p>
-              <Button variant="outline" className="border-border text-foreground hover:bg-accent">
-                <Users className="w-4 h-4 mr-2" />
-                Переглянути всіх студентів
-              </Button>
-            </div>
-          )}
         </>
       )}
     </div>
@@ -481,12 +816,16 @@ const StudentSelect = ({ students, selectedStudent, onSelect, loading }: Student
               onClick={() => {
                 onSelect(student);
                 setIsOpen(false);
-                // Оновлюємо URL при виборі студента
                 window.history.pushState({}, '', `/teacher/grades?studentId=${student.id}`);
               }}
               className="w-full px-4 py-2 text-left hover:bg-accent first:rounded-t-lg last:rounded-b-lg border-b border-border last:border-b-0"
             >
-              <div className="font-medium text-foreground">{student.name}</div>
+              <div className="flex items-center justify-between">
+                <div className="font-medium text-foreground">{student.name}</div>
+                {student.hasPendingReview && (
+                  <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                )}
+              </div>
               <div className="text-sm text-muted-foreground">
                 {student.workType === 'coursework' ? 'Курсова' : 'Дипломна'} • {student.progress}%
               </div>
@@ -498,6 +837,84 @@ const StudentSelect = ({ students, selectedStudent, onSelect, loading }: Student
   );
 };
 
+// Інтерфейси для API відповідей
+interface ApiStudent {
+  id?: string;
+  student_name?: string;
+  name?: string;
+  student_email?: string;
+  email?: string;
+  student_phone?: string;
+  phone?: string;
+  student_avatar?: string;
+  avatar?: string;
+  course?: number;
+  faculty?: string;
+  specialty?: string;
+  work_type?: 'coursework' | 'diploma';
+  workType?: 'coursework' | 'diploma';
+  work_title?: string;
+  workTitle?: string;
+  start_date?: string;
+  startDate?: string;
+  progress?: number;
+  status?: 'active' | 'completed' | 'behind';
+  last_activity?: string;
+  lastActivity?: string;
+  grade?: number;
+  student_grade?: number;
+  unread_comments?: number;
+  unreadComments?: number;
+  project_type?: 'diploma' | 'coursework' | 'practice';
+  projectType?: 'diploma' | 'coursework' | 'practice';
+  has_pending_review?: boolean;
+  last_submission_date?: string;
+}
+
+interface ApiChapter {
+  id: number;
+  key?: string;
+  chapter_key?: string;
+  title?: string;
+  chapter_title?: string;
+  description?: string;
+  chapter_description?: string;
+  progress?: number;
+  status?: 'completed' | 'review' | 'inProgress' | 'pending';
+  student_grade?: number;
+  grade?: number;
+  student_note?: string;
+  note?: string;
+  uploaded_file?: {
+    name: string;
+    upload_date: string;
+    size: string;
+    current_version: number;
+  };
+  comments?: Array<{
+    id: string;
+    text: string;
+    author: string;
+    date: string;
+    type: 'feedback' | 'response';
+    status: 'info' | 'warning' | 'error' | 'success';
+  }>;
+  file_history?: Array<{
+    id: string;
+    file_name: string;
+    file_size: string;
+    upload_date: string;
+    uploaded_by: string;
+    user_id: string;
+    version: number;
+    download_url?: string;
+    changes?: string;
+  }>;
+  graded_by?: string;
+  graded_at?: string;
+  submitted_for_review_at?: string;
+}
+
 const TeacherGrades = () => {
   const [searchParams] = useSearchParams();
   const studentIdFromUrl = searchParams.get('studentId');
@@ -507,355 +924,334 @@ const TeacherGrades = () => {
   const [chaptersData, setChaptersData] = useState<Chapter[]>([]);
   const [loading, setLoading] = useState(true);
   const [studentsLoading, setStudentsLoading] = useState(true);
+  const [expandedComments, setExpandedComments] = useState<Record<number, boolean>>({});
+  const [fileHistoryModal, setFileHistoryModal] = useState<{
+    isOpen: boolean;
+    fileHistory: FileVersion[];
+  }>({
+    isOpen: false,
+    fileHistory: []
+  });
+  const [gradeModal, setGradeModal] = useState<{
+    isOpen: boolean;
+    chapter: Chapter | null;
+  }>({
+    isOpen: false,
+    chapter: null
+  });
+
+  // Функція для створення базової структури розділів
+  const getDefaultChapters = (): Chapter[] => {
+    return [
+      { 
+        id: 1, 
+        key: 'intro', 
+        title: 'Вступ', 
+        description: 'Вступна частина роботи',
+        progress: 0,
+        status: 'pending',
+        studentGrade: null,
+        studentNote: '',
+        teacherComments: [],
+        fileHistory: []
+      },
+      { 
+        id: 2, 
+        key: 'analysis', 
+        title: 'Аналіз літератури', 
+        description: 'Огляд наукових джерел та літератури',
+        progress: 0,
+        status: 'pending',
+        studentGrade: null,
+        studentNote: '',
+        teacherComments: [],
+        fileHistory: []
+      },
+      { 
+        id: 3, 
+        key: 'methodology', 
+        title: 'Методологія', 
+        description: 'Методи дослідження',
+        progress: 0,
+        status: 'pending',
+        studentGrade: null,
+        studentNote: '',
+        teacherComments: [],
+        fileHistory: []
+      },
+      { 
+        id: 4, 
+        key: 'results', 
+        title: 'Результати', 
+        description: 'Результати дослідження',
+        progress: 0,
+        status: 'pending',
+        studentGrade: null,
+        studentNote: '',
+        teacherComments: [],
+        fileHistory: []
+      },
+      { 
+        id: 5, 
+        key: 'conclusion', 
+        title: 'Висновки', 
+        description: 'Висновки та рекомендації',
+        progress: 0,
+        status: 'pending',
+        studentGrade: null,
+        studentNote: '',
+        teacherComments: [],
+        fileHistory: []
+      }
+    ];
+  };
+
+  // Функція для завантаження студентів з API
+  const fetchStudents = async () => {
+    try {
+      setStudentsLoading(true);
+      const teacherId = getCurrentUserId();
+      
+      let apiStudents: Student[] = [];
+
+      // Завантаження з API
+      if (teacherId) {
+        try {
+          const data = await safeFetch(`/api/teacher/students?teacher_id=${teacherId}`);
+          
+          if (data && Array.isArray(data)) {
+            apiStudents = data.map((student: ApiStudent) => ({
+              id: student.id?.toString() || '',
+              name: student.student_name || student.name || '',
+              email: student.student_email || student.email || '',
+              phone: student.student_phone || student.phone || '',
+              avatar: student.student_avatar || student.avatar || '',
+              course: student.course || 0,
+              faculty: student.faculty || "",
+              specialty: student.specialty || "",
+              workType: student.work_type || student.workType || 'coursework',
+              workTitle: student.work_title || student.workTitle || '',
+              startDate: student.start_date || student.startDate || '',
+              progress: student.progress || 0,
+              status: student.status || 'active',
+              lastActivity: student.last_activity || student.lastActivity || '',
+              grade: student.grade || student.student_grade || 0,
+              unreadComments: student.unread_comments || student.unreadComments || 0,
+              projectType: student.project_type || student.projectType || 'coursework',
+              teacherId: teacherId,
+              hasPendingReview: student.has_pending_review || false,
+              lastSubmissionDate: student.last_submission_date || ''
+            })).filter(student => student.id && student.name);
+          }
+        } catch (error) {
+          console.error('Error processing students data:', error);
+        }
+      }
+
+      // Fallback: перевірка localStorage
+      if (apiStudents.length === 0) {
+        try {
+          const localStudents = JSON.parse(localStorage.getItem('teacherStudents') || '[]');
+          if (Array.isArray(localStudents) && localStudents.length > 0) {
+            // Фільтруємо студентів поточного викладача
+            apiStudents = localStudents.filter((student: Student) => 
+              student.teacherId === teacherId
+            );
+            console.log('Loaded students from localStorage:', apiStudents);
+          }
+        } catch (localError) {
+          console.error('Error reading from localStorage:', localError);
+        }
+      }
+
+      console.log('Final loaded students:', apiStudents);
+      setStudents(apiStudents);
+
+      // Якщо є studentId в URL, знаходимо відповідного студента
+      if (studentIdFromUrl && apiStudents.length > 0) {
+        const studentFromUrl = apiStudents.find((s: Student) => s.id === studentIdFromUrl);
+        if (studentFromUrl) {
+          setSelectedStudent(studentFromUrl);
+          console.log('Selected student from URL:', studentFromUrl);
+        }
+      }
+    } catch (error) {
+      console.error('Помилка завантаження студентів:', error);
+    } finally {
+      setStudentsLoading(false);
+    }
+  };
+
+  // Функція для завантаження робіт на перевірку
+  const fetchPendingReviews = async () => {
+    try {
+      const teacherId = getCurrentUserId();
+      const pendingReviews = await safeFetch(`/api/teacher/pending-reviews?teacher_id=${teacherId}`);
+      
+      if (pendingReviews && Array.isArray(pendingReviews)) {
+        // Оновлюємо список студентів з роботами на перевірці
+        setStudents(prevStudents => 
+          prevStudents.map(student => {
+            const hasPendingReview = pendingReviews.some((review: any) => review.studentId === student.id);
+            return {
+              ...student,
+              hasPendingReview: hasPendingReview,
+              status: hasPendingReview ? 'review' : student.status
+            };
+          })
+        );
+      }
+    } catch (error) {
+      console.error('Error fetching pending reviews:', error);
+    }
+  };
+
+  // Функція для перевірки нових робіт
+  const checkForNewSubmissions = async () => {
+    try {
+      const teacherId = getCurrentUserId();
+      const newSubmissions = await safeFetch(`/api/teacher/new-submissions?teacher_id=${teacherId}`);
+      
+      if (newSubmissions && newSubmissions.length > 0) {
+        // Оновлюємо список студентів
+        await fetchStudents();
+        
+        // Показуємо сповіщення
+        if (newSubmissions.length > 0 && !window.location.href.includes('studentId')) {
+          console.log(`У вас ${newSubmissions.length} нових робіт на перевірці!`);
+        }
+      }
+    } catch (error) {
+      console.error('Error checking new submissions:', error);
+    }
+  };
+
+  // Функція для завантаження даних студента з ThesisTracker
+  const fetchStudentData = async (student: Student) => {
+    try {
+      setLoading(true);
+      
+      let studentChapters: Chapter[] = [];
+
+      // Завантаження з API ThesisTracker
+      try {
+        const data = await safeFetch(`/api/thesis-tracker/student/${student.id}/chapters`);
+        
+        if (data && data.chapters && Array.isArray(data.chapters)) {
+          studentChapters = data.chapters.map((chapter: ApiChapter) => ({
+            id: chapter.id,
+            key: chapter.key || chapter.chapter_key || '',
+            title: chapter.title || chapter.chapter_title || '',
+            description: chapter.description || chapter.chapter_description || '',
+            progress: chapter.progress || 0,
+            status: chapter.status || 'pending',
+            studentGrade: chapter.student_grade || chapter.grade || null,
+            studentNote: chapter.student_note || chapter.note || '',
+            uploadedFile: chapter.uploaded_file ? {
+              name: chapter.uploaded_file.name,
+              uploadDate: chapter.uploaded_file.upload_date,
+              size: chapter.uploaded_file.size,
+              currentVersion: chapter.uploaded_file.current_version
+            } : undefined,
+            teacherComments: Array.isArray(chapter.comments) ? chapter.comments.map((comment) => ({
+              id: comment.id,
+              text: comment.text,
+              author: comment.author,
+              date: comment.date,
+              type: comment.type,
+              status: comment.status
+            })) : [],
+            fileHistory: Array.isArray(chapter.file_history) ? chapter.file_history.map((file) => ({
+              id: file.id,
+              fileName: file.file_name,
+              fileSize: file.file_size,
+              uploadDate: file.upload_date,
+              uploadedBy: file.uploaded_by,
+              userId: file.user_id,
+              version: file.version,
+              downloadUrl: file.download_url,
+              changes: file.changes
+            })) : [],
+            gradedBy: chapter.graded_by,
+            gradedAt: chapter.graded_at,
+            submittedForReviewAt: chapter.submitted_for_review_at
+          }));
+        }
+      } catch (error) {
+        console.error('Error processing student chapters data:', error);
+      }
+
+      // Якщо API не повернув даних, використовуємо порожню структуру
+      if (studentChapters.length === 0) {
+        studentChapters = getDefaultChapters();
+      }
+
+      setChaptersData(studentChapters);
+      
+    } catch (error) {
+      console.error('Помилка завантаження даних студента:', error);
+      setChaptersData(getDefaultChapters());
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Завантаження списку студентів
   useEffect(() => {
-    const loadStudents = async () => {
-      try {
-        setStudentsLoading(true);
-        // Завантажуємо студентів з localStorage або API
-        const savedStudents = JSON.parse(localStorage.getItem('teacherStudents') || '[]');
-        setStudents(savedStudents);
+    fetchStudents();
+    fetchPendingReviews();
 
-        if (savedStudents.length > 0) {
-          // Якщо є studentId в URL, знаходимо відповідного студента
-          if (studentIdFromUrl) {
-            const studentFromUrl = savedStudents.find((s: Student) => s.id === studentIdFromUrl);
-            if (studentFromUrl) {
-              setSelectedStudent(studentFromUrl);
-            }
-          }
-        }
-      } catch (error) {
-        console.error('Помилка завантаження студентів:', error);
-      } finally {
-        setStudentsLoading(false);
+    // Слухач для оновлення студентів
+    const handleStudentUpdate = () => {
+      console.log('Student update event received in TeacherGrades');
+      fetchStudents();
+      fetchPendingReviews();
+    };
+
+    const handleStudentsUpdated = () => {
+      console.log('Students updated event received in TeacherGrades');
+      fetchStudents();
+      fetchPendingReviews();
+    };
+
+    // Слухач для оновлення даних студента з ThesisTracker
+    const handleThesisTrackerUpdate = () => {
+      console.log('ThesisTracker update event received in TeacherGrades');
+      if (selectedStudent) {
+        fetchStudentData(selectedStudent);
+        fetchPendingReviews();
       }
     };
 
-    loadStudents();
-  }, [studentIdFromUrl]);
+    window.addEventListener('studentUpdated', handleStudentUpdate);
+    window.addEventListener('studentsUpdated', handleStudentsUpdated);
+    window.addEventListener('thesisTrackerUpdated', handleThesisTrackerUpdate);
+    
+    return () => {
+      window.removeEventListener('studentUpdated', handleStudentUpdate);
+      window.removeEventListener('studentsUpdated', handleStudentsUpdated);
+      window.removeEventListener('thesisTrackerUpdated', handleThesisTrackerUpdate);
+    };
+  }, [studentIdFromUrl, selectedStudent]);
 
   // Завантаження даних обраного студента
   useEffect(() => {
-    const loadStudentData = async () => {
-      if (!selectedStudent) return;
-      
-      try {
-        setLoading(true);
-        
- // Симулюємо завантаження даних з ThesisTracker
-const mockChapters: Chapter[] = [
-  { 
-    id: 1, 
-    key: 'intro', 
-    title: 'Вступ',
-    description: 'Вступна частина роботи',
-    progress: 100, 
-    status: 'completed', 
-    studentGrade: 90, 
-    studentNote: 'Додав основні тези та мету дослідження',
-    teacherComments: [
-      { 
-        id: '1', 
-        text: 'Добре розкрита тема, але потрібно більше прикладів', 
-        author: 'Викладач', 
-        date: '2024-01-15', 
-        type: 'feedback',
-        status: 'info'
-      },
-      { 
-        id: '2', 
-        text: 'Виправив помилки, додав приклади', 
-        author: 'Студент', 
-        date: '2024-01-16', 
-        type: 'response',
-        status: 'success'
-      }
-    ],
-    fileHistory: [
-      {
-        id: '1',
-        fileName: 'вступ.docx',
-        fileSize: '245 KB',
-        uploadDate: new Date().toISOString(),
-        uploadedBy: selectedStudent.name,
-        userId: selectedStudent.id,
-        version: 1,
-        changes: 'Перша версія вступу'
-      }
-    ]
-  },
-  { 
-    id: 2, 
-    key: 'theory', 
-    title: 'Теоретична частина',
-    description: 'Теоретичне підґрунтя дослідження',
-    progress: 85, 
-    status: 'review', 
-    studentGrade: 85, 
-    studentNote: 'Проаналізував основні теоретичні концепції',
-    teacherComments: [
-      { 
-        id: '1', 
-        text: 'Перевірте цитування джерел', 
-        author: 'Викладач', 
-        date: '2024-01-14', 
-        type: 'feedback',
-        status: 'warning'
-      },
-      { 
-        id: '2', 
-        text: 'Додав більше джерел та виправив цитування', 
-        author: 'Студент', 
-        date: '2024-01-17', 
-        type: 'response',
-        status: 'info'
-      }
-    ],
-    uploadedFile: {
-      name: 'теоретична_частина.docx',
-      uploadDate: '2024-01-14',
-      size: '512 KB',
-      currentVersion: 2
-    },
-    fileHistory: [
-      {
-        id: '2',
-        fileName: 'теоретична_частина_v2.docx',
-        fileSize: '512 KB',
-        uploadDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-        uploadedBy: selectedStudent.name,
-        userId: selectedStudent.id,
-        version: 2,
-        changes: 'Додано більше джерел, виправлено цитування'
-      },
-      {
-        id: '1',
-        fileName: 'теоретична_частина_v1.docx',
-        fileSize: '487 KB',
-        uploadDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-        uploadedBy: selectedStudent.name,
-        userId: selectedStudent.id,
-        version: 1,
-        changes: 'Перша версія теоретичної частини'
-      }
-    ]
-  },
-  { 
-    id: 3, 
-    key: 'design', 
-    title: 'Проектування',
-    description: 'Архітектура та дизайн системи',
-    progress: 50, 
-    status: 'inProgress', 
-    studentGrade: null, 
-    studentNote: 'Розробляю архітектуру системи, вивчаю технології',
-    teacherComments: [
-      { 
-        id: '1', 
-        text: 'Рекомендую розглянути використання React для фронтенду', 
-        author: 'Викладач', 
-        date: '2024-01-10', 
-        type: 'feedback',
-        status: 'info'
-      }
-    ],
-    uploadedFile: {
-      name: 'проектування_архітектури.docx',
-      uploadDate: '2024-01-10',
-      size: '321 KB',
-      currentVersion: 1
-    },
-    fileHistory: [
-      {
-        id: '1',
-        fileName: 'проектування_архітектури.docx',
-        fileSize: '321 KB',
-        uploadDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-        uploadedBy: selectedStudent.name,
-        userId: selectedStudent.id,
-        version: 1,
-        changes: 'Початковий проект архітектури'
-      }
-    ]
-  },
-  { 
-    id: 4, 
-    key: 'implementation', 
-    title: 'Реалізація',
-    description: 'Практична реалізація проекту',
-    progress: 30, 
-    status: 'inProgress', 
-    studentGrade: null, 
-    studentNote: 'Почав реалізацію основного функціоналу',
-    teacherComments: [
-      { 
-        id: '1', 
-        text: 'Зверніть увагу на обробку помилок у коді', 
-        author: 'Викладач', 
-        date: '2024-01-08', 
-        type: 'feedback',
-        status: 'warning'
-      }
-    ],
-    uploadedFile: {
-      name: 'код_реалізації.zip',
-      uploadDate: '2024-01-08',
-      size: '1.2 MB',
-      currentVersion: 1
-    },
-    fileHistory: [
-      {
-        id: '1',
-        fileName: 'код_реалізації.zip',
-        fileSize: '1.2 MB',
-        uploadDate: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000).toISOString(),
-        uploadedBy: selectedStudent.name,
-        userId: selectedStudent.id,
-        version: 1,
-        changes: 'Початкова версія коду'
-      }
-    ]
-  },
-  { 
-    id: 5, 
-    key: 'testing', 
-    title: 'Тестування',
-    description: 'Тестування та валідація системи',
-    progress: 15, 
-    status: 'inProgress', 
-    studentGrade: null, 
-    studentNote: 'Готую тестові сценарії',
-    teacherComments: [
-      { 
-        id: '1', 
-        text: 'Розробіть план тестування перед початком', 
-        author: 'Викладач', 
-        date: '2024-01-05', 
-        type: 'feedback',
-        status: 'info'
-      }
-    ],
-    uploadedFile: {
-      name: 'план_тестування.docx',
-      uploadDate: '2024-01-05',
-      size: '156 KB',
-      currentVersion: 1
-    },
-    fileHistory: [
-      {
-        id: '1',
-        fileName: 'план_тестування.docx',
-        fileSize: '156 KB',
-        uploadDate: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000).toISOString(),
-        uploadedBy: selectedStudent.name,
-        userId: selectedStudent.id,
-        version: 1,
-        changes: 'Початковий план тестування'
-      }
-    ]
-  },
-  { 
-    id: 6, 
-    key: 'conclusion', 
-    title: 'Висновки',
-    description: 'Висновки та результати дослідження',
-    progress: 10, 
-    status: 'pending', 
-    studentGrade: null, 
-    studentNote: 'Ще не розпочав роботу над висновками',
-    teacherComments: [],
-    fileHistory: []
-  },
-  { 
-    id: 7, 
-    key: 'literature', 
-    title: 'Список літератури',
-    description: 'Перелік використаних джерел',
-    progress: 95, 
-    status: 'review', 
-    studentGrade: null, 
-    studentNote: 'Скомпілював основні джерела',
-    teacherComments: [
-      { 
-        id: '1', 
-        text: 'Додайте ще 2-3 сучасні джерела за останні 3 роки', 
-        author: 'Викладач', 
-        date: '2024-01-12', 
-        type: 'feedback',
-        status: 'warning'
-      }
-    ],
-    uploadedFile: {
-      name: 'список_літератури.docx',
-      uploadDate: '2024-01-12',
-      size: '89 KB',
-      currentVersion: 1
-    },
-    fileHistory: [
-      {
-        id: '1',
-        fileName: 'список_літератури.docx',
-        fileSize: '89 KB',
-        uploadDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-        uploadedBy: selectedStudent.name,
-        userId: selectedStudent.id,
-        version: 1,
-        changes: 'Початковий список літератури'
-      }
-    ]
-  },
-  { 
-    id: 8, 
-    key: 'appendix', 
-    title: 'Додатки',
-    description: 'Додаткові матеріали та додатки',
-    progress: 25, 
-    status: 'inProgress', 
-    studentGrade: null, 
-    studentNote: 'Готую діаграми та схеми',
-    teacherComments: [
-      { 
-        id: '1', 
-        text: 'Додайте UML діаграми для кращої візуалізації', 
-        author: 'Викладач', 
-        date: '2024-01-09', 
-        type: 'feedback',
-        status: 'info'
-      }
-    ],
-    uploadedFile: {
-      name: 'діаграми.pdf',
-      uploadDate: '2024-01-09',
-      size: '745 KB',
-      currentVersion: 1
-    },
-    fileHistory: [
-      {
-        id: '1',
-        fileName: 'діаграми.pdf',
-        fileSize: '745 KB',
-        uploadDate: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString(),
-        uploadedBy: selectedStudent.name,
-        userId: selectedStudent.id,
-        version: 1,
-        changes: 'Початкові діаграми системи'
-      }
-    ]
-  }
-];
+    if (selectedStudent) {
+      fetchStudentData(selectedStudent);
+    }
+  }, [selectedStudent]);
 
-setChaptersData(mockChapters);
-        
-      } catch (error) {
-        console.error('Помилка завантаження даних студента:', error);
-      } finally {
-        setLoading(false);
+  // Інтервал для перевірки оновлень
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchPendingReviews();
+      checkForNewSubmissions();
+      if (selectedStudent) {
+        fetchStudentData(selectedStudent);
       }
-    };
-
-    loadStudentData();
+    }, 30000); // Перевіряємо кожні 30 секунд
+    
+    return () => clearInterval(interval);
   }, [selectedStudent]);
 
   const handleAddComment = async (chapterId: number, commentText: string, status: Comment['status']) => {
@@ -871,6 +1267,17 @@ setChaptersData(mockChapters);
         status
       };
 
+      // Спроба зберегти коментар через API
+      await safeFetch(`/api/thesis-tracker/chapter/${chapterId}/comments`, {
+        method: 'POST',
+        body: JSON.stringify({
+          text: commentText,
+          status: status,
+          type: 'feedback'
+        })
+      });
+
+      // Оновлюємо локальний стан
       setChaptersData(prevChapters =>
         prevChapters.map(chapter =>
           chapter.id === chapterId
@@ -883,6 +1290,7 @@ setChaptersData(mockChapters);
         )
       );
 
+      // Оновлюємо лічильник коментарів
       setStudents(prev =>
         prev.map(student =>
           student.id === selectedStudent.id
@@ -890,6 +1298,9 @@ setChaptersData(mockChapters);
             : student
         )
       );
+
+      // Сповіщаємо про оновлення коментарів
+      window.dispatchEvent(new CustomEvent('thesisTrackerUpdated'));
 
     } catch (error) {
       console.error('Помилка додавання коментаря:', error);
@@ -900,30 +1311,91 @@ setChaptersData(mockChapters);
     handleAddComment(chapterId, commentText, status);
   };
 
-  const handleGradeUpdate = async (chapterId: number, grade: number) => {
+  const handleGradeUpdate = async (chapterId: number, grade: number, feedback?: string) => {
     if (!selectedStudent) return;
 
     try {
+      // Оновлюємо через API
+      await safeFetch(`/api/thesis-tracker/chapter/${chapterId}/grade`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          grade: grade,
+          feedback: feedback,
+          status: 'completed',
+          gradedBy: getCurrentUserId(),
+          gradedAt: new Date().toISOString()
+        })
+      });
+
+      // Оновлюємо локальний стан
       setChaptersData(prevChapters =>
         prevChapters.map(chapter =>
           chapter.id === chapterId
-            ? { ...chapter, studentGrade: grade, status: 'completed' }
+            ? { 
+                ...chapter, 
+                studentGrade: grade, 
+                status: 'completed',
+                gradedBy: getCurrentUserId() || 'Викладач',
+                gradedAt: new Date().toISOString(),
+                teacherComments: feedback ? [
+                  ...chapter.teacherComments,
+                  {
+                    id: Date.now().toString(),
+                    text: feedback,
+                    author: 'Викладач',
+                    date: new Date().toLocaleDateString('uk-UA'),
+                    type: 'feedback',
+                    status: grade >= 60 ? 'success' : 'error'
+                  }
+                ] : chapter.teacherComments
+              }
             : chapter
         )
       );
 
-      const gradedChapters = chaptersData.filter(ch => ch.studentGrade !== null);
+      // Перераховуємо середню оцінку
+      const updatedChapters = chaptersData.map(chapter =>
+        chapter.id === chapterId
+          ? { ...chapter, studentGrade: grade, status: 'completed' }
+          : chapter
+      );
+
+      const gradedChapters = updatedChapters.filter(ch => ch.studentGrade !== null);
       const newAverageGrade = gradedChapters.length > 0 
         ? Math.round(gradedChapters.reduce((sum, ch) => sum + (ch.studentGrade || 0), 0) / gradedChapters.length)
         : selectedStudent.grade;
 
+      // Оновлюємо студента
       setStudents(prev =>
         prev.map(student =>
           student.id === selectedStudent.id
-            ? { ...student, grade: newAverageGrade }
+            ? { 
+                ...student, 
+                grade: newAverageGrade,
+                status: newAverageGrade >= 60 ? 'completed' : 'review',
+                hasPendingReview: false
+              }
             : student
         )
       );
+
+      // Сповіщаємо студента про оцінку
+      await safeFetch('/api/notify-student', {
+        method: 'POST',
+        body: JSON.stringify({
+          studentId: selectedStudent.id,
+          chapterId: chapterId,
+          grade: grade,
+          feedback: feedback,
+          teacherName: 'Викладач'
+        })
+      });
+
+      // Сповіщаємо всі компоненти про оновлення
+      window.dispatchEvent(new CustomEvent('thesisTrackerUpdated'));
+      window.dispatchEvent(new CustomEvent('teacherGradesUpdated'));
+
+      console.log(`Оцінка ${grade} успішно виставлена для розділу ${chapterId}`);
 
     } catch (error) {
       console.error('Помилка оновлення оцінки:', error);
@@ -933,6 +1405,38 @@ setChaptersData(mockChapters);
   const handleSelectStudent = (student: Student) => {
     setSelectedStudent(student);
     window.history.pushState({}, '', `/teacher/grades?studentId=${student.id}`);
+  };
+
+  const toggleCommentExpansion = (chapterId: number) => {
+    setExpandedComments(prev => ({
+      ...prev,
+      [chapterId]: !prev[chapterId]
+    }));
+  };
+
+  const showFileHistory = (chapterId: number) => {
+    const chapter = chaptersData.find(ch => ch.id === chapterId);
+    if (!chapter || !chapter.fileHistory) return;
+
+    setFileHistoryModal({
+      isOpen: true,
+      fileHistory: chapter.fileHistory
+    });
+  };
+
+  const showGradeModal = (chapter: Chapter) => {
+    setGradeModal({
+      isOpen: true,
+      chapter: chapter
+    });
+  };
+
+  const handleDownloadFile = (chapterId: number) => {
+    const chapter = chaptersData.find(ch => ch.id === chapterId);
+    if (!chapter?.uploadedFile) return;
+
+    // Тут буде логіка завантаження файлу
+    alert(`Завантаження файлу: ${chapter.uploadedFile.name}`);
   };
 
   const totalProgress = chaptersData.length > 0 
@@ -962,7 +1466,6 @@ setChaptersData(mockChapters);
     );
   }
 
-  // Решта коду залишається незмінною (відображення обраного студента)
   return (
     <div className="min-h-screen bg-background flex">
       <div className="hidden md:block sticky top-0 h-screen bg-background border-r border-border">
@@ -985,7 +1488,7 @@ setChaptersData(mockChapters);
               <StudentSelect
                 students={students}
                 selectedStudent={selectedStudent}
-                onSelect={setSelectedStudent}
+                onSelect={handleSelectStudent}
                 loading={studentsLoading}
               />
             </div>
@@ -1016,6 +1519,12 @@ setChaptersData(mockChapters);
                       <span className="font-medium">Поточна оцінка:</span> 
                       <span className="font-bold text-primary ml-2">{selectedStudent.grade}/100</span>
                     </p>
+                    {selectedStudent.hasPendingReview && (
+                      <div className="flex items-center gap-2 text-sm text-yellow-600">
+                        <Bell className="w-4 h-4" />
+                        <span>Має роботи на перевірці</span>
+                      </div>
+                    )}
                   </div>
                   <div className="text-center md:text-right space-y-2">
                     <div className="text-3xl font-bold text-primary">{totalProgress}%</div>
@@ -1077,6 +1586,21 @@ setChaptersData(mockChapters);
                               <span className={`text-xs px-2 py-1 rounded-full ${getStatusColor(chapter.status)}`}>
                                 {getStatusText(chapter.status)}
                               </span>
+                              {(chapter.teacherComments?.length || 0) > 0 && (
+                                <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full border border-blue-200">
+                                  {chapter.teacherComments?.length} коментарів
+                                </span>
+                              )}
+                              {(chapter.fileHistory?.length || 0) > 0 && (
+                                <span className="px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded-full border border-gray-200">
+                                  {chapter.fileHistory?.length} версій
+                                </span>
+                              )}
+                              {chapter.submittedForReviewAt && (
+                                <span className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full border border-yellow-200">
+                                  Надіслано: {new Date(chapter.submittedForReviewAt).toLocaleDateString('uk-UA')}
+                                </span>
+                              )}
                             </div>
                             <p className="text-sm text-muted-foreground">
                               {chapter.description}
@@ -1084,6 +1608,11 @@ setChaptersData(mockChapters);
                             {chapter.studentNote && (
                               <p className="text-sm text-blue-600 mt-1">
                                 <strong>Нотатка студента:</strong> {chapter.studentNote}
+                              </p>
+                            )}
+                            {chapter.gradedAt && (
+                              <p className="text-sm text-green-600 mt-1">
+                                <strong>Оцінено:</strong> {new Date(chapter.gradedAt).toLocaleDateString('uk-UA')}
                               </p>
                             )}
                           </div>
@@ -1104,10 +1633,54 @@ setChaptersData(mockChapters);
                       
                       <Progress value={chapter.progress} className="h-2 mt-2 bg-muted" />
                       
+                      {/* Завантажений файл */}
+                      {chapter.uploadedFile && (
+                        <div className="bg-muted p-3 rounded-lg mt-3">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <FileText className="w-4 h-4 text-muted-foreground" />
+                              <div>
+                                <p className="text-sm font-medium">{chapter.uploadedFile.name}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {chapter.uploadedFile.size} • Версія {chapter.uploadedFile.currentVersion}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleDownloadFile(chapter.id)}
+                                className="border-border text-foreground hover:bg-accent"
+                              >
+                                <Download className="w-4 h-4 mr-1" />
+                                Завантажити
+                              </Button>
+                              {(chapter.fileHistory?.length || 0) > 0 && (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => showFileHistory(chapter.id)}
+                                  className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                >
+                                  <History className="w-4 h-4 mr-1" />
+                                  Історія
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      
                       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mt-4">
                         <div className="flex flex-wrap gap-2">
                           {chapter.uploadedFile && (
-                            <Button size="sm" variant="outline" className="border-border text-foreground hover:bg-accent">
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="border-border text-foreground hover:bg-accent"
+                              onClick={() => handleDownloadFile(chapter.id)}
+                            >
                               <FileText className="w-4 h-4 mr-1" />
                               Переглянути роботу
                             </Button>
@@ -1116,6 +1689,18 @@ setChaptersData(mockChapters);
                             chapterId={chapter.id}
                             onQuickComment={handleQuickComment}
                           />
+                          {(chapter.teacherComments?.length || 0) > 0 && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => toggleCommentExpansion(chapter.id)}
+                              className="text-muted-foreground hover:text-foreground"
+                            >
+                              <Eye className="w-4 h-4 mr-1" />
+                              Коментарі ({chapter.teacherComments?.length})
+                              {expandedComments[chapter.id] ? ' ↑' : ' ↓'}
+                            </Button>
+                          )}
                         </div>
                         
                         <div className="flex gap-2">
@@ -1123,12 +1708,7 @@ setChaptersData(mockChapters);
                             <Button 
                               size="sm" 
                               className="bg-primary text-primary-foreground hover:bg-primary/90"
-                              onClick={() => {
-                                const grade = prompt('Введіть оцінку (0-100):');
-                                if (grade && !isNaN(parseInt(grade))) {
-                                  handleGradeUpdate(chapter.id, parseInt(grade));
-                                }
-                              }}
+                              onClick={() => showGradeModal(chapter)}
                             >
                               <Star className="w-4 h-4 mr-1" />
                               Оцінити розділ
@@ -1139,12 +1719,7 @@ setChaptersData(mockChapters);
                               size="sm" 
                               variant="outline" 
                               className="border-green-600 text-green-600 hover:bg-green-600 hover:text-white dark:border-green-400 dark:text-green-400 dark:hover:bg-green-400 dark:hover:text-white"
-                              onClick={() => {
-                                const grade = prompt('Введіть нову оцінку (0-100):', chapter.studentGrade?.toString() || '0');
-                                if (grade && !isNaN(parseInt(grade))) {
-                                  handleGradeUpdate(chapter.id, parseInt(grade));
-                                }
-                              }}
+                              onClick={() => showGradeModal(chapter)}
                             >
                               <Edit className="w-4 h-4 mr-1" />
                               Змінити оцінку
@@ -1152,6 +1727,33 @@ setChaptersData(mockChapters);
                           )}
                         </div>
                       </div>
+
+                      {/* Коментарі викладача */}
+                      {expandedComments[chapter.id] && (chapter.teacherComments?.length || 0) > 0 && (
+                        <div className="mt-4 border-t border-border pt-4">
+                          <h4 className="font-medium text-sm mb-3">Коментарі викладача</h4>
+                          <div className="space-y-3">
+                            {(chapter.teacherComments || []).map((comment) => (
+                              <div key={comment.id} className="bg-blue-50 p-3 rounded border border-blue-200">
+                                <div className="flex items-start justify-between mb-2">
+                                  <span className={`text-xs px-2 py-1 rounded-full ${getCommentBadgeStyle(comment.status)}`}>
+                                    {comment.status === 'success' && '✓ Схвалено'}
+                                    {comment.status === 'warning' && '⚠ Попередження'}
+                                    {comment.status === 'error' && '✗ Потребує виправлень'}
+                                    {comment.status === 'info' && 'ℹ Інформація'}
+                                  </span>
+                                  <span className="text-xs text-muted-foreground">
+                                    {comment.date}
+                                  </span>
+                                </div>
+                                <p className="text-sm text-foreground">
+                                  {comment.text}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
 
                       {/* Comment Section */}
                       <CommentSection
@@ -1167,6 +1769,22 @@ setChaptersData(mockChapters);
           </div>
         </main>
       </div>
+
+      {/* Модальне вікно історії файлів */}
+      <FileHistoryModal
+        isOpen={fileHistoryModal.isOpen}
+        onClose={() => setFileHistoryModal({ isOpen: false, fileHistory: [] })}
+        fileHistory={fileHistoryModal.fileHistory}
+        currentUser={{ id: getCurrentUserId() || '', name: 'Викладач' }}
+      />
+
+      {/* Модальне вікно оцінювання */}
+      <GradeModal
+        isOpen={gradeModal.isOpen}
+        onClose={() => setGradeModal({ isOpen: false, chapter: null })}
+        chapter={gradeModal.chapter}
+        onGradeSubmit={handleGradeUpdate}
+      />
     </div>
   );
 };

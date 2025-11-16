@@ -1,18 +1,17 @@
 {
-  "header": {
-    "welcome": "Welcome, {{name}}!",
-    "projectInProgress": "ACTIVE PROJECT!",
-    "create": "Create",
-    "searchPlaceholder": "Search projects, tasks, documents...",
-    "online": "Online",
-    "offline": "Offline",
-    "language": "Language",
-    "theme": "Theme",
-    "create": "Create",
-    "createCoursework": "Coursework",
-    "createDiploma": "Diplom",
-    "createPractice": "Practice",
-    "menu": "Menu"
+  "header":{
+    "welcome":"Welcome, {{name}}!",
+    "projectInProgress":"ACTIVE PROJECT!",
+    "create":"Create",
+    "searchPlaceholder":"Search projects, tasks, documents...",
+    "online":"Online",
+    "offline":"Offline",
+    "language":"Language",
+    "theme":"Theme",
+    "createCoursework":"Coursework",
+    "createDiploma":"Diplom",
+    "createPractice":"Practice",
+    "menu":"Menu"
   },
   "sidebar": {
     "sectionMain": "Main",
@@ -22,6 +21,7 @@
     "projects": "Projects",
     "tasks": "Chat",
     "calendar": "Calendar",
+    "workspace": "Workspace",
     "aiAssistant": "AI Assistant",
     "analytics": "Analytics",
     "resources": "Resources",
@@ -29,207 +29,250 @@
     "team": "Team",
     "notifications": "Notifications",
     "settings": "Settings",
-    "logout": "Logout"
+    "logout": "Logout",
+    "user": "User",
+    "userInitial": "U",
+    "student": "Student",
+    "teacher": "Teacher",
+    "teacherDashboard": "Teacher Dashboard",
+    "gradingWorks": "Grading Works",
+    "studentApplications": "Student Applications",
+    "messages": "Messages",
+    "teacherPanel": "Teacher Panel",
+    "teacherPlatform": "Teaching Platform",
+    "researchPlatform": "Research Platform"
   },
-  "index": {
-    "title": "Development of a Web-Based Scientific Research Management System",
-    "supervisor": "Prof. Ivanenko I.I.",
-    "supervisorName": "science doctor",
-    "deadline": "January 15, 2025",
-    "status": "Under Review",
-    "welcomeTitle": "Welcome, {{name}}!",
-    "encouragementFirstTime": "Start the work on your project.",
-    "encouragement": "Keep up the work on your project.",
-    "progressCompleted": "{{progress}}% completed",
-    "projectType": "ACTIVE PROJECT",
-    "projstart": "Start your work",
-    "projDesc": "Choose a type of academic work to start tracking your progress and getting help from an AI assistant.",
-    "createButton": "Create project",
-    "AIhelp": "AI help",
-    "proj": "Your project",
-    "projectProgress": "Project Progress",
-    "projType": "Choose a job type to start",
-    "detailedView": "Detailed View",
-    "chatWithSupervisor": "Chat with Supervisor",
-    "quickActions": "Quick Actions",
-    "aiAssistant": "AI Assistant",
-    "planner": "Planner",
-    "analytics": "Analytics",
-    "stats": {
-      "overallProgress": "Overall Progress",
-      "chaptersReady": "Chapters Ready",
-      "daysLeft": "Days Left",
-      "aiSuggestions": "AI Suggestions",
-      "progressChange": "Choose project",
-      "progressChange1": "Start uploading",
-      "chaptersChange": "Create project",
-      "noChaptersYet": "Start uploading Chapters",
-      "urgent": "Urgent!",
-      "newTips": "New Tips"
+  "index":{
+    "title":"Development of a Web-Based Scientific Research Management System",
+    "supervisor":"Prof. Ivanenko I.I.",
+    "supervisorName":"science doctor",
+    "deadline":"January 15, 2025",
+    "status":"Under Review",
+    "welcomeTitle":"Welcome, {{name}}!",
+    "encouragementFirstTime":"Start the work on your project.",
+    "encouragement":"Keep up the work on your project.",
+    "progressCompleted":"{{progress}}% completed",
+    "projectType":"ACTIVE PROJECT",
+    "projstart":"Start your work",
+    "projDesc":"Choose a type of academic work to start tracking your progress and getting help from an AI assistant.",
+    "createButton":"Create project",
+    "AIhelp":"AI help",
+    "proj":"Your project",
+    "projectProgress":"Project Progress",
+    "projType":"Choose a job type to start",
+    "detailedView":"Detailed View",
+    "chatWithSupervisor":"Chat with Supervisor",
+    "quickActions":"Quick Actions",
+    "aiAssistant":"AI Assistant",
+    "planner":"Planner",
+    "analytics":"Analytics",
+    "stats":{
+      "overallProgress":"Overall Progress",
+      "chaptersReady":"Chapters Ready",
+      "daysLeft":"Days Left",
+      "aiSuggestions":"AI Suggestions",
+      "progressChange":"Choose project",
+      "progressChange1":"Start uploading",
+      "chaptersChange":"Create project",
+      "noChaptersYet":"Start uploading Chapters",
+      "urgent":"Urgent!",
+      "newTips":"New Tips"
     },
-    "milestones": {
-      "intro": "Introduction",
-      "literature": "Literature Review",
-      "methodology": "Methodology",
-      "implementation": "Implementation",
-      "testing": "Testing",
-      "conclusion": "Conclusion",
-      "completed": "Completed",
-      "inProgress": "In Progress",
-      "pending": "Pending"
+    "milestones":{
+      "intro":"Introduction",
+      "literature":"Literature Review",
+      "methodology":"Methodology",
+      "implementation":"Implementation",
+      "testing":"Testing",
+      "conclusion":"Conclusion",
+      "completed":"Completed",
+      "inProgress":"In Progress",
+      "pending":"Pending"
     },
-    "recentActivity": {
-      "title": "Recent Activity",
-      "activities": {
-        "comment": "New comment to part 2",
-        "deadline": "Reminder: deadline is tomorrow",
-        "approval": "Part 1 has been approved"
+    "recentActivity":{
+      "title":"Recent Activity",
+      "activities":{
+        "comment":"New comment to part 2",
+        "deadline":"Reminder: deadline is tomorrow",
+        "approval":"Part 1 has been approved"
       },
-      "times": {
-        "comment": "2 hours ago",
-        "deadline": "1 day ago",
-        "approval": "3 days ago"
+      "times":{
+        "comment":"2 hours ago",
+        "deadline":"1 day ago",
+        "approval":"3 days ago"
       }
     },
-    "aiRecommendations": {
-      "title": "AI Recommendations",
-      "description": "Personalized suggestions to improve your work",
-      "view": "View",
-      "literatureReview": {
-        "title": "Literature Review",
-        "description": "Add more up-to-date sources to enhance relevance",
-        "priority": "High"
+    "aiRecommendations":{
+      "title":"AI Recommendations",
+      "description":"Personalized suggestions to improve your work",
+      "view":"View",
+      "literatureReview":{
+        "title":"Literature Review",
+        "description":"Add more up-to-date sources to enhance relevance",
+        "priority":"High"
       },
-      "methodology": {
-        "title": "Methodology",
-        "description": "Expand experiment descriptions and add diagrams",
-        "priority": "Medium"
+      "methodology":{
+        "title":"Methodology",
+        "description":"Expand experiment descriptions and add diagrams",
+        "priority":"Medium"
       },
-      "conclusion": {
-        "title": "Conclusions",
-        "description": "Improve results structure and add recommendations",
-        "priority": "Low"
+      "conclusion":{
+        "title":"Conclusions",
+        "description":"Improve results structure and add recommendations",
+        "priority":"Low"
       }
     }
   },
-  "chat": {
-    "placeholder": "Write a message...",
-    "attachFile": "Add file",
-    "send": "Send",
-    "example": {
-      "supervisor1": "Hello! I reviewed your work. The introduction needs some refinement.",
-      "student1": "Thank you for your feedback! I will start working on the corrections today.",
-      "supervisor2": "Okay. Don't forget to structure the bibliography according to our department's requirements.",
-      "student2": "Got it, thanks! I'll finish up the material and send it to you for review by the end of the week. Have a great day!"
+  "chat":{
+    "placeholder":"Write a message...",
+    "attachFile":"Add file",
+    "send":"Send",
+    "example":{
+      "supervisor1":"Hello! I reviewed your work. The introduction needs some refinement.",
+      "student1":"Thank you for your feedback! I will start working on the corrections today.",
+      "supervisor2":"Okay. Don't forget to structure the bibliography according to our department's requirements.",
+      "student2":"Got it, thanks! I'll finish up the material and send it to you for review by the end of the week. Have a great day!"
     }
   },
-  "welcome": {
-  "heading": "Choose Work Type",
-  "subheading": "Select the type of academic work you want to focus on",
-
-  "diploma": {
-    "title": "Thesis Project",
-    "description": "Create and track the progress of your thesis"
-  },
-  "coursework": {
-    "title": "Coursework",
-    "description": "Organize and manage your course project"
-  },
-  "practice": {
-    "title": "Internship",
-    "description": "Keep a record of your internship experience"
-  },
-
-  "help": {
-    "title": "Not sure where to start?",
-    "subtitle": "Our assistant will help you organize your work and track your progress"
-  },
-
-  "howItWorks": {
-    "title": "📋 How the system works:",
-    "step1": "Choose a work type",
-    "step2": "Upload files for each section",
-    "step3": "Track your progress",
-    "step4": "Communicate with your supervisor"
-  },
-
-  "tips": {
-    "title": "💡 Helpful Tips:",
-    "tip1": "Start with the introduction and literature review",
-    "tip2": "Regularly save your intermediate results",
-    "tip3": "Stick to the given deadlines",
-    "tip4": "Coordinate changes with your supervisor"
-  },
-  "startButton": "Start"
-},
-  "thesis": {
-    "projectTypes": {
-      "diploma": "Diploma project",
-      "coursework": "Coursework",
-      "practice": "Practice"
+  "welcome":{
+    "heading":"Choose Work Type",
+    "subheading":"Select the type of academic work you want to focus on",
+    "diploma":{
+      "title":"Thesis Project",
+      "description":"Create and track the progress of your thesis"
     },
-    "cardTitle": "Diploma project",
-    "supervisor": "Supervisor",
-    "startDate": "Start",
-    "deadline": "Deadline",
-    "progress": "Progress",
-    "export": "Export report",
-    "chapters": {
-      "intro": "Introduction",
-      "theory": "Theoretical foundations",
-      "design": "System design",
-      "implementation": "Realization",
-      "conclusion": "Conclusions",
-      "appendix": "Appendices",
-      "sources": "List of sources",
-      "abstract": "Annotation",
-      "cover": "Title page",
-      "content": "Contents",
-      "tasks": "Tasks",
-      "diary": "Diary",
-      "report": "Report"
+    "coursework":{
+      "title":"Coursework",
+      "description":"Organize and manage your course project"
     },
-    "chapterDescriptions": {
-      "intro": "Relevance, purpose, and objectives of the study",
-      "theory": "Overview of the subject area",
-      "design": "Architecture and modules",
-      "implementation": "Functionality development, testing",
-      "conclusion": "Results, achievements, recommendations",
-      "appendix": "Code snippets, mockups",
-      "sources": "Design in accordance with standards",
-      "abstract": "Brief summary of the main provisions",
-      "cover": "Design in accordance with requirements",
-      "content": "Structured list of sections",
-      "tasks": "Description of assigned tasks",
-      "diary": "Practice progress notes",
-      "report": "Official report"
+    "practice":{
+      "title":"Internship",
+      "description":"Keep a record of your internship experience"
     },
-    "statuses": {
-      "completed": "Completed",
-      "review": "Under review",
-      "inProgress": "In progress",
-      "pending": "Expected"
+    "help":{
+      "title":"Not sure where to start?",
+      "subtitle":"Our assistant will help you organize your work and track your progress"
     },
-    "actions": {
-      "sendForReview": "Send for review",
-      "file": "File"
+    "howItWorks":{
+      "title":"📋 How the system works:",
+      "step1":"Choose a work type",
+      "step2":"Upload files for each section",
+      "step3":"Track your progress",
+      "step4":"Communicate with your supervisor"
     },
-  "index": {
-    "chatWithSupervisor": "Chat with supervisor",
-    "planner": "Planner",
-    "projectProgress": "Project progress"
-  }
-},
-  "profile": {
-    "title": "User profile",
-    "subtitle": "Edit your personal data",
-    "name": "Name",
-    "namePlaceholder": "Enter your name",
-    "email": "Email",
-    "emailPlaceholder": "Enter your email",
-    "role": "Role",
-    "rolePlaceholder": "Enter status",
-    "save": "Save changes"
+    "tips":{
+      "title":"💡 Helpful Tips:",
+      "tip1":"Start with the introduction and literature review",
+      "tip2":"Regularly save your intermediate results",
+      "tip3":"Stick to the given deadlines",
+      "tip4":"Coordinate changes with your supervisor"
+    },
+    "startButton":"Start"
+  },
+  "thesis":{
+    "projectTypes":{
+      "diploma":"Diploma project",
+      "coursework":"Coursework",
+      "practice":"Practice"
+    },
+    "cardTitle":"Diploma project",
+    "supervisor":"Supervisor",
+    "startDate":"Start",
+    "deadline":"Deadline",
+    "progress":"Progress",
+    "export":"Export report",
+    "chapters":{
+      "intro":"Introduction",
+      "theory":"Theoretical foundations",
+      "design":"System design",
+      "implementation":"Realization",
+      "conclusion":"Conclusions",
+      "appendix":"Appendices",
+      "sources":"List of sources",
+      "abstract":"Annotation",
+      "cover":"Title page",
+      "content":"Contents",
+      "tasks":"Tasks",
+      "diary":"Diary",
+      "report":"Report"
+    },
+    "chapterDescriptions":{
+      "intro":"Relevance, purpose, and objectives of the study",
+      "theory":"Overview of the subject area",
+      "design":"Architecture and modules",
+      "implementation":"Functionality development, testing",
+      "conclusion":"Results, achievements, recommendations",
+      "appendix":"Code snippets, mockups",
+      "sources":"Design in accordance with standards",
+      "abstract":"Brief summary of the main provisions",
+      "cover":"Design in accordance with requirements",
+      "content":"Structured list of sections",
+      "tasks":"Description of assigned tasks",
+      "diary":"Practice progress notes",
+      "report":"Official report"
+    },
+    "statuses":{
+      "completed":"Completed",
+      "review":"Under review",
+      "inProgress":"In progress",
+      "pending":"Expected"
+    },
+    "actions":{
+      "sendForReview":"Send for review",
+      "file":"File",
+      "uploadFile":"Upload file",
+      "updateFile":"Update file",
+      "deleteFile":"Delete file",
+      "viewHistory":"View history",
+      "restoreVersion":"Restore version",
+      "addNotes":"Add notes",
+      "editNotes":"Edit notes",
+      "saveNotes":"Save notes",
+      "cancel":"Cancel",
+      "viewComments":"View comments"
+    },
+    "fileHistory":{
+      "title":"File version history",
+      "currentVersion":"Current version",
+      "yourVersion":"Your version",
+      "changes":"Changes",
+      "totalVersions":"Total versions",
+      "lastChange":"Last change",
+      "version":"Version",
+      "uploadedBy":"Uploaded by"
+    },
+    "notes":{
+      "myNotes":"My notes",
+      "noNotes":"No notes yet. Click \"Edit\" to add.",
+      "placeholder":"Add your notes to this chapter...",
+      "edit":"Edit",
+      "save":"Save",
+      "cancel":"Cancel"
+    },
+    "comments":{
+      "teacherComments":"Teacher comments",
+      "approved":"Approved",
+      "warning":"Warning",
+      "needsImprovement":"Needs improvement",
+      "information":"Information"
+    },
+    "alerts":{
+      "restoreVersion":"Restoring version {{version}} of file \"{{fileName}}\"",
+      "describeChanges":"Describe changes in this version:",
+      "describeChangesOptional":"Describe changes in this version (optional):"
+    },
+    "common":{
+      "loading":"Loading...",
+      "versions":"versions",
+      "file":"File",
+      "size":"Size",
+      "date":"Date"
+    }
+  },
+  "indexs":{
+    "chatWithSupervisor":"Chat with supervisor",
+    "planner":"Planner",
+    "projectProgress":"Project progress"
   },
   "aiAssistant": {
     "title": "AI Assistant",
@@ -269,18 +312,10 @@
       "generate": "Generate topics",
       "relevance": "Relevance",
       "choose": "Select a topic",
-      "title1": "Optimization of data processing algorithms",
-      "category1": "Computer science",
-      "description1": "Research into methods for accelerating the processing of large volumes of information.",
-      "title2": "The impact of artificial intelligence on medicine",
-      "category2": "Medicine",
-      "description2": "Analysis of the use of AI for the diagnosis and treatment of diseases.",
-      "title3": "Environmental monitoring using drones",
-      "category3": "Ecology",
-      "description3": "Studying methods for collecting and analyzing environmental data using drones.",
-      "title4": "Development of chatbots for user support",
-      "category4": "Information technology",
-      "description4": "Creating effective chatbots for automating customer service."
+      "defaultTitle": "Untitled Topic",
+      "defaultDescription": "Default topic description",
+      "generatedTopics": "Generated topics",
+      "generatingTopics": "Generating topics..."
     },
     "structure": {
       "title": "Structure generation",
@@ -289,215 +324,709 @@
       "generate": "Generate",
       "generating": "Generation...",
       "resultTitle": "Generated structure",
-      "copy": "Copy"
+      "copy": "Copy",
+      "section": "Section",
+      "sections": {
+        "intro": "Introduction",
+        "theory": "Theoretical foundations",
+        "analysis": "Requirements analysis",
+        "design": "Design",
+        "development": "Development",
+        "testing": "Testing",
+        "implementation": "Implementation",
+        "results": "Results",
+        "sources": "Sources",
+        "appendix": "Appendices"
+      },
+      "fallback": {
+        "title": "Work structure on topic",
+        "intro": {
+          "relevance": "Topic relevance",
+          "goals": "Research goals and objectives",
+          "object": "Research object and subject"
+        },
+        "theoretical": "Theoretical part",
+        "theoretical": {
+          "literature": "Literature review",
+          "concepts": "Basic concepts and terminology",
+          "approaches": "Analysis of existing approaches"
+        },
+        "practical": "Practical part",
+        "practical": {
+          "methodology": "Research methodology",
+          "experimental": "Experimental part",
+          "results": "Analysis of obtained results"
+        },
+        "conclusions": "Conclusions",
+        "conclusions": {
+          "results": "Main results",
+          "recommendations": "Practical recommendations",
+          "perspectives": "Perspectives for further research"
+        },
+        "sources": "List of used sources"
+      }
     },
     "analysis": {
       "title": "Text analysis",
       "description": "Function in development",
       "textareaPlaceholder": "Insert text...",
       "plagiarism": "Check for plagiarism",
-      "quality": "Quality analysis",
-      "comingSoonNote": "This feature will be available soon. We are actively working on it!"
+      "grammar": "Grammar check",
+      "analyze": "Analyze",
+      "analyzing": "Analyzing...",
+      "note": "This feature will be available soon. We are actively working on it!",
+      "overallScore": "Overall quality assessment",
+      "metrics": {
+        "title": "Text statistics",
+        "words": "Words",
+        "sentences": "Sentences",
+        "paragraphs": "Paragraphs",
+        "wordsPerSentence": "Words per sentence",
+        "readability": "Readability",
+        "coherence": "Coherence"
+      },
+      "strengths": "Strengths",
+      "issues": "Possible problems",
+      "suggestions": "Improvement recommendations",
+      "scores": {
+        "excellent": "Excellent",
+        "good": "Good",
+        "needsImprovement": "Needs improvement"
+      },
+      "fallback": {
+        "strength": "Text successfully received for analysis",
+        "issue": "Analysis service temporarily unavailable",
+        "suggestion": "Try analyzing the text later"
+      }
     },
     "status": {
       "active": "Active",
       "comingSoon": "Soon"
-    }
-  },
-  "calendar": {
-    "pageTitle": "Calendar",
-    "pageDescription": "Manage events, deadlines, and meetings in one place.",
-    "card": {
-      "calendarTitle": "Calendar",
-      "calendarDescription": "Select a date to view events or create new ones.",
-      "eventsTitle": "Events on {{date}}",
-      "eventsDescription": "Your events for the selected date.",
-      "noEvents": "No events.",
-      "eventCount_one": "{{count}} events",
-      "eventCount_few": "{{count}} events",
-      "eventCount_many": "{{count}} events"
     },
-    "button": {
-      "addEvent": "Add event",
-      "viewMore": "View all"
-    },
-    "eventTypes": {
-      "meeting": "Meeting",
-      "deadline": "Deadline",
-      "task": "Task"
-    },
-    "features": {
-      "upcoming": "Upcoming events",
-      "tasks": "Task",
-      "addEvent": "Add event",
-      "deadlines": "Deadlines",
-      "upcomingDesc": "Review upcoming meetings and deadlines",
-      "tasksDesc": "Your planned tasks",
-      "addEventDesc": "Quickly create a new event",
-      "deadlinesDesc": "Monitoring important deadlines"
-    },
-    "badge": {
-      "comingSoon": "Soon"
-    },
-    "mockEvents": {
-      "meeting1": "Consultation with the manager",
-      "deadline1": "Submit the first section",
-      "task1": "Interim testing"
-    },
-    "dialog": {
-      "title": "Add New Event",
-      "placeholder": "Enter event title",
-      "selectType": "Select event type",
+    "application": {
+      "title": "Topic Application Submission",
+      "description": "Fill out the form to submit an application to the teacher",
+      "topic": "Project Topic",
+      "topicPlaceholder": "Enter the topic of your project...",
+      "description": "Topic Description",
+      "descriptionPlaceholder": "Describe your topic in detail...",
+      "goals": "Goals and Objectives",
+      "goalsPlaceholder": "Describe the goals and objectives of your project...",
+      "requirements": "Requirements and Necessary Skills",
+      "requirementsPlaceholder": "List the requirements and necessary skills...",
+      "deadline": "Desired Deadline",
       "cancel": "Cancel",
-      "save": "Save"
+      "submit": "Submit Application",
+      "validationError": "Please fill in all required fields",
+      "submitSuccess": "Application submitted successfully!",
+      "submitError": "Error submitting application"
+    },
+    "teachers": {
+      "recommended": "Recommended teachers",
+      "searching": "Searching for teachers...",
+      "select": "Select",
+      "available": "Available for supervision",
+      "busy": "Busy",
+      "skills": "Key skills",
+      "showMore": "More information",
+      "showLess": "Less information",
+      "hide": "Hide",
+      "show": "Teachers",
+      "notFound": {
+        "title": "No suitable teachers found",
+        "description": "Choose a random teacher from your faculty"
+      },
+      "chooseTeacher": "Choose teacher",
+      "chooseTeacherHint": "Teacher selection page will open",
+      "chooseTeacherAlert": "Teacher selection page coming soon!\n\nTopic: \"{{topic}}\"\nFaculty: {{faculty}}",
+      "noTeachers": "No suitable teachers found for this topic",
+      "tryDifferentTopic": "Try changing the topic or choose a random teacher",
+      "authenticationRequired": "Please log in to search for teachers",
+      "facultyError": "Could not determine your faculty. Please check your profile or contact the dean's office.",
+      "unknownError": "Unknown error",
+      "searchError": "Search error",
+      "login": "Log in",
+      "tryAgain": "Try again"
+    },
+    "faculty": {
+      "faculty": "Faculty",
+      "notSet": "Not set",
+      "filter": "Faculty filter",
+      "yourFaculty": "Your faculty"
+    },
+    "premium": {
+      "title": "Premium recommendations",
+      "description": "Exclusive suggestions from teachers based on your interests",
+      "badge": "Premium",
+      "loading": "Loading premium suggestions...",
+      "relevance": "Relevance",
+      "fromTeacher": "From teacher",
+      "view": "View",
+      "noResults": "No premium suggestions available",
+      "types": {
+        "work": "Work",
+        "direction": "Direction",
+        "future_topic": "Future topic",
+        "skill": "Skill"
+      }
     }
   },
-   "analytics": {
-    "title": "Analytics",
-    "description": "Review your project's key metrics",
-    "lastUpdated": "Just updated",
-    "visits": "Visits",
-    "thisMonth": "this month",
-    "conversions": "Conversions",
-    "growthRate": "growth rate",
-    "bounceRate": "Failure rate",
-    "low": "low level",
-    "averageTime": "Average time",
-    "perVisit": "on visits",
-    "trafficOverview": "Traffic overview",
-    "lineChartDescription": "Visits by month",
-    "departmentStats": "Distribution by departments",
-    "pieChartDescription": "Percentage distribution of tasks"
+  "calendar":{
+    "pageTitle":"Calendar",
+    "pageDescription":"Manage events, deadlines, and meetings in one place.",
+    "card":{
+      "calendarTitle":"Calendar",
+      "calendarDescription":"Select a date to view events or create new ones.",
+      "eventsTitle":"Events on {{date}}",
+      "eventsDescription":"Your events for the selected date.",
+      "noEvents":"No events.",
+      "eventCount_one":"{{count}} events",
+      "eventCount_few":"{{count}} events",
+      "eventCount_many":"{{count}} events"
+    },
+    "button":{
+      "addEvent":"Add event",
+      "viewMore":"View all"
+    },
+    "eventTypes":{
+      "meeting":"Meeting",
+      "deadline":"Deadline",
+      "task":"Task"
+    },
+    "features":{
+      "upcoming":"Upcoming events",
+      "tasks":"Task",
+      "addEvent":"Add event",
+      "deadlines":"Deadlines",
+      "upcomingDesc":"Review upcoming meetings and deadlines",
+      "tasksDesc":"Your planned tasks",
+      "addEventDesc":"Quickly create a new event",
+      "deadlinesDesc":"Monitoring important deadlines"
+    },
+    "badge":{
+      "comingSoon":"Soon"
+    },
+    "mockEvents":{
+      "meeting1":"Consultation with the manager",
+      "deadline1":"Submit the first section",
+      "task1":"Interim testing",
+      "newEvent":"New event"
+    },
+    "dialog":{
+      "title":"Add New Event",
+      "editTitle":"Edit Event",
+      "description":"Fill in the information about the new event",
+      "editDescription":"Make changes to the event",
+      "eventTitle":"Event title",
+      "eventType":"Event type",
+      "time":"Time",
+      "location":"Location",
+      "link":"Link",
+      "description":"Description",
+      "placeholder":"Enter event title",
+      "locationPlaceholder":"Auditorium, address...",
+      "linkPlaceholder":"https://meet.google.com/...",
+      "descriptionPlaceholder":"Additional details...",
+      "markCompleted":"Mark as completed",
+      "cancel":"Cancel",
+      "save":"Save",
+      "update":"Update"
+    },
+    "deleteDialog":{
+      "title":"Delete event?",
+      "description":"This action cannot be undone. Confirm deletion.",
+      "cancel":"Cancel",
+      "delete":"Delete"
+    },
+    "noEvents":{
+      "title":"No events for this day",
+      "description":"No events are scheduled for {{date}}. Add the first event to start planning."
+    },
+    "status":{
+      "completed":"Completed",
+      "notCompleted":"Not completed"
+    },
+    "actions":{
+      "edit":"Edit",
+      "delete":"Delete",
+      "markComplete":"Mark as completed",
+      "markIncomplete":"Mark as incomplete"
+    },
+    "joinMeeting":"Join meeting"
+  },
+  "notes": {
+    "pageTitle": "Notes",
+    "pageDescription": "Manage your notes and ideas",
+    "button": {
+      "newNote": "New Note",
+      "save": "Save",
+      "saving": "Saving...",
+      "cancel": "Cancel",
+      "add": "Add",
+      "clearAll": "Clear All"
+    },
+    "search": {
+      "placeholder": "Search notes..."
+    },
+    "sort": {
+      "title": "Sort",
+      "custom": "Custom Order",
+      "date": "By Date",
+      "title": "By Title",
+      "wordCount": "By Word Count"
+    },
+    "filters": {
+      "title": "Filters",
+      "categories": "Categories",
+      "tags": "Tags",
+      "bookmarks": "Bookmarks Only",
+      "public": "Public Only",
+      "activeFilters": "Active Filters"
+    },
+    "viewMode": {
+      "grid": "Grid",
+      "list": "List"
+    },
+    "editor": {
+      "newNote": "New Note",
+      "editNote": "Edit Note",
+      "title": "Note title...",
+      "category": "Category",
+      "tags": "Tags",
+      "addTag": "Add tag...",
+      "colors": "Colors",
+      "textColor": "Text Color",
+      "backgroundColor": "Note Background",
+      "public": "Public",
+      "bookmark": "Bookmark",
+      "words": "words",
+      "characters": "characters",
+      "textStyles": {
+        "bold": "Bold",
+        "italic": "Italic",
+        "underline": "Underline"
+      },
+      "alignment": {
+        "left": "Align Left",
+        "center": "Align Center",
+        "right": "Align Right"
+      },
+      "lists": {
+        "unordered": "Bulleted List",
+        "ordered": "Numbered List"
+      },
+      "image": "Image"
+    },
+    "categories": {
+      "personal": "Personal",
+      "work": "Work",
+      "study": "Study",
+      "ideas": "Ideas"
+    },
+    "status": {
+      "public": "Public",
+      "private": "Private",
+      "bookmarked": "Bookmarked",
+      "notBookmarked": "Not Bookmarked"
+    },
+    "preview": {
+      "updated": "Updated",
+      "words": "words"
+    },
+    "emptyState": {
+      "title": "No Notes Found",
+      "description": "Try changing your search parameters or create a new note.",
+      "button": "Create Note"
+    },
+    "deleteDialog": {
+      "title": "Delete Note?",
+      "description": "This action cannot be undone. The note will be permanently deleted.",
+      "cancel": "Cancel",
+      "delete": "Delete"
+    },
+    "actions": {
+      "edit": "Edit",
+      "delete": "Delete",
+      "preview": "Preview",
+      "toggleBookmark": "Add to Bookmarks",
+      "removeBookmark": "Remove from Bookmarks",
+      "makePublic": "Make Public",
+      "makePrivate": "Make Private"
+    },
+    "validation": {
+      "titleRequired": "Please enter a note title"
+    },
+    "messages": {
+      "loading": "Loading notes...",
+      "saveError": "Error saving note. Please check your network connection.",
+      "deleteError": "Error deleting note"
+    }
+  },
+  "analytics":{
+    "title":"Analytics",
+    "description":"Review your project's key metrics",
+    "lastUpdated":"Just updated",
+    "visits":"Visits",
+    "thisMonth":"this month",
+    "conversions":"Conversions",
+    "growthRate":"growth rate",
+    "bounceRate":"Failure rate",
+    "low":"low level",
+    "averageTime":"Average time",
+    "perVisit":"on visits",
+    "trafficOverview":"Traffic overview",
+    "lineChartDescription":"Visits by month",
+    "departmentStats":"Distribution by departments",
+    "pieChartDescription":"Percentage distribution of tasks"
   },
   "resources": {
-  "title": "Materials for coursework/thesis",
-  "searchPlaceholder": "Search resources...",
-  "cards": {
-    "templates": {
-      "title": "Design samples",
-      "description": "Rules for formatting coursework and theses (titles, tables, references, etc.).",
-      "action": "View"
+    "title": "Materials for coursework/thesis",
+    "searchPlaceholder": "Search resources...",
+    "loading": "Loading resources...",
+    "sections": {
+      "myFolders": "My folders",
+      "allResources": "All resources",
+      "resourcesInFolder": "Resources in folder"
     },
-    "examples": {
-      "title": "Examples of works",
-      "description": "Ready-made examples of previous coursework and thesis projects.",
-      "action": "View"
+    "stats": {
+      "available": "{{count}} resources available",
+      "folders": "{{count}} folders",
+      "foldersCount": "{{count}} folders",
+      "resourcesCount": "{{count}} resources",
+      "resourcesInFolder": "{{count}} resource(s)"
     },
-    "guidelines": {
-      "title": "Methodological guidelines",
-      "description": "Official instructions and guidelines for completing coursework and dissertations.",
-      "action": "Download"
+    "actions": {
+      "createFolder": "Create folder",
+      "addResource": "Add resource",
+      "showSaved": "Saved",
+      "showAll": "All resources",
+      "save": "Save",
+      "removeSaved": "Remove from saved",
+      "edit": "Edit",
+      "delete": "Delete",
+      "deleteFolder": "Delete folder",
+      "goToResource": "Go to resource",
+      "dragToFolder": "Drag to folder",
+      "removeFromFolder": "Remove from folder",
+      "clickToExpand": "Click to expand/collapse",
+      "dragToAdd": "Drag resources here to add"
     },
-    "literature": {
-      "title": "Useful literature",
-      "description": "A selection of books, articles, and online resources for a deeper understanding of the topic.",
-      "action": "Open list"
+    "categories": {
+      "templates": "Templates",
+      "examples": "Examples",
+      "guidelines": "Guidelines",
+      "literature": "Literature",
+      "library": "Library",
+      "other": "Other"
     },
-    "faq": {
-      "title": "Frequently asked questions (FAQ)",
-      "description": "Answers to frequently asked questions about the structure, content, and defense of the work.",
-      "action": "View FAQ"
+    "dialogs": {
+      "cancel": "Cancel",
+      "understand": "Understand",
+      "createFolder": {
+        "title": "Create new folder",
+        "name": "Folder name",
+        "namePlaceholder": "Enter folder name",
+        "description": "Description",
+        "descriptionPlaceholder": "Describe the folder...",
+        "createButton": "Create folder"
+      },
+      "addResource": {
+        "title": "Add new resource",
+        "name": "Resource name",
+        "namePlaceholder": "Enter resource name",
+        "description": "Description",
+        "descriptionPlaceholder": "Describe the resource...",
+        "link": "Link",
+        "linkPlaceholder": "https://example.com",
+        "category": "Category",
+        "categoryPlaceholder": "Select category",
+        "addButton": "Add resource",
+        "adding": "Adding..."
+      },
+      "editResource": {
+        "title": "Edit resource",
+        "name": "Resource name",
+        "namePlaceholder": "Enter resource name",
+        "description": "Description",
+        "descriptionPlaceholder": "Describe the resource...",
+        "link": "Link",
+        "linkPlaceholder": "https://example.com",
+        "category": "Category",
+        "categoryPlaceholder": "Select category",
+        "saveButton": "Save changes",
+        "saving": "Saving..."
+      }
     },
-    "defense": {
-      "title": "Tips for defense",
-      "description": "How to effectively prepare for defense and present your work.",
-      "action": "Details"
+    "alerts": {
+      "unauthorized": "User not authorized",
+      "fillRequiredFields": "Please fill in name and link",
+      "cannotEdit": "Cannot edit this resource",
+      "cannotEditSystem": "This is a system resource and cannot be edited",
+      "confirmDelete": "Are you sure you want to delete this resource?",
+      "addError": "Error adding",
+      "editError": "Error editing",
+      "deleteError": "Error deleting",
+      "networkError": "Network error"
     },
-    "state-standards": {
-      "title": "State education standards",
-      "description": "DSTU, GOST and other standards for scientific formatting",
-      "action": "View standards"
+    "empty": {
+      "saved": "No saved resources",
+      "savedHint": "Save resources by clicking the bookmark icon",
+      "noResults": "No resources found",
+      "noResultsHint": "Try changing your search query",
+      "folder": "Folder is empty",
+      "folderHint": "Drag resources here or add new ones"
+    }
+  },
+  "profile": {
+    "title": "Student Profile",
+    "subtitle": "Manage your information, projects and achievements",
+    "loading": "Loading profile...",
+    "sections": {
+      "personalInfo": "Personal Information",
+      "projects": "My Projects",
+      "achievements": "Achievements",
+      "goals": "Goals and Plans"
     },
-    "mon-regulations": {
-      "title": "Regulations of the Ministry of Education",
-      "description": "Official documents and requirements from the Ministry of Education",
-      "action": "Open documents"
+    "fields": {
+      "name": "Name",
+      "group": "Group",
+      "course": "Course",
+      "faculty": "Faculty",
+      "email": "Email",
+      "phone": "Phone",
+      "bio": "About me",
+      "title": "Title",
+      "projectType": "Project Type",
+      "status": "Status",
+      "description": "Description",
+      "date": "Date",
+      "goal": "Goal",
+      "deadline": "Deadline",
+      "notSpecified": "Not specified",
+      "bioPlaceholder": "Information about yourself has not been added yet. Click the edit icon to add information."
     },
-    "scientific-library": {
-      "title": "Scientific Library",
-      "description": "Access to university’s electronic catalog and databases",
-      "action": "Go to catalog"
+    "actions": {
+      "addProject": "Add Project",
+      "addAchievement": "Add Achievement",
+      "addGoal": "Add Goal",
+      "edit": "Edit",
+      "delete": "Delete",
+      "save": "Save",
+      "saveChanges": "Save Changes",
+      "cancel": "Cancel"
     },
-    "nbuv": {
-      "title": "NBUV (National Library)",
-      "description": "National Library of Ukraine - electronic resources",
-      "action": "Open NBUV"
+    "placeholders": {
+      "name": "Enter your name",
+      "group": "Enter your group",
+      "course": "Enter your course",
+      "faculty": "Enter your faculty",
+      "email": "Enter your email",
+      "bio": "Tell about yourself, your interests and achievements...",
+      "projectTitle": "Enter project title",
+      "projectType": "Coursework, Diploma, Personal...",
+      "projectStatus": "In progress, Completed...",
+      "projectDescription": "Describe your project...",
+      "achievementTitle": "Enter achievement title",
+      "achievementDate": "March 2024",
+      "achievementDescription": "Describe your achievement...",
+      "goal": "Enter your goal",
+      "goalDeadline": "December 2025",
+      "goalDescription": "Describe your goal in more detail..."
     },
-    "google-scholar": {
-      "title": "Google Scholar",
-      "description": "Search for scientific publications and citations",
-      "action": "Search publications"
+    "dialogs": {
+      "editInfo": {
+        "title": "Edit Personal Information"
+      },
+      "addProject": {
+        "title": "Add New Project"
+      },
+      "editProject": {
+        "title": "Edit Project"
+      },
+      "addAchievement": {
+        "title": "Add Achievement"
+      },
+      "editAchievement": {
+        "title": "Edit Achievement"
+      },
+      "addGoal": {
+        "title": "Add New Goal"
+      },
+      "editGoal": {
+        "title": "Edit Goal"
+      },
+      "delete": {
+        "title": "Are you sure?",
+        "description": "This action cannot be undone. This will delete the item permanently."
+      }
     },
-    "cyberleninka": {
-      "title": "CyberLeninka",
-      "description": "Free electronic library of scientific publications",
-      "action": "View articles"
+    "empty": {
+      "projects": {
+        "title": "No projects yet",
+        "description": "Add your first project"
+      },
+      "achievements": {
+        "title": "No achievements yet",
+        "description": "Add your achievements"
+      },
+      "goals": {
+        "title": "No goals yet",
+        "description": "Add your goals and plans"
+      }
     },
-    "writing-guide": {
-      "title": "Writing guidelines",
-      "description": "General recommendations for writing coursework and theses",
-      "action": "Read guide"
+    "alerts": {
+      "loginRequired": "You need to log in",
+      "fillRequiredFields": "Please fill in the required fields",
+      "infoUpdated": "Information updated",
+      "projectAdded": "Project added",
+      "projectUpdated": "Project updated",
+      "projectDeleted": "Project deleted",
+      "achievementAdded": "Achievement added",
+      "achievementUpdated": "Achievement updated",
+      "achievementDeleted": "Achievement deleted",
+      "goalAdded": "Goal added",
+      "goalUpdated": "Goal updated",
+      "goalDeleted": "Goal deleted",
+      "loadError": "Error loading data",
+      "updateError": "Error updating profile",
+      "projectAddError": "Error adding project",
+      "projectUpdateError": "Error updating project",
+      "achievementAddError": "Error adding achievement",
+      "achievementUpdateError": "Error updating achievement",
+      "goalAddError": "Error adding goal",
+      "goalUpdateError": "Error updating goal",
+      "deleteError": "Error deleting"
+    }
+  },
+  "teacherProfile": {
+    "title": "Teacher Profile",
+    "subtitle": "Manage your information, works and research directions",
+    "loading": "Loading profile...",
+    "sections": {
+      "personalInfo": "Personal Information",
+      "works": "Works and Publications",
+      "researchDirections": "Research Directions",
+      "futureTopics": "Future Research Topics"
     },
-    "citation-styles": {
-      "title": "Citation styles",
-      "description": "DSTU, APA, Harvard – citation formatting rules",
-      "action": "Explore styles"
+    "fields": {
+      "name": "Name",
+      "title": "Title",
+      "department": "Department",
+      "faculty": "Faculty",
+      "email": "Email",
+      "phone": "Phone",
+      "officeHours": "Office Hours",
+      "website": "Website",
+      "bio": "Biography",
+      "workTitle": "Work Title",
+      "workType": "Work Type",
+      "year": "Year",
+      "description": "Description",
+      "researchArea": "Research Area",
+      "topic": "Research Topic",
+      "fileLink": "File Link",
+      "publicationLink": "Publication Link",
+      "notSpecified": "Not specified"
     },
-    "research-methods": {
-      "title": "Research methods",
-      "description": "Theoretical and practical methods of scientific research",
-      "action": "Learn more"
+    "actions": {
+      "edit": "Edit",
+      "save": "Save",
+      "saveChanges": "Save Changes",
+      "cancel": "Cancel",
+      "delete": "Delete",
+      "addWork": "Add Work",
+      "addDirection": "Add Direction",
+      "addTopic": "Add Topic",
+      "editInfo": "Edit Information"
     },
-    "antiplagiat": {
-      "title": "Plagiarism check",
-      "description": "Tools for checking text uniqueness",
-      "action": "Check work"
+    "placeholders": {
+      "title": "PhD, Professor",
+      "phone": "+380 XX XXX XX XX",
+      "officeHours": "Mon-Fri 14:00-16:00",
+      "website": "https://...",
+      "bio": "Tell about yourself, your experience and achievements...",
+      "workTitle": "Enter work title",
+      "workType": "Monograph, Article, Book...",
+      "year": "2024",
+      "workDescription": "Brief description of the work...",
+      "researchArea": "For example: Artificial Intelligence and Machine Learning",
+      "directionDescription": "Detailed description of research direction...",
+      "topicName": "For example: Quantum Computing in AI",
+      "topicDescription": "Describe the topic and research plans...",
+      "fileLink": "https://...",
+      "publicationLink": "https://..."
     },
-    "grammar-check": {
-      "title": "Grammar check",
-      "description": "Tools for spelling and style checking",
-      "action": "Check text"
+    "dialogs": {
+      "editInfo": {
+        "title": "Edit Personal Information",
+        "nameHelp": "Name cannot be changed through this form"
+      },
+      "addWork": {
+        "title": "Add New Work"
+      },
+      "editWork": {
+        "title": "Edit Work"
+      },
+      "addDirection": {
+        "title": "Add Research Direction"
+      },
+      "editDirection": {
+        "title": "Edit Direction"
+      },
+      "addTopic": {
+        "title": "Add Future Topic"
+      },
+      "editTopic": {
+        "title": "Edit Topic"
+      },
+      "delete": {
+        "title": "Are you sure?",
+        "description": "This action cannot be undone. This will delete the item permanently."
+      }
     },
-    "latex-templates": {
-      "title": "LaTeX templates",
-      "description": "Ready-made templates for scientific papers",
-      "action": "Download templates"
+    "empty": {
+      "works": {
+        "title": "No works yet",
+        "description": "Add your first work or publication",
+        "hint": "Add your first work or publication"
+      },
+      "directions": {
+        "title": "No directions yet",
+        "description": "Add your research directions",
+        "hint": "Add your research directions"
+      },
+      "topics": {
+        "title": "No topics yet",
+        "description": "Add topics for future research",
+        "hint": "Add topics for future research"
+      }
     },
-    "mendeley": {
-      "title": "Mendeley",
-      "description": "Reference manager and scientific source organizer",
-      "action": "Use service"
+    "alerts": {
+      "loginRequired": "You need to log in",
+      "fillRequiredFields": "Please fill in the required fields",
+      "infoUpdated": "Information updated",
+      "workAdded": "Work added",
+      "workUpdated": "Work updated",
+      "workDeleted": "Work deleted",
+      "directionAdded": "Direction added",
+      "directionUpdated": "Direction updated",
+      "directionDeleted": "Direction deleted",
+      "topicAdded": "Topic added",
+      "topicUpdated": "Topic updated",
+      "topicDeleted": "Topic deleted",
+      "loadError": "Error loading data",
+      "updateError": "Error updating profile",
+      "workAddError": "Error adding work",
+      "workUpdateError": "Error updating work",
+      "directionAddError": "Error adding direction",
+      "directionUpdateError": "Error updating direction",
+      "topicAddError": "Error adding topic",
+      "topicUpdateError": "Error updating topic",
+      "deleteError": "Error deleting"
     },
-    "ukrstat": {
-      "title": "Ukrainian statistics",
-      "description": "Official statistical data of Ukraine",
-      "action": "View data"
-    },
-    "world-bank": {
-      "title": "World Bank",
-      "description": "International statistical data and research",
-      "action": "Open data"
-    },
-    "internship-guide": {
-      "title": "Internship guide",
-      "description": "Organization and participation in practical training",
-      "action": "Read guide"
-    },
-    "job-portals": {
-      "title": "Job portals",
-      "description": "Find internships and future job opportunities",
-      "action": "Search jobs"
-    },
-    "coursera-ukraine": {
-      "title": "Free courses",
-      "description": "Online courses to deepen knowledge in various fields",
-      "action": "View courses"
-    },
-    "ted-talks": {
-      "title": "TED in Ukrainian",
-      "description": "Educational video lectures by world experts",
-      "action": "Watch lectures"
+    "links": {
+      "file": "📄 File",
+      "publication": "🌐 Publication"
     }
   }
-}
 }
